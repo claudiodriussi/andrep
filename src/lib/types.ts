@@ -81,3 +81,18 @@ export interface Template {
   rows: Row[];
   composition?: CompositionRule[];
 }
+
+// Toolbar group identifiers — controls order and visibility
+export type ToolbarGroupId = 'colors' | 'borders' | 'font' | 'align' | 'cell' | 'structure';
+
+export interface EditorConfig {
+  _type: 'andrep-config'; // file signature — used to validate on load
+  locale: 'en' | 'it';
+  units: 'px' | 'mm' | 'inch';
+  toolbarGroups: ToolbarGroupId[]; // ordered list; absent groups are hidden
+  defaultFont: string;
+  defaultFontSize: number;
+  bandNamePresets: string[]; // quick-pick list shown on "+ Row"
+  fgPalette: string[]; // foreground (text / border) color swatches
+  bgPalette: string[]; // background color swatches
+}
