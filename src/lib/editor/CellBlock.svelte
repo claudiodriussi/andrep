@@ -7,13 +7,14 @@
   const selected = $derived(editor.selectedCellIds.has(cell.id));
   const active = $derived(editor.activeCellId === cell.id);
   const s = $derived(cell.style);
-  const borders = $derived(editor.showGuides ? s.borders : null);
+  const b = $derived(s.borders);
 </script>
 
 <div
   class="cell"
   class:selected
   class:active
+  class:guides={editor.showGuides}
   style="
     width: {cell.width}px;
     height: {cell.height}px;
@@ -26,10 +27,10 @@
     background-color: {s.backgroundColor};
     text-align: {s.alignment};
     padding: {s.paddingTop}px {s.paddingRight}px {s.paddingBottom}px {s.paddingLeft}px;
-    border-top: {borders ? `${borders.top.width}px ${borders.top.style} ${borders.top.color}` : 'none'};
-    border-bottom: {borders ? `${borders.bottom.width}px ${borders.bottom.style} ${borders.bottom.color}` : 'none'};
-    border-left: {borders ? `${borders.left.width}px ${borders.left.style} ${borders.left.color}` : 'none'};
-    border-right: {borders ? `${borders.right.width}px ${borders.right.style} ${borders.right.color}` : 'none'};
+    border-top: {b.top.width > 0 ? `${b.top.width}px ${b.top.style} ${b.top.color}` : 'none'};
+    border-bottom: {b.bottom.width > 0 ? `${b.bottom.width}px ${b.bottom.style} ${b.bottom.color}` : 'none'};
+    border-left: {b.left.width > 0 ? `${b.left.width}px ${b.left.style} ${b.left.color}` : 'none'};
+    border-right: {b.right.width > 0 ? `${b.right.width}px ${b.right.style} ${b.right.color}` : 'none'};
   "
   role="button"
   tabindex="0"
@@ -72,8 +73,17 @@
     pointer-events: none;
   }
 
-  /* Bordo scuro per la cella attiva (ultima cliccata).
-     box-shadow inset: non conflitte con outline:none del :focus */
+  /* Guide: overlay dashed per vedere i contorni nell'editor (indipendente dai bordi template) */
+  .guides::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 1px dashed rgba(148, 163, 184, 0.7);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Bordo scuro per la cella attiva (ultima cliccata) */
   .active {
     box-shadow: inset 0 0 0 2px #1e3a5f;
     z-index: 1;

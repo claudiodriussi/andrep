@@ -30,19 +30,19 @@ export interface CellStyle {
 
 export type CellType = 'text' | 'markdown' | 'image' | 'barcode' | 'qrcode' | 'embed';
 
-// Semantica del campo `content` per tipo:
-//   text     — testo con interpolazione [VAR|formatter]
-//   markdown — markdown con interpolazione [VAR|formatter]; il renderer converte in HTML
-//   image    — URL, path relativo o data URI; può contenere [VAR] che risolve a uno di questi
-//   barcode  — valore da codificare (stringa/numero o [VAR])
-//   qrcode   — valore da codificare (URL, testo o [VAR])
-//   embed    — non usato (la band è in embedTarget)
+// Semantics of the `content` field by cell type:
+//   text     — plain text with [VAR|formatter] interpolation
+//   markdown — markdown with [VAR|formatter] interpolation; renderer converts to HTML
+//   image    — URL, relative path, or data URI; may contain [VAR] that resolves to one of these
+//   barcode  — value to encode (string/number or [VAR])
+//   qrcode   — value to encode (URL, text, or [VAR])
+//   embed    — unused (the band name is in embedTarget)
 
 export interface Cell {
   id: string;
   content: string;
   type: CellType;
-  embedTarget?: string; // solo se type === 'embed': nome della band da espandere in questa cella
+  embedTarget?: string; // only when type === 'embed': name of the band to expand inside this cell
   x: number;
   width: number;
   height: number;
@@ -52,7 +52,7 @@ export interface Cell {
 
 export interface Row {
   id: string;
-  name: string; // nome band — più righe con lo stesso nome formano una band
+  name: string; // band name — multiple rows sharing the same name form a band
   cells: Cell[];
 }
 
@@ -70,13 +70,14 @@ export type CompositionRuleType = 'IFNOT' | 'REPLACE' | 'INSBEFORE' | 'INSAFTER'
 
 export interface CompositionRule {
   rule: CompositionRuleType;
-  target: string; // nome del template o band di riferimento
+  target: string; // name of the referenced template or band
 }
 
 export interface Template {
+  _type: 'andrep-template'; // file signature — used to validate on load
   name: string;
   version: string;
   page: PageConfig;
   rows: Row[];
-  composition?: CompositionRule[]; // regole di composizione dichiarate dal template
+  composition?: CompositionRule[];
 }

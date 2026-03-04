@@ -3,15 +3,7 @@
   import { editor } from '$lib/store/editor.svelte';
   import CellBlock from './CellBlock.svelte';
 
-  let {
-    row,
-    isFirst,
-    isLast,
-  }: {
-    row: Row;
-    isFirst: boolean;
-    isLast: boolean;
-  } = $props();
+  let { row, isFirst, isLast }: { row: Row; isFirst: boolean; isLast: boolean } = $props();
 
   const rowHeight = $derived(
     row.cells.length > 0 ? Math.max(...row.cells.map((c) => c.height)) : 24,
@@ -58,7 +50,7 @@
         tabindex="0"
         onclick={(e) => { e.stopPropagation(); editor.selectRow(row.id); }}
         ondblclick={startEdit}
-        title="Click per selezionare la riga · Doppio click per rinominare"
+        title="Click to select row · Double-click to rename"
       >{row.name}</span>
     {/if}
     <div class="row-controls">
@@ -66,18 +58,18 @@
         class="ctrl-btn"
         disabled={isFirst}
         onclick={() => editor.moveRowUp(row.id)}
-        title="Sposta su (Alt+↑)"
+        title="Move up (Alt+↑)"
       >▲</button>
       <button
         class="ctrl-btn"
         disabled={isLast}
         onclick={() => editor.moveRowDown(row.id)}
-        title="Sposta giù (Alt+↓)"
+        title="Move down (Alt+↓)"
       >▼</button>
       <button
         class="ctrl-btn del"
         onclick={() => editor.deleteRow(row.id)}
-        title="Elimina riga (Alt+Del)"
+        title="Delete row (Alt+Del)"
       >×</button>
     </div>
   </div>
@@ -90,7 +82,7 @@
       class="add-cell-btn"
       style="height: {rowHeight}px"
       onclick={() => editor.addCell(row.id)}
-      title="Aggiungi cella (Ins)"
+      title="Add cell (Ins)"
     >+</button>
   </div>
 </div>

@@ -1,31 +1,62 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import DesignCanvas from '$lib/editor/DesignCanvas.svelte';
+  import Toolbar from '$lib/editor/Toolbar.svelte';
   import { editor } from '$lib/store/editor.svelte';
 
-  // Info cella: mostra la cella attiva (ultima cliccata)
   const selectedCell = $derived(
     editor.activeCellId ? editor.findCell(editor.activeCellId) : null,
   );
+
+  // Autosave draft to localStorage on every template change (debounced)
+  let saveTimer: ReturnType<typeof setTimeout> | null = null;
+  $effect(() => {
+    // Touch template to track changes — JSON.stringify reads all nested properties
+    JSON.stringify(editor.template);
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => editor.saveDraft(), 500);
+  });
+
+  onMount(() => {
+    return () => {
+      if (saveTimer) clearTimeout(saveTimer);
+    };
+  });
 </script>
 
 <div class="editor-root">
-  <header class="toolbar">
+  <header class="header">
     <span class="app-name">AndRep</span>
+
+    <div class="sep"></div>
+
+    <button class="hbtn" onclick={() => editor.loadJson()} title="Open template (Ctrl+O)">
+      ⬆ Open
+    </button>
+    <button class="hbtn" onclick={() => editor.saveJson()} title="Save template (Ctrl+S)">
+      ⬇ Save
+    </button>
+
+    <div class="spacer"></div>
+
     {#if selectedCell}
       <span class="cell-info">
         w:{selectedCell.width}px · h:{selectedCell.height}px · x:{selectedCell.x}px
       </span>
     {/if}
-    <span class="spacer"></span>
+
     <button
-      class="guide-toggle"
+      class="hbtn"
       class:active={editor.showGuides}
       onclick={() => editor.toggleGuides()}
-      title="Mostra/nascondi bordi celle"
+      title="Toggle design guides"
     >
-      ⊞ Guide
+      ⊞ Guides
     </button>
   </header>
+
+  <Toolbar />
+
   <DesignCanvas />
 </div>
 
@@ -37,14 +68,14 @@
     overflow: hidden;
   }
 
-  .toolbar {
+  .header {
     height: 36px;
     background: #1e293b;
     color: white;
     display: flex;
     align-items: center;
-    padding: 0 16px;
-    gap: 24px;
+    padding: 0 12px;
+    gap: 6px;
     flex-shrink: 0;
   }
 
@@ -53,29 +84,43 @@
     font-size: 14px;
     letter-spacing: 0.05em;
     color: #e2e8f0;
+    margin-right: 4px;
   }
 
-  .cell-info {
-    font-size: 11px;
-    color: #94a3b8;
-    font-family: monospace;
+  .sep {
+    width: 1px;
+    height: 20px;
+    background: #334155;
   }
 
   .spacer {
     flex: 1;
   }
 
-  .guide-toggle {
+  .cell-info {
+    font-size: 11px;
+    color: #94a3b8;
+    font-family: monospace;
+    margin-right: 8px;
+  }
+
+  .hbtn {
     padding: 3px 10px;
     font-size: 11px;
     background: transparent;
     border: 1px solid #475569;
     border-radius: 3px;
-    color: #94a3b8;
+    color: #cbd5e1;
     cursor: pointer;
   }
 
-  .guide-toggle.active {
+  .hbtn:hover {
+    background: #334155;
+    border-color: #64748b;
+    color: #e2e8f0;
+  }
+
+  .hbtn.active {
     background: #334155;
     border-color: #64748b;
     color: #e2e8f0;

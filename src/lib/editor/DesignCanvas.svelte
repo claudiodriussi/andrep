@@ -6,8 +6,8 @@
   let showRowInput = $state(false);
   let inputEl = $state<HTMLInputElement | null>(null);
 
-  // Larghezza colonna band: si adatta al nome più lungo.
-  // 7px/char stimato + 38px per i 3 bottoni (11px×3 + padding + gap)
+  // Band column width: adapts to the longest band name.
+  // Estimated 7px/char + 38px for the 3 control buttons (11px × 3 + padding + gap)
   const BTN_AREA = 38;
   const CHAR_W = 7;
   const bandColW = $derived(
@@ -44,17 +44,16 @@
   onclick={() => editor.clearSelection()}
   role="presentation"
 >
-  <!-- Header: colonna band + ruler placeholder -->
+  <!-- Header row: band column label + ruler placeholder -->
   <div class="header-row">
     <div class="band-col-header">Band</div>
     <div class="ruler-placeholder">
-      <!-- righello in fase 2 -->
+      <!-- horizontal ruler — phase 2 -->
     </div>
   </div>
 
-  <!-- Righe flat -->
+  <!-- Flat row list -->
   {#each editor.template.rows as row, i (row.id)}
-    <!-- stopPropagation: il click sulle righe non deseleziona -->
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <div role="presentation" onclick={(e) => e.stopPropagation()}>
       <RowBlock
@@ -65,14 +64,14 @@
     </div>
   {/each}
 
-  <!-- Aggiungi riga -->
+  <!-- Add row -->
   <div class="add-row-area">
     {#if showRowInput}
       <input
         bind:this={inputEl}
         bind:value={newRowName}
         class="row-input"
-        placeholder="Nome riga (es. Header, Band, Footer)..."
+        placeholder="Row name (e.g. Header, Band, Footer)..."
         onclick={(e) => e.stopPropagation()}
         onkeydown={(e) => {
           if (e.key === 'Enter') confirmAddRow();
@@ -91,7 +90,7 @@
         }}>×</button
       >
     {:else}
-      <button class="add-row-btn" onclick={startAddRow}>+ Riga</button>
+      <button class="add-row-btn" onclick={startAddRow}>+ Row</button>
     {/if}
   </div>
 </div>

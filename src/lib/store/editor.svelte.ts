@@ -1,10 +1,12 @@
-import type { Cell, CellStyle, Row, Template } from '$lib/types';
+import type { BorderSide, Cell, CellStyle, Row, Template } from '$lib/types';
+
+const STORAGE_KEY = 'andrep-draft';
 
 let _uid = 1;
 const uid = () => `r${_uid++}`;
 
-function borderSide(w = 1) {
-  return { width: w, style: 'solid' as const, color: '#cccccc' };
+function borderSide(): BorderSide {
+  return { width: 0, style: 'none', color: '#000000' };
 }
 
 function defaultStyle(): CellStyle {
@@ -48,9 +50,10 @@ function makeRow(name: string): Row {
   return { id: uid(), name, cells: [] };
 }
 
-class EditorState {
-  template = $state<Template>({
-    name: 'Nuovo template',
+function emptyTemplate(): Template {
+  return {
+    _type: 'andrep-template',
+    name: 'New template',
     version: '1.0',
     page: {
       width: 794,
@@ -62,26 +65,42 @@ class EditorState {
       orientation: 'portrait',
     },
     rows: [],
-  });
+  };
+}
+
+function loadDraft(): Template {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return emptyTemplate();
+    const data = JSON.parse(raw);
+    if (data?._type !== 'andrep-template') return emptyTemplate();
+    return data as Template;
+  } catch {
+    return emptyTemplate();
+  }
+}
+
+class EditorState {
+  template = $state<Template>(loadDraft());
 
   selectedCellIds = $state<Set<string>>(new Set());
-  // Ultima cella cliccata — ha il bordo di focus visivo
+  // Last clicked cell — receives the focus border highlight
   activeCellId = $state<string | null>(null);
-  // Toggle guide di design (bordi celle visibili nell'editor)
+  // Toggle design guides (dashed cell outlines visible only in the editor)
   showGuides = $state(true);
+
+  // All selected cells as an array (consumed by the toolbar)
+  selectedCells = $derived(
+    this.template.rows.flatMap((r) => r.cells).filter((c) => this.selectedCellIds.has(c.id)),
+  );
 
   toggleGuides() {
     this.showGuides = !this.showGuides;
   }
 
-  // Tutte le celle selezionate come array (per toolbar)
-  selectedCells = $derived(
-    this.template.rows.flatMap((r) => r.cells).filter((c) => this.selectedCellIds.has(c.id)),
-  );
-
-  // --- selezione ---
-  // Nota: riassegnare sempre selectedCellIds (new Set) invece di mutare in-place,
-  // perché Svelte 5 non traccia le mutazioni di Set cross-componente in modo affidabile.
+  // --- selection ---
+  // Always reassign selectedCellIds (new Set) instead of mutating in-place:
+  // Svelte 5 does not reliably track in-place Set mutations across components.
 
   selectOne(id: string) {
     this.selectedCellIds = new Set([id]);
@@ -119,7 +138,7 @@ class EditorState {
     this.activeCellId = null;
   }
 
-  // --- righe ---
+  // --- rows ---
 
   addRow(name: string) {
     this.template.rows.push(makeRow(name));
@@ -149,7 +168,7 @@ class EditorState {
     this.template.rows.splice(idx + 1, 0, row);
   }
 
-  // --- celle ---
+  // --- cells ---
 
   addCell(rowId: string) {
     const row = this.template.rows.find((r) => r.id === rowId);
@@ -191,6 +210,74 @@ class EditorState {
 
   findRowOfCell(cellId: string): Row | null {
     return this.template.rows.find((r) => r.cells.some((c) => c.id === cellId)) ?? null;
+  }
+
+  // --- style ---
+
+  applyStyle(patch: Partial<CellStyle>) {
+    for (const cell of this.selectedCells) {
+      Object.assign(cell.style, patch);
+    }
+  }
+
+  applyBorderSides(sides: ('top' | 'bottom' | 'left' | 'right')[], patch: Partial<BorderSide>) {
+    for (const cell of this.selectedCells) {
+      for (const side of sides) {
+        Object.assign(cell.style.borders[side], patch);
+      }
+    }
+  }
+
+  // --- draft autosave ---
+
+  saveDraft() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.template));
+    } catch {
+      // localStorage may be unavailable (private browsing, storage quota, etc.)
+    }
+  }
+
+  clearDraft() {
+    localStorage.removeItem(STORAGE_KEY);
+  }
+
+  // --- file ---
+
+  saveJson() {
+    this.clearDraft();
+    const json = JSON.stringify(this.template, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${this.template.name.replace(/\s+/g, '_')}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  loadJson() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        if (data?._type !== 'andrep-template') {
+          alert('Invalid file: not an AndRep template.');
+          return;
+        }
+        this.template = data as Template;
+        this.clearSelection();
+        this.clearDraft();
+      } catch {
+        alert('Invalid JSON file.');
+      }
+    };
+    input.click();
   }
 }
 
