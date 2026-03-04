@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Row } from '$lib/types';
   import { editor } from '$lib/store/editor.svelte';
+  import { _ } from '$lib/i18n/index.svelte';
   import CellBlock from './CellBlock.svelte';
 
   let { row, isFirst, isLast }: { row: Row; isFirst: boolean; isLast: boolean } = $props();
@@ -50,7 +51,7 @@
         tabindex="0"
         onclick={(e) => { e.stopPropagation(); editor.selectRow(row.id); }}
         ondblclick={startEdit}
-        title="Click to select row · Double-click to rename"
+        title={_('Click to select · Double-click to rename')}
       >{row.name}</span>
     {/if}
     <div class="row-controls">
@@ -58,18 +59,18 @@
         class="ctrl-btn"
         disabled={isFirst}
         onclick={() => editor.moveRowUp(row.id)}
-        title="Move up (Alt+↑)"
+        title={_('Move up (Alt+↑)')}
       >▲</button>
       <button
         class="ctrl-btn"
         disabled={isLast}
         onclick={() => editor.moveRowDown(row.id)}
-        title="Move down (Alt+↓)"
+        title={_('Move down (Alt+↓)')}
       >▼</button>
       <button
         class="ctrl-btn del"
         onclick={() => editor.deleteRow(row.id)}
-        title="Delete row (Alt+Del)"
+        title={_('Delete row (Alt+Del)')}
       >×</button>
     </div>
   </div>
@@ -82,7 +83,7 @@
       class="add-cell-btn"
       style="height: {rowHeight}px"
       onclick={() => editor.addCell(row.id)}
-      title="Add cell (Ins)"
+      title={_('Add cell (Ins)')}
     >+</button>
   </div>
 </div>

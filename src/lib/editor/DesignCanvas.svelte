@@ -1,5 +1,6 @@
 <script lang="ts">
   import { editor } from '$lib/store/editor.svelte';
+  import { _ } from '$lib/i18n/index.svelte';
   import RowBlock from './RowBlock.svelte';
 
   let newRowName = $state('');
@@ -46,7 +47,7 @@
 >
   <!-- Header row: band column label + ruler placeholder -->
   <div class="header-row">
-    <div class="band-col-header">Band</div>
+    <div class="band-col-header">{_('Band')}</div>
     <div class="ruler-placeholder">
       <!-- horizontal ruler — phase 2 -->
     </div>
@@ -71,7 +72,7 @@
         bind:this={inputEl}
         bind:value={newRowName}
         class="row-input"
-        placeholder="Row name (e.g. Header, Band, Footer)..."
+        placeholder={_('Row name (e.g. Header, Band, Footer)...')}
         onclick={(e) => e.stopPropagation()}
         onkeydown={(e) => {
           if (e.key === 'Enter') confirmAddRow();
@@ -90,7 +91,7 @@
         }}>×</button
       >
     {:else}
-      <button class="add-row-btn" onclick={startAddRow}>+ Row</button>
+      <button class="add-row-btn" onclick={startAddRow}>{_('+ Row')}</button>
     {/if}
   </div>
 </div>

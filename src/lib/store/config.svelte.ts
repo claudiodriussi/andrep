@@ -1,4 +1,5 @@
 import type { EditorConfig } from '$lib/types';
+import { _ } from '$lib/i18n/index.svelte';
 
 const STORAGE_KEY = 'andrep-config';
 
@@ -70,14 +71,14 @@ class ConfigState {
         const text = await file.text();
         const data = JSON.parse(text);
         if (data?._type !== 'andrep-config') {
-          alert('Invalid file: not an AndRep config.');
+          alert(_('Invalid file: not an AndRep config.'));
           return;
         }
         // Merge with defaults to handle missing fields from older config files
         this.config = { ...DEFAULT_CONFIG, ...data };
         this.save();
       } catch {
-        alert('Invalid JSON file.');
+        alert(_('Invalid JSON file.'));
       }
     };
     input.click();

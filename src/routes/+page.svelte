@@ -4,6 +4,7 @@
   import Toolbar from '$lib/editor/Toolbar.svelte';
   import { editor } from '$lib/store/editor.svelte';
   import { config } from '$lib/store/config.svelte';
+  import { _ } from '$lib/i18n/index.svelte';
 
   const selectedCell = $derived(
     editor.activeCellId ? editor.findCell(editor.activeCellId) : null,
@@ -41,11 +42,11 @@
 
     <div class="sep"></div>
 
-    <button class="hbtn" onclick={() => editor.loadJson()} title="Open template (Ctrl+O)">
-      ⬆ Open
+    <button class="hbtn" onclick={() => editor.loadJson()} title={_('Open template (Ctrl+O)')}>
+      ⬆ {_('Open')}
     </button>
-    <button class="hbtn" onclick={() => editor.saveJson()} title="Save template (Ctrl+S)">
-      ⬇ Save
+    <button class="hbtn" onclick={() => editor.saveJson()} title={_('Save template (Ctrl+S)')}>
+      ⬇ {_('Save')}
     </button>
 
     <div class="spacer"></div>
@@ -60,9 +61,9 @@
       class="hbtn"
       class:active={editor.showGuides}
       onclick={() => editor.toggleGuides()}
-      title="Toggle design guides"
+      title={_('Toggle design guides')}
     >
-      ⊞ Guides
+      ⊞ {_('Guides')}
     </button>
 
     <div class="sep"></div>
@@ -73,7 +74,7 @@
         class="hbtn"
         class:active={showConfigMenu}
         onclick={() => (showConfigMenu = !showConfigMenu)}
-        title="Configuration"
+        title={_('Configuration')}
       >
         ⚙
       </button>
@@ -88,14 +89,14 @@
         ></div>
         <div class="config-menu">
           <button class="menu-item" onclick={() => { config.loadJson(); showConfigMenu = false; }}>
-            ⬆ Load config
+            ⬆ {_('Load config')}
           </button>
           <button class="menu-item" onclick={() => { config.saveJson(); showConfigMenu = false; }}>
-            ⬇ Save config
+            ⬇ {_('Save config')}
           </button>
           <div class="menu-sep"></div>
           <button class="menu-item danger" onclick={() => { config.reset(); showConfigMenu = false; }}>
-            ↺ Reset to defaults
+            ↺ {_('Reset to defaults')}
           </button>
         </div>
       {/if}

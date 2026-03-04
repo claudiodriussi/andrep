@@ -1,4 +1,5 @@
 import type { BorderSide, Cell, CellStyle, Row, Template } from '$lib/types';
+import { _ } from '$lib/i18n/index.svelte';
 
 const STORAGE_KEY = 'andrep-draft';
 
@@ -267,14 +268,14 @@ class EditorState {
         const text = await file.text();
         const data = JSON.parse(text);
         if (data?._type !== 'andrep-template') {
-          alert('Invalid file: not an AndRep template.');
+          alert(_('Invalid file: not an AndRep template.'));
           return;
         }
         this.template = data as Template;
         this.clearSelection();
         this.clearDraft();
       } catch {
-        alert('Invalid JSON file.');
+        alert(_('Invalid JSON file.'));
       }
     };
     input.click();

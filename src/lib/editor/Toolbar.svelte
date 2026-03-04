@@ -1,6 +1,7 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { editor } from '$lib/store/editor.svelte';
+  import { _ } from '$lib/i18n/index.svelte';
   import type { BorderSide } from '$lib/types';
 
   type BorderSideName = 'top' | 'bottom' | 'left' | 'right';
@@ -105,21 +106,21 @@
     editor.applyBorderSides(ALL_SIDES, { width: 0, style: 'none' });
   }
 
-  const SIDES: { key: BorderSideName; label: string; title: string }[] = [
-    { key: 'top', label: 'T', title: 'Top border — click to apply pen, click again to remove (Ctrl+3)' },
-    { key: 'bottom', label: 'B', title: 'Bottom border — click to apply pen, click again to remove (Ctrl+4)' },
-    { key: 'left', label: 'L', title: 'Left border — click to apply pen, click again to remove (Ctrl+1)' },
-    { key: 'right', label: 'R', title: 'Right border — click to apply pen, click again to remove (Ctrl+2)' },
+  const SIDES: { key: BorderSideName; label: string; titleKey: string }[] = [
+    { key: 'top',    label: 'T', titleKey: 'Top border — click to apply pen, click again to remove (Ctrl+3)' },
+    { key: 'bottom', label: 'B', titleKey: 'Bottom border — click to apply pen, click again to remove (Ctrl+4)' },
+    { key: 'left',   label: 'L', titleKey: 'Left border — click to apply pen, click again to remove (Ctrl+1)' },
+    { key: 'right',  label: 'R', titleKey: 'Right border — click to apply pen, click again to remove (Ctrl+2)' },
   ];
 </script>
 
 <div class="toolbar" class:disabled={!hasSelection}>
   <!-- COLORS -->
   <div class="group">
-    <span class="group-label">COLORS</span>
+    <span class="group-label">{_('Colors')}</span>
 
-    <label class="color-item" title={textColorMixed ? 'Text color (mixed values)' : 'Text color'}>
-      <span class="color-label" class:mixed={textColorMixed}>Text</span>
+    <label class="color-item" title={textColorMixed ? _('Text color (mixed)') : _('Font color')}>
+      <span class="color-label" class:mixed={textColorMixed}>{_('Text')}</span>
       <div class="color-swatch-wrap">
         <input
           type="color"
@@ -137,9 +138,9 @@
 
     <label
       class="color-item"
-      title={bgColorMixed ? 'Background color (mixed values)' : 'Background color'}
+      title={bgColorMixed ? _('Background color (mixed)') : _('Background color')}
     >
-      <span class="color-label" class:mixed={bgColorMixed}>BG</span>
+      <span class="color-label" class:mixed={bgColorMixed}>{_('BG')}</span>
       <div class="color-swatch-wrap">
         <input
           type="color"
@@ -156,14 +157,14 @@
       </div>
     </label>
 
-    <label class="transp-label" title="Transparent background">
+    <label class="transp-label" title={_('Transparent background')}>
       <input
         type="checkbox"
         checked={isBgTransparent}
         onchange={onTransparentToggle}
         disabled={!hasSelection}
       />
-      <span>transp.</span>
+      <span>{_('transp.')}</span>
     </label>
   </div>
 
@@ -171,7 +172,7 @@
 
   <!-- BORDERS -->
   <div class="group">
-    <span class="group-label">BORDERS</span>
+    <span class="group-label">{_('Borders')}</span>
 
     <!-- Pen: width -->
     <input
@@ -180,7 +181,7 @@
       value={borderWidth}
       min="1"
       max="10"
-      title="Pen width (px)"
+      title={_('Pen width (px)')}
       disabled={!hasSelection}
       onchange={(e) => {
         borderWidth = Number((e.target as HTMLInputElement).value);
@@ -193,19 +194,19 @@
       class="style-select"
       value={borderStyle}
       disabled={!hasSelection}
-      title="Pen style"
+      title={_('Pen style')}
       onchange={(e) => {
         borderStyle = (e.target as HTMLSelectElement).value as BorderSide['style'];
       }}
     >
-      <option value="solid">─── solid</option>
-      <option value="dashed">- - dashed</option>
-      <option value="dotted">··· dotted</option>
-      <option value="double">═══ double</option>
+      <option value="solid">─── {_('solid')}</option>
+      <option value="dashed">- - {_('dashed')}</option>
+      <option value="dotted">··· {_('dotted')}</option>
+      <option value="double">═══ {_('double')}</option>
     </select>
 
     <!-- Pen: color -->
-    <label class="color-item" title="Pen color">
+    <label class="color-item" title={_('Pen color')}>
       <div class="color-swatch-wrap">
         <input
           type="color"
@@ -226,7 +227,7 @@
           class="side-btn"
           class:active={sideHasBorder(s.key)}
           onclick={() => clickSide(s.key)}
-          title={s.title}
+          title={_(s.titleKey)}
           disabled={!hasSelection}
         >
           {s.label}
@@ -239,7 +240,7 @@
       class="remove-btn"
       onclick={removeAllBorders}
       disabled={!hasSelection}
-      title="Remove all borders (Ctrl+0)"
+      title={_('Remove all borders (Ctrl+0)')}
     >
       ✕ all
     </button>
