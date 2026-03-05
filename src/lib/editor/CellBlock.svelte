@@ -8,6 +8,50 @@
   const active = $derived(editor.activeCellId === cell.id);
   const s = $derived(cell.style);
   const b = $derived(s.borders);
+
+  let draggingW = false;
+  let dragStartX = 0;
+  let dragStartWidth = 0;
+
+  function onRightHandlePointerDown(e: PointerEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    draggingW = true;
+    dragStartX = e.clientX;
+    dragStartWidth = cell.width;
+    (e.target as Element).setPointerCapture(e.pointerId);
+  }
+
+  function onRightHandlePointerMove(e: PointerEvent) {
+    if (!draggingW) return;
+    editor.resizeCell(cell.id, Math.max(20, dragStartWidth + e.clientX - dragStartX));
+  }
+
+  function onRightHandlePointerUp() {
+    draggingW = false;
+  }
+
+  let draggingH = false;
+  let dragStartY = 0;
+  let dragStartHeight = 0;
+
+  function onBottomHandlePointerDown(e: PointerEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    draggingH = true;
+    dragStartY = e.clientY;
+    dragStartHeight = cell.height;
+    (e.target as Element).setPointerCapture(e.pointerId);
+  }
+
+  function onBottomHandlePointerMove(e: PointerEvent) {
+    if (!draggingH) return;
+    editor.resizeCellHeight(cell.id, Math.max(10, dragStartHeight + e.clientY - dragStartY));
+  }
+
+  function onBottomHandlePointerUp() {
+    draggingH = false;
+  }
 </script>
 
 <div
@@ -47,6 +91,20 @@
   }}
 >
   {cell.content || '\u00a0'}
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div
+    class="resize-handle right"
+    onpointerdown={onRightHandlePointerDown}
+    onpointermove={onRightHandlePointerMove}
+    onpointerup={onRightHandlePointerUp}
+  ></div>
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div
+    class="resize-handle bottom"
+    onpointerdown={onBottomHandlePointerDown}
+    onpointermove={onBottomHandlePointerMove}
+    onpointerup={onBottomHandlePointerUp}
+  ></div>
 </div>
 
 <style>
@@ -78,7 +136,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    border: 1px dashed rgba(148, 163, 184, 0.7);
+    border: 1px solid rgba(148, 163, 184, 0.3);
     pointer-events: none;
     z-index: 1;
   }
@@ -87,5 +145,26 @@
   .active {
     box-shadow: inset 0 0 0 2px #1e3a5f;
     z-index: 1;
+  }
+
+  .resize-handle {
+    position: absolute;
+    z-index: 3;
+  }
+
+  .resize-handle.right {
+    top: 0;
+    right: 0;
+    width: 5px;
+    height: 100%;
+    cursor: col-resize;
+  }
+
+  .resize-handle.bottom {
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 5px;
+    cursor: row-resize;
   }
 </style>

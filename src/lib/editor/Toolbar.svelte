@@ -1,11 +1,21 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { editor } from '$lib/store/editor.svelte';
+  import { config } from '$lib/store/config.svelte';
   import { _ } from '$lib/i18n/index.svelte';
+  import ColorPicker from './ColorPicker.svelte';
   import type { BorderSide } from '$lib/types';
+
+  import type { ToolbarGroupId } from '$lib/types';
 
   type BorderSideName = 'top' | 'bottom' | 'left' | 'right';
   const ALL_SIDES: BorderSideName[] = ['top', 'bottom', 'left', 'right'];
+
+  // Groups implemented so far — unimplemented ones are silently skipped
+  const IMPLEMENTED = new Set<ToolbarGroupId>(['colors', 'borders']);
+  const activeGroups = $derived(
+    config.config.toolbarGroups.filter((g) => IMPLEMENTED.has(g)),
+  );
 
   // --- current selection ---
   const cells = $derived(editor.selectedCells);
@@ -31,14 +41,6 @@
     cells.length > 1 && uniformVal((c) => c.style.backgroundColor) === null,
   );
   const bgColor = $derived(isBgTransparent ? '#ffffff' : bgRaw === '#808080' ? '#808080' : bgRaw);
-
-  function onTextColorChange(e: Event) {
-    editor.applyStyle({ color: (e.target as HTMLInputElement).value });
-  }
-
-  function onBgColorChange(e: Event) {
-    editor.applyStyle({ backgroundColor: (e.target as HTMLInputElement).value });
-  }
 
   function onTransparentToggle(e: Event) {
     const checked = (e.target as HTMLInputElement).checked;
@@ -115,146 +117,114 @@
 </script>
 
 <div class="toolbar" class:disabled={!hasSelection}>
-  <!-- COLORS -->
-  <div class="group">
-    <span class="group-label">{_('Colors')}</span>
+  {#each activeGroups as groupId, i (groupId)}
+    {#if i > 0}<div class="sep"></div>{/if}
 
-    <label class="color-item" title={textColorMixed ? _('Text color (mixed)') : _('Font color')}>
-      <span class="color-label" class:mixed={textColorMixed}>{_('Text')}</span>
-      <div class="color-swatch-wrap">
-        <input
-          type="color"
-          value={textColor}
-          onchange={onTextColorChange}
-          disabled={!hasSelection}
-        />
+    {#if groupId === 'colors'}
+      <!-- COLORS -->
+      <div class="group">
+        <span class="group-label">{_('Colors')}</span>
+        <div class="color-item" title={textColorMixed ? _('Text color (mixed)') : _('Font color')}>
+          <span class="color-label" class:mixed={textColorMixed}>{_('Text')}</span>
+          <ColorPicker
+            value={textColor}
+            palette={config.config.fgPalette}
+            mixed={textColorMixed}
+            disabled={!hasSelection}
+            onpick={(color) => editor.applyStyle({ color })}
+          />
+        </div>
         <div
-          class="color-preview"
-          class:mixed-preview={textColorMixed}
-          style="background:{textColor}"
-        ></div>
-      </div>
-    </label>
-
-    <label
-      class="color-item"
-      title={bgColorMixed ? _('Background color (mixed)') : _('Background color')}
-    >
-      <span class="color-label" class:mixed={bgColorMixed}>{_('BG')}</span>
-      <div class="color-swatch-wrap">
-        <input
-          type="color"
-          value={bgColor}
-          onchange={onBgColorChange}
-          disabled={!hasSelection || isBgTransparent}
-        />
-        <div
-          class="color-preview"
-          class:transparent-preview={isBgTransparent}
-          class:mixed-preview={bgColorMixed && !isBgTransparent}
-          style="background:{isBgTransparent ? 'transparent' : bgColor}"
-        ></div>
-      </div>
-    </label>
-
-    <label class="transp-label" title={_('Transparent background')}>
-      <input
-        type="checkbox"
-        checked={isBgTransparent}
-        onchange={onTransparentToggle}
-        disabled={!hasSelection}
-      />
-      <span>{_('transp.')}</span>
-    </label>
-  </div>
-
-  <div class="sep"></div>
-
-  <!-- BORDERS -->
-  <div class="group">
-    <span class="group-label">{_('Borders')}</span>
-
-    <!-- Pen: width -->
-    <input
-      type="number"
-      class="width-input"
-      value={borderWidth}
-      min="1"
-      max="10"
-      title={_('Pen width (px)')}
-      disabled={!hasSelection}
-      onchange={(e) => {
-        borderWidth = Number((e.target as HTMLInputElement).value);
-      }}
-    />
-    <span class="unit">px</span>
-
-    <!-- Pen: style -->
-    <select
-      class="style-select"
-      value={borderStyle}
-      disabled={!hasSelection}
-      title={_('Pen style')}
-      onchange={(e) => {
-        borderStyle = (e.target as HTMLSelectElement).value as BorderSide['style'];
-      }}
-    >
-      <option value="solid">─── {_('solid')}</option>
-      <option value="dashed">- - {_('dashed')}</option>
-      <option value="dotted">··· {_('dotted')}</option>
-      <option value="double">═══ {_('double')}</option>
-    </select>
-
-    <!-- Pen: color -->
-    <label class="color-item" title={_('Pen color')}>
-      <div class="color-swatch-wrap">
-        <input
-          type="color"
-          value={borderColor}
-          disabled={!hasSelection}
-          onchange={(e) => {
-            borderColor = (e.target as HTMLInputElement).value;
-          }}
-        />
-        <div class="color-preview" style="background:{borderColor}"></div>
-      </div>
-    </label>
-
-    <!-- Side buttons: click to apply pen, click again to remove -->
-    <div class="sides">
-      {#each SIDES as s}
-        <button
-          class="side-btn"
-          class:active={sideHasBorder(s.key)}
-          onclick={() => clickSide(s.key)}
-          title={_(s.titleKey)}
-          disabled={!hasSelection}
+          class="color-item"
+          title={bgColorMixed ? _('Background color (mixed)') : _('Background color')}
         >
-          {s.label}
-        </button>
-      {/each}
-    </div>
+          <span class="color-label" class:mixed={bgColorMixed}>{_('BG')}</span>
+          <ColorPicker
+            value={bgColor}
+            palette={config.config.bgPalette}
+            mixed={bgColorMixed && !isBgTransparent}
+            transparent={isBgTransparent}
+            disabled={!hasSelection}
+            onpick={(color) => editor.applyStyle({ backgroundColor: color })}
+          />
+        </div>
+        <label class="transp-label" title={_('Transparent background')}>
+          <input
+            type="checkbox"
+            checked={isBgTransparent}
+            onchange={onTransparentToggle}
+            disabled={!hasSelection}
+          />
+          <span>{_('transp.')}</span>
+        </label>
+      </div>
 
-    <!-- Remove all borders -->
-    <button
-      class="remove-btn"
-      onclick={removeAllBorders}
-      disabled={!hasSelection}
-      title={_('Remove all borders (Ctrl+0)')}
-    >
-      ✕ all
-    </button>
-  </div>
+    {:else if groupId === 'borders'}
+      <!-- BORDERS -->
+      <div class="group">
+        <span class="group-label">{_('Borders')}</span>
+        <input
+          type="number"
+          class="width-input"
+          value={borderWidth}
+          min="1"
+          max="10"
+          title={_('Pen width (px)')}
+          disabled={!hasSelection}
+          onchange={(e) => { borderWidth = Number((e.target as HTMLInputElement).value); }}
+        />
+        <span class="unit">px</span>
+        <select
+          class="style-select"
+          value={borderStyle}
+          disabled={!hasSelection}
+          title={_('Pen style')}
+          onchange={(e) => {
+            borderStyle = (e.target as HTMLSelectElement).value as BorderSide['style'];
+          }}
+        >
+          <option value="solid">─── {_('solid')}</option>
+          <option value="dashed">- - {_('dashed')}</option>
+          <option value="dotted">··· {_('dotted')}</option>
+          <option value="double">═══ {_('double')}</option>
+        </select>
+        <ColorPicker
+          value={borderColor}
+          palette={config.config.fgPalette}
+          disabled={!hasSelection}
+          onpick={(color) => { borderColor = color; }}
+        />
+        <div class="sides">
+          {#each SIDES as s}
+            <button
+              class="side-btn"
+              class:active={sideHasBorder(s.key)}
+              onclick={() => clickSide(s.key)}
+              title={_(s.titleKey)}
+              disabled={!hasSelection}
+            >{s.label}</button>
+          {/each}
+        </div>
+        <button
+          class="remove-btn"
+          onclick={removeAllBorders}
+          disabled={!hasSelection}
+          title={_('Remove all borders (Ctrl+0)')}
+        >✕ all</button>
+      </div>
+    {/if}
+  {/each}
 </div>
 
 <style>
   .toolbar {
-    height: 32px;
+    min-height: 32px;
     background: #f1f5f9;
     border-bottom: 1px solid #cbd5e1;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    padding: 0 12px;
+    padding: 4px 12px;
     gap: 8px;
     flex-shrink: 0;
     font-size: 11px;
@@ -297,61 +267,9 @@
     color: #475569;
   }
 
-  .color-swatch-wrap {
-    position: relative;
-    width: 22px;
-    height: 22px;
-  }
-
-  .color-swatch-wrap input[type='color'] {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    cursor: pointer;
-    border: none;
-    padding: 0;
-  }
-
-  .color-swatch-wrap input[type='color']:disabled {
-    cursor: default;
-  }
-
-  .color-preview {
-    width: 22px;
-    height: 22px;
-    border: 1px solid #94a3b8;
-    border-radius: 3px;
-    pointer-events: none;
-  }
-
   .mixed {
     font-style: italic;
     color: #94a3b8;
-  }
-
-  .mixed-preview {
-    background-image: repeating-linear-gradient(
-      45deg,
-      #aaa 0px,
-      #aaa 2px,
-      #ddd 2px,
-      #ddd 5px
-    ) !important;
-  }
-
-  .transparent-preview {
-    background-image: linear-gradient(45deg, #ccc 25%, transparent 25%),
-      linear-gradient(-45deg, #ccc 25%, transparent 25%),
-      linear-gradient(45deg, transparent 75%, #ccc 75%),
-      linear-gradient(-45deg, transparent 75%, #ccc 75%);
-    background-size: 6px 6px;
-    background-position:
-      0 0,
-      0 3px,
-      3px -3px,
-      -3px 0px;
   }
 
   .transp-label {

@@ -2,6 +2,7 @@
   import { editor } from '$lib/store/editor.svelte';
   import { _ } from '$lib/i18n/index.svelte';
   import RowBlock from './RowBlock.svelte';
+  import { handleKeydown } from './keyboard';
 
   let newRowName = $state('');
   let showRowInput = $state(false);
@@ -30,14 +31,7 @@
   }
 </script>
 
-<svelte:window
-  onkeydown={(e) => {
-    if (e.key === 'a' && (e.ctrlKey || e.metaKey)) {
-      e.preventDefault();
-      editor.selectAll();
-    }
-  }}
-/>
+<svelte:window onkeydown={handleKeydown} />
 
 <div
   class="canvas"

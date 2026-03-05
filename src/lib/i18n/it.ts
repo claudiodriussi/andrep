@@ -111,6 +111,9 @@ const it: Record<string, string> = {
   'Right border — click to apply pen, click again to remove (Ctrl+2)': 'Bordo destro — click applica penna, re-click rimuove (Ctrl+2)',
   'Remove all borders (Ctrl+0)': 'Rimuovi tutti i bordi (Ctrl+0)',
 
+  // color picker
+  'Other': 'Altro',
+
   // toolbar labels
   'Colors': 'Colori',
   'Borders': 'Bordi',

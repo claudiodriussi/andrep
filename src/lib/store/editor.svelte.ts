@@ -6,6 +6,19 @@ const STORAGE_KEY = 'andrep-draft';
 let _uid = 1;
 const uid = () => `r${_uid++}`;
 
+// After loading a template from storage or file, advance _uid past
+// all existing IDs so new items don't collide with loaded ones.
+function syncUid(template: Template) {
+  for (const row of template.rows) {
+    const n = parseInt(row.id.replace(/\D/g, ''));
+    if (!isNaN(n) && n >= _uid) _uid = n + 1;
+    for (const cell of row.cells) {
+      const m = parseInt(cell.id.replace(/\D/g, ''));
+      if (!isNaN(m) && m >= _uid) _uid = m + 1;
+    }
+  }
+}
+
 function borderSide(): BorderSide {
   return { width: 0, style: 'none', color: '#000000' };
 }
@@ -75,7 +88,9 @@ function loadDraft(): Template {
     if (!raw) return emptyTemplate();
     const data = JSON.parse(raw);
     if (data?._type !== 'andrep-template') return emptyTemplate();
-    return data as Template;
+    const t = data as Template;
+    syncUid(t);
+    return t;
   } catch {
     return emptyTemplate();
   }
@@ -126,6 +141,7 @@ class EditorState {
     this.selectedCellIds = new Set(row.cells.map((c) => c.id));
     this.activeCellId = row.cells[0]?.id ?? null;
   }
+
 
   selectAll() {
     this.selectedCellIds = new Set(
@@ -193,6 +209,51 @@ class EditorState {
         if (this.activeCellId === cellId) this.activeCellId = null;
         return;
       }
+    }
+  }
+
+  deleteSelectedCells() {
+    const ids = this.selectedCellIds;
+    if (ids.size === 0) return;
+    for (const row of this.template.rows) {
+      row.cells = row.cells.filter((c) => !ids.has(c.id));
+    }
+    this.selectedCellIds = new Set();
+    this.activeCellId = null;
+  }
+
+  moveCellInRow(cellId: string, direction: 'left' | 'right') {
+    for (const row of this.template.rows) {
+      const idx = row.cells.findIndex((c) => c.id === cellId);
+      if (idx === -1) continue;
+      const swapIdx = direction === 'left' ? idx - 1 : idx + 1;
+      if (swapIdx < 0 || swapIdx >= row.cells.length) return;
+      [row.cells[idx], row.cells[swapIdx]] = [row.cells[swapIdx], row.cells[idx]];
+      let x = 0;
+      for (const cell of row.cells) { cell.x = x; x += cell.width; }
+      return;
+    }
+  }
+
+  resizeCellHeight(cellId: string, newHeight: number) {
+    const row = this.findRowOfCell(cellId);
+    if (row) {
+      for (const cell of row.cells) cell.height = newHeight;
+    }
+  }
+
+  resizeCell(cellId: string, newWidth: number) {
+    for (const row of this.template.rows) {
+      const idx = row.cells.findIndex((c) => c.id === cellId);
+      if (idx === -1) continue;
+      row.cells[idx].width = newWidth;
+      // Recalculate x of subsequent cells to keep the model consistent
+      let x = row.cells[idx].x + newWidth;
+      for (let i = idx + 1; i < row.cells.length; i++) {
+        row.cells[i].x = x;
+        x += row.cells[i].width;
+      }
+      return;
     }
   }
 
@@ -272,6 +333,7 @@ class EditorState {
           return;
         }
         this.template = data as Template;
+        syncUid(this.template);
         this.clearSelection();
         this.clearDraft();
       } catch {

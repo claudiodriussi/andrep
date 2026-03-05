@@ -183,7 +183,7 @@
     min-width: 20px;
     flex-shrink: 0;
     background: transparent;
-    border: 1px dashed #94a3b8;
+    border: 1px solid #94a3b8;
     color: #6b7280;
     font-size: 14px;
     cursor: pointer;
