@@ -22,9 +22,12 @@
     (e.target as Element).setPointerCapture(e.pointerId);
   }
 
+  function snapX(delta: number) { const s = editor.gridStepX; return s > 1 ? Math.round(delta / s) * s : delta; }
+  function snapY(delta: number) { const s = editor.gridStepY; return s > 1 ? Math.round(delta / s) * s : delta; }
+
   function onRightHandlePointerMove(e: PointerEvent) {
     if (!draggingW) return;
-    editor.resizeCell(cell.id, Math.max(20, dragStartWidth + e.clientX - dragStartX));
+    editor.resizeCell(cell.id, Math.max(20, dragStartWidth + snapX(e.clientX - dragStartX)));
   }
 
   function onRightHandlePointerUp() {
@@ -46,7 +49,7 @@
 
   function onBottomHandlePointerMove(e: PointerEvent) {
     if (!draggingH) return;
-    editor.resizeCellHeight(cell.id, Math.max(10, dragStartHeight + e.clientY - dragStartY));
+    editor.resizeCellHeight(cell.id, Math.max(10, dragStartHeight + snapY(e.clientY - dragStartY)));
   }
 
   function onBottomHandlePointerUp() {

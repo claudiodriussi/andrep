@@ -74,8 +74,6 @@ function adjacentRowCell(direction: 'up' | 'down') {
   return adjRow.cells[Math.min(colIdx, adjRow.cells.length - 1)];
 }
 
-const CELL_STEP = 1; // px per Ctrl+←/→
-const ROW_STEP = 1;   // px per Ctrl+↑/↓
 
 // --- shortcut map ---
 
@@ -125,8 +123,8 @@ const SHORTCUTS: Record<string, Handler> = {
   // Cells
   'Delete': (_) => { editor.deleteSelectedCells(); },
   'Insert': (_) => { const r = activeRow(); if (r) editor.addCell(r.id); },
-  'Ctrl+ArrowLeft':  (e) => { e.preventDefault(); const c = editor.activeCellId ? editor.findCell(editor.activeCellId) : null; if (c) editor.resizeCell(c.id, Math.max(20, c.width - CELL_STEP)); },
-  'Ctrl+ArrowRight': (e) => { e.preventDefault(); const c = editor.activeCellId ? editor.findCell(editor.activeCellId) : null; if (c) editor.resizeCell(c.id, c.width + CELL_STEP); },
+  'Ctrl+ArrowLeft':  (e) => { e.preventDefault(); const c = editor.activeCellId ? editor.findCell(editor.activeCellId) : null; if (c) editor.resizeCell(c.id, Math.max(20, c.width - editor.gridStepX)); },
+  'Ctrl+ArrowRight': (e) => { e.preventDefault(); const c = editor.activeCellId ? editor.findCell(editor.activeCellId) : null; if (c) editor.resizeCell(c.id, c.width + editor.gridStepX); },
 
   // Row navigation
   'ArrowUp':        (e) => { const c = adjacentRowCell('up');   if (c) { e.preventDefault(); editor.selectOne(c.id); } },
@@ -142,8 +140,8 @@ const SHORTCUTS: Record<string, Handler> = {
   'Alt+ArrowUp':    (e) => { e.preventDefault(); const r = activeRow(); if (r) editor.moveRowUp(r.id); },
   'Alt+ArrowDown':  (e) => { e.preventDefault(); const r = activeRow(); if (r) editor.moveRowDown(r.id); },
   'Alt+Delete':     (_) => { const r = activeRow(); if (r) editor.deleteRow(r.id); },
-  'Ctrl+ArrowUp':   (e) => { e.preventDefault(); const r = activeRow(); if (r) for (const c of r.cells) c.height = Math.max(10, c.height - ROW_STEP); },
-  'Ctrl+ArrowDown': (e) => { e.preventDefault(); const r = activeRow(); if (r) for (const c of r.cells) c.height += ROW_STEP; },
+  'Ctrl+ArrowUp':   (e) => { e.preventDefault(); const r = activeRow(); if (r) for (const c of r.cells) c.height = Math.max(10, c.height - editor.gridStepY); },
+  'Ctrl+ArrowDown': (e) => { e.preventDefault(); const r = activeRow(); if (r) for (const c of r.cells) c.height += editor.gridStepY; },
 };
 
 export function handleKeydown(e: KeyboardEvent): void {

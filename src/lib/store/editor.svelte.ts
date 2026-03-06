@@ -104,6 +104,8 @@ class EditorState {
   activeCellId = $state<string | null>(null);
   // Toggle design guides (dashed cell outlines visible only in the editor)
   showGuides = $state(true);
+  gridStepX = $state(4); // px — horizontal resize step (keyboard + drag)
+  gridStepY = $state(4); // px — vertical resize step (keyboard + drag)
 
   // All selected cells as an array (consumed by the toolbar)
   selectedCells = $derived(
@@ -191,9 +193,21 @@ class EditorState {
     const row = this.template.rows.find((r) => r.id === rowId);
     if (!row) return;
     const cell = makeCell();
-    const last = row.cells.at(-1);
-    cell.x = last ? last.x + last.width : 0;
-    row.cells.push(cell);
+    // Insert after active cell if it belongs to this row, otherwise append
+    const activeIdx = this.activeCellId
+      ? row.cells.findIndex((c) => c.id === this.activeCellId)
+      : -1;
+    if (activeIdx !== -1) {
+      const ref = row.cells[activeIdx];
+      cell.height = ref.height;
+      cell.x = ref.x + ref.width;
+      row.cells.splice(activeIdx + 1, 0, cell);
+    } else {
+      const last = row.cells.at(-1);
+      cell.height = last ? last.height : cell.height;
+      cell.x = last ? last.x + last.width : 0;
+      row.cells.push(cell);
+    }
   }
 
   deleteCell(cellId: string) {
@@ -206,7 +220,11 @@ class EditorState {
           s.delete(cellId);
           this.selectedCellIds = s;
         }
-        if (this.activeCellId === cellId) this.activeCellId = null;
+        if (this.activeCellId === cellId) {
+          // activate next cell, or previous if it was the last, or null
+          const next = row.cells[idx] ?? row.cells[idx - 1] ?? null;
+          if (next) this.selectOne(next.id); else this.activeCellId = null;
+        }
         return;
       }
     }
@@ -215,11 +233,21 @@ class EditorState {
   deleteSelectedCells() {
     const ids = this.selectedCellIds;
     if (ids.size === 0) return;
+    let nextActiveId: string | null = null;
     for (const row of this.template.rows) {
+      if (!nextActiveId && this.activeCellId && ids.has(this.activeCellId)) {
+        const idx = row.cells.findIndex((c) => c.id === this.activeCellId);
+        if (idx !== -1) {
+          // find first surviving cell after, then before
+          const after = row.cells.slice(idx + 1).find((c) => !ids.has(c.id));
+          const before = row.cells.slice(0, idx).reverse().find((c) => !ids.has(c.id));
+          nextActiveId = (after ?? before)?.id ?? null;
+        }
+      }
       row.cells = row.cells.filter((c) => !ids.has(c.id));
     }
     this.selectedCellIds = new Set();
-    this.activeCellId = null;
+    if (nextActiveId) this.selectOne(nextActiveId); else this.activeCellId = null;
   }
 
   moveCellInRow(cellId: string, direction: 'left' | 'right') {
