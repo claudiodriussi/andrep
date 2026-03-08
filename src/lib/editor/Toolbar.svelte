@@ -10,14 +10,14 @@
     Bold, Italic, Underline,
     AlignLeft, AlignCenter, AlignRight, AlignJustify,
     AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd,
-    SquareDashed,
+    SquareDashed, SquarePlus, Trash2, ListPlus, ListX, ArrowUp, ArrowDown,
   } from 'lucide-svelte';
 
   type BorderSideName = 'top' | 'bottom' | 'left' | 'right';
   const ALL_SIDES: BorderSideName[] = ['top', 'bottom', 'left', 'right'];
 
   // Groups implemented so far — unimplemented ones are silently skipped
-  const IMPLEMENTED = new Set<ToolbarGroupId>(['file', 'colors', 'borders', 'font', 'align']);
+  const IMPLEMENTED = new Set<ToolbarGroupId>(['file', 'colors', 'borders', 'font', 'align', 'structure']);
   const activeGroups = $derived(
     config.config.toolbarGroups.filter((g) => IMPLEMENTED.has(g)),
   );
@@ -31,6 +31,32 @@
     if (cells.length === 0) return null;
     const first = getter(cells[0]);
     return cells.every((c) => getter(c) === first) ? first : null;
+  }
+
+  // --- structure ---
+  const activeRow = $derived(
+    editor.activeCellId ? editor.findRowOfCell(editor.activeCellId) : null,
+  );
+
+  function addCell() {
+    if (activeRow) editor.addCell(activeRow.id);
+  }
+
+  function addRow() {
+    const name = prompt(_('Band name:'), 'band');
+    if (name?.trim()) editor.addRow(name.trim());
+  }
+
+  function deleteRow() {
+    if (activeRow) editor.deleteRow(activeRow.id);
+  }
+
+  function moveRowUp() {
+    if (activeRow) editor.moveRowUp(activeRow.id);
+  }
+
+  function moveRowDown() {
+    if (activeRow) editor.moveRowDown(activeRow.id);
   }
 
   // --- align ---
@@ -250,6 +276,31 @@
             title={_('Underline (Ctrl+U)')}
           ><Underline size={13} /></button>
         </div>
+      </div>
+
+    {:else if groupId === 'structure'}
+      <!-- STRUCTURE -->
+      <div class="group">
+        <span class="group-label">{_('Structure')}</span>
+        <button class="tb-btn" onclick={addCell} disabled={!activeRow}
+          title={_('Add cell (Insert)')}
+        ><SquarePlus size={13} /></button>
+        <button class="tb-btn remove-btn" onclick={() => editor.deleteSelectedCells()} disabled={!hasSelection}
+          title={_('Delete selected cells (Delete)')}
+        ><Trash2 size={13} /></button>
+        <div class="sep-inner"></div>
+        <button class="tb-btn" onclick={addRow}
+          title={_('Add row')}
+        ><ListPlus size={13} /></button>
+        <button class="tb-btn remove-btn" onclick={deleteRow} disabled={!activeRow}
+          title={_('Delete row (Alt+Delete)')}
+        ><ListX size={13} /></button>
+        <button class="tb-btn" onclick={moveRowUp} disabled={!activeRow}
+          title={_('Move row up (Alt+↑)')}
+        ><ArrowUp size={13} /></button>
+        <button class="tb-btn" onclick={moveRowDown} disabled={!activeRow}
+          title={_('Move row down (Alt+↓)')}
+        ><ArrowDown size={13} /></button>
       </div>
 
     {:else if groupId === 'colors'}
