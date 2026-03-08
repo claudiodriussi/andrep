@@ -56,6 +56,7 @@ function makeCell(): Cell {
     width: 100,
     height: 24,
     wrap: false,
+    autoStretch: false,
     style: defaultStyle(),
   };
 }
@@ -320,6 +321,7 @@ class EditorState {
     height: number;
     x: number;
     wrap: boolean;
+    autoStretch: boolean;
     rotation: 0 | 90 | 180 | 270 | undefined;
     cssExtra: string | undefined;
   }) {
@@ -329,6 +331,7 @@ class EditorState {
     cell.type = props.type;
     cell.embedTarget = props.embedTarget || undefined;
     cell.wrap = props.wrap;
+    cell.autoStretch = props.autoStretch;
     cell.rotation = props.rotation || undefined;
     cell.cssExtra = props.cssExtra || undefined;
     cell.x = Math.max(0, props.x);

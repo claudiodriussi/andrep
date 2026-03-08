@@ -56,7 +56,6 @@
 
   <!-- Flat row list -->
   {#each editor.template.rows as row, i (row.id)}
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
     <div role="presentation" onclick={(e) => e.stopPropagation()}>
       <RowBlock
         {row}

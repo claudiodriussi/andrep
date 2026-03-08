@@ -46,7 +46,8 @@ export interface Cell {
   x: number;
   width: number;
   height: number;
-  wrap: boolean;
+  wrap: boolean;          // word wrap: text wraps to multiple lines
+  autoStretch: boolean;   // height adapts to content (true = renderer measures and expands the cell)
   rotation?: 0 | 90 | 180 | 270;     // text rotation in degrees (0 = default)
   cssExtra?: string;                   // additional CSS properties string appended to inline style
   style: CellStyle;

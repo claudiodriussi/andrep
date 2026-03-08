@@ -12,6 +12,7 @@
   let height = $state(24);
   let x = $state(0);
   let wrap = $state(false);
+  let autoStretch = $state(false);
   let rotation = $state<0 | 90 | 180 | 270>(0);
   let cssExtra = $state('');
 
@@ -25,6 +26,7 @@
       height = cell.height;
       x = cell.x;
       wrap = cell.wrap;
+      autoStretch = cell.autoStretch;
       rotation = cell.rotation ?? 0;
       cssExtra = cell.cssExtra ?? '';
     }
@@ -40,6 +42,7 @@
       height,
       x,
       wrap,
+      autoStretch,
       rotation: rotation !== 0 ? rotation : undefined,
       cssExtra: cssExtra.trim() || undefined,
     });
@@ -138,6 +141,10 @@
           <label class="field-label-inline check">
             <input type="checkbox" bind:checked={wrap} />
             {_('Word wrap')}
+          </label>
+          <label class="field-label-inline check">
+            <input type="checkbox" bind:checked={autoStretch} />
+            {_('Auto stretch')}
           </label>
         </div>
 
