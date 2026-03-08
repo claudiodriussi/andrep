@@ -7,7 +7,7 @@ const DEFAULT_CONFIG: EditorConfig = {
   _type: 'andrep-config',
   locale: 'en',
   units: 'px',
-  toolbarGroups: ['colors', 'borders', 'font', 'align', 'cell', 'structure'],
+  toolbarGroups: ['file', 'font', 'align', 'colors', 'borders', 'cell', 'structure'],
   defaultFont: 'Arial',
   defaultFontSize: 11,
   bandNamePresets: ['band', 'first_header', 'page_header', 'page_footer', 'last_footer', 'page_filler'],

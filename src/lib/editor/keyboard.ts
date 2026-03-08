@@ -81,6 +81,7 @@ type Handler = (e: KeyboardEvent) => void;
 
 const SHORTCUTS: Record<string, Handler> = {
   // File
+  'Ctrl+n': (e) => { e.preventDefault(); editor.newTemplate(); },
   'Ctrl+s': (e) => { e.preventDefault(); editor.saveJson(); },
   'Ctrl+o': (e) => { e.preventDefault(); editor.loadJson(); },
 
@@ -131,6 +132,9 @@ const SHORTCUTS: Record<string, Handler> = {
   'ArrowDown':      (e) => { const c = adjacentRowCell('down'); if (c) { e.preventDefault(); editor.selectOne(c.id); } },
   'Shift+ArrowUp':  (e) => { const c = adjacentRowCell('up');   if (c) { e.preventDefault(); editor.selectAdd(c.id); } },
   'Shift+ArrowDown':(e) => { const c = adjacentRowCell('down'); if (c) { e.preventDefault(); editor.selectAdd(c.id); } },
+
+  // Inline text editor
+  'Enter': (e) => { e.preventDefault(); if (editor.activeCellId) editor.openInlineEditor(editor.activeCellId); },
 
   // Cell properties dialog
   'Alt+Enter': (e) => { e.preventDefault(); if (editor.activeCellId) editor.openCellDialog(editor.activeCellId); },

@@ -4,15 +4,20 @@
   import { config } from '$lib/store/config.svelte';
   import { _ } from '$lib/i18n/index.svelte';
   import ColorPicker from './ColorPicker.svelte';
-  import type { BorderSide } from '$lib/types';
-
-  import type { ToolbarGroupId } from '$lib/types';
+  import type { BorderSide, ToolbarGroupId } from '$lib/types';
+  import {
+    FilePlus, FolderOpen, Save,
+    Bold, Italic, Underline,
+    AlignLeft, AlignCenter, AlignRight, AlignJustify,
+    AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd,
+    SquareDashed,
+  } from 'lucide-svelte';
 
   type BorderSideName = 'top' | 'bottom' | 'left' | 'right';
   const ALL_SIDES: BorderSideName[] = ['top', 'bottom', 'left', 'right'];
 
   // Groups implemented so far — unimplemented ones are silently skipped
-  const IMPLEMENTED = new Set<ToolbarGroupId>(['colors', 'borders', 'font']);
+  const IMPLEMENTED = new Set<ToolbarGroupId>(['file', 'colors', 'borders', 'font', 'align']);
   const activeGroups = $derived(
     config.config.toolbarGroups.filter((g) => IMPLEMENTED.has(g)),
   );
@@ -27,6 +32,10 @@
     const first = getter(cells[0]);
     return cells.every((c) => getter(c) === first) ? first : null;
   }
+
+  // --- align ---
+  const alignment         = $derived(uniformVal((c) => c.style.alignment));
+  const verticalAlignment = $derived(uniformVal((c) => c.style.verticalAlignment));
 
   // --- font ---
 
@@ -128,7 +137,61 @@
   {#each activeGroups as groupId, i (groupId)}
     {#if i > 0}<div class="sep"></div>{/if}
 
-    {#if groupId === 'font'}
+    {#if groupId === 'file'}
+      <!-- FILE -->
+      <div class="group">
+        <span class="group-label">{_('File')}</span>
+        <button class="tb-btn" onclick={() => editor.newTemplate()} title={_('New template (Ctrl+N)')}>
+          <FilePlus size={14} />
+        </button>
+        <button class="tb-btn" onclick={() => editor.loadJson()} title={_('Open template (Ctrl+O)')}>
+          <FolderOpen size={14} />
+        </button>
+        <button class="tb-btn" onclick={() => editor.saveJson()} title={_('Save template (Ctrl+S)')}>
+          <Save size={14} />
+        </button>
+      </div>
+
+    {:else if groupId === 'align'}
+      <!-- ALIGN -->
+      <div class="group">
+        <span class="group-label">{_('Align')}</span>
+        <div class="align-btns">
+          <button class="tb-btn" class:active={alignment === 'left'}
+            onclick={() => editor.applyStyle({ alignment: 'left' })}
+            disabled={!hasSelection} title={_('Align left (Ctrl+L)')}
+          ><AlignLeft size={13} /></button>
+          <button class="tb-btn" class:active={alignment === 'center'}
+            onclick={() => editor.applyStyle({ alignment: 'center' })}
+            disabled={!hasSelection} title={_('Center (Ctrl+E)')}
+          ><AlignCenter size={13} /></button>
+          <button class="tb-btn" class:active={alignment === 'right'}
+            onclick={() => editor.applyStyle({ alignment: 'right' })}
+            disabled={!hasSelection} title={_('Align right (Ctrl+R)')}
+          ><AlignRight size={13} /></button>
+          <button class="tb-btn" class:active={alignment === 'justify'}
+            onclick={() => editor.applyStyle({ alignment: 'justify' })}
+            disabled={!hasSelection} title={_('Justify')}
+          ><AlignJustify size={13} /></button>
+        </div>
+        <div class="sep-inner"></div>
+        <div class="align-btns">
+          <button class="tb-btn" class:active={verticalAlignment === 'top'}
+            onclick={() => editor.applyStyle({ verticalAlignment: 'top' })}
+            disabled={!hasSelection} title={_('Align top (Ctrl+T)')}
+          ><AlignVerticalJustifyStart size={13} /></button>
+          <button class="tb-btn" class:active={verticalAlignment === 'middle'}
+            onclick={() => editor.applyStyle({ verticalAlignment: 'middle' })}
+            disabled={!hasSelection} title={_('Align middle (Ctrl+G)')}
+          ><AlignVerticalJustifyCenter size={13} /></button>
+          <button class="tb-btn" class:active={verticalAlignment === 'bottom'}
+            onclick={() => editor.applyStyle({ verticalAlignment: 'bottom' })}
+            disabled={!hasSelection} title={_('Align bottom (Ctrl+M)')}
+          ><AlignVerticalJustifyEnd size={13} /></button>
+        </div>
+      </div>
+
+    {:else if groupId === 'font'}
       <!-- FONT -->
       <div class="group">
         <span class="group-label">{_('Font')}</span>
@@ -166,29 +229,26 @@
         <span class="unit">pt</span>
         <div class="fmt-btns">
           <button
-            class="fmt-btn"
+            class="tb-btn"
             class:active={fontWeight === 'bold'}
-            style="font-weight: bold"
             onclick={() => editor.applyStyle({ fontWeight: fontWeight === 'bold' ? 'normal' : 'bold' })}
             disabled={!hasSelection}
             title={_('Bold (Ctrl+B)')}
-          >B</button>
+          ><Bold size={13} /></button>
           <button
-            class="fmt-btn"
+            class="tb-btn"
             class:active={fontStyleVal === 'italic'}
-            style="font-style: italic"
             onclick={() => editor.applyStyle({ fontStyle: fontStyleVal === 'italic' ? 'normal' : 'italic' })}
             disabled={!hasSelection}
             title={_('Italic (Ctrl+I)')}
-          >I</button>
+          ><Italic size={13} /></button>
           <button
-            class="fmt-btn"
+            class="tb-btn"
             class:active={textDecoration === 'underline'}
-            style="text-decoration: underline"
             onclick={() => editor.applyStyle({ textDecoration: textDecoration === 'underline' ? 'none' : 'underline' })}
             disabled={!hasSelection}
             title={_('Underline (Ctrl+U)')}
-          >U</button>
+          ><Underline size={13} /></button>
         </div>
       </div>
 
@@ -278,11 +338,11 @@
           {/each}
         </div>
         <button
-          class="remove-btn"
+          class="tb-btn remove-btn"
           onclick={removeAllBorders}
           disabled={!hasSelection}
           title={_('Remove all borders (Ctrl+0)')}
-        >✕ all</button>
+        ><SquareDashed size={13} /></button>
       </div>
     {/if}
   {/each}
@@ -419,13 +479,6 @@
   }
 
   .remove-btn {
-    height: 22px;
-    padding: 0 8px;
-    border: 1px solid #cbd5e1;
-    border-radius: 3px;
-    background: white;
-    font-size: 11px;
-    cursor: pointer;
     color: #ef4444;
   }
 
@@ -434,9 +487,46 @@
     border-color: #ef4444;
   }
 
-  .remove-btn:disabled {
+  .tb-btn {
+    width: 22px;
+    height: 22px;
+    border: 1px solid #cbd5e1;
+    border-radius: 3px;
+    background: white;
+    cursor: pointer;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .tb-btn:hover:not(:disabled) {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+  }
+
+  .tb-btn.active {
+    background: #2563eb;
+    border-color: #1d4ed8;
+    color: white;
+  }
+
+  .tb-btn:disabled {
     cursor: default;
     opacity: 0.4;
+  }
+
+  .align-btns {
+    display: flex;
+    gap: 2px;
+  }
+
+  .sep-inner {
+    width: 1px;
+    height: 16px;
+    background: #e2e8f0;
+    margin: 0 2px;
   }
 
   .font-select {
@@ -473,30 +563,5 @@
   .fmt-btns {
     display: flex;
     gap: 2px;
-  }
-
-  .fmt-btn {
-    width: 22px;
-    height: 22px;
-    border: 1px solid #cbd5e1;
-    border-radius: 3px;
-    background: white;
-    font-size: 12px;
-    cursor: pointer;
-    color: #475569;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .fmt-btn.active {
-    background: #2563eb;
-    border-color: #1d4ed8;
-    color: white;
-  }
-
-  .fmt-btn:disabled {
-    cursor: default;
-    opacity: 0.4;
   }
 </style>

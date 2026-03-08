@@ -15,6 +15,29 @@
     ] ?? 'flex-start',
   );
 
+  // --- inline editor ---
+  const isEditing = $derived(editor.inlineCellId === cell.id);
+  let editValue = $state('');
+
+  $effect(() => {
+    if (isEditing) editValue = cell.content;
+  });
+
+  function saveInline() {
+    cell.content = editValue;
+    editor.closeInlineEditor();
+  }
+
+  function cancelInline() {
+    editor.closeInlineEditor();
+  }
+
+  function focusAndSelect(node: HTMLTextAreaElement) {
+    node.focus();
+    node.select();
+  }
+
+  // --- resize ---
   let draggingW = false;
   let dragStartX = 0;
   let dragStartWidth = 0;
@@ -94,6 +117,8 @@
     e.stopPropagation();
     if (e.shiftKey) {
       editor.selectAdd(cell.id);
+    } else if (e.ctrlKey || e.metaKey) {
+      editor.openInlineEditor(cell.id);
     } else {
       editor.selectOne(cell.id);
     }
@@ -103,9 +128,7 @@
     editor.selectOne(cell.id);
     editor.openCellDialog(cell.id);
   }}
-  onkeydown={(e) => {
-    if (e.key === 'Enter') editor.selectOne(cell.id);
-  }}
+  onkeydown={undefined}
 >
   <div
     class="cell-content"
@@ -113,6 +136,30 @@
   >
     {cell.content || '\u00a0'}
   </div>
+
+  {#if isEditing}
+    <!-- svelte-ignore a11y_autofocus -->
+    <textarea
+      class="inline-editor"
+      bind:value={editValue}
+      use:focusAndSelect
+      style="
+        padding: {s.paddingTop}px {s.paddingRight}px {s.paddingBottom}px {s.paddingLeft}px;
+        font-family: {s.fontFamily};
+        font-size: {s.fontSize}pt;
+        font-weight: {s.fontWeight};
+        font-style: {s.fontStyle};
+        color: {s.color};
+        text-align: {s.alignment};
+      "
+      onblur={saveInline}
+      onkeydown={(e) => {
+        if (e.key === 'Escape') { e.preventDefault(); cancelInline(); }
+        else if (e.key === 'Enter') { e.preventDefault(); saveInline(); }
+        e.stopPropagation();
+      }}
+    ></textarea>
+  {/if}
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
     class="resize-handle right"
@@ -174,6 +221,20 @@
   .active {
     box-shadow: inset 0 0 0 2px #1e3a5f;
     z-index: 1;
+  }
+
+  .inline-editor {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    width: 100%;
+    height: 100%;
+    resize: none;
+    border: 2px solid #2563eb;
+    outline: none;
+    background: white;
+    line-height: 1.3;
+    box-sizing: border-box;
   }
 
   .resize-handle {

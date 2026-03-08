@@ -105,6 +105,8 @@ class EditorState {
   activeCellId = $state<string | null>(null);
   // Cell properties dialog — set to a cell id to open the dialog
   cellDialogId = $state<string | null>(null);
+  // Inline text editor — set to a cell id to open the textarea overlay
+  inlineCellId = $state<string | null>(null);
   // Toggle design guides (dashed cell outlines visible only in the editor)
   showGuides = $state(true);
   gridStepX = $state(4); // px — horizontal resize step (keyboard + drag)
@@ -114,6 +116,15 @@ class EditorState {
   selectedCells = $derived(
     this.template.rows.flatMap((r) => r.cells).filter((c) => this.selectedCellIds.has(c.id)),
   );
+
+  newTemplate() {
+    if (this.template.rows.length > 0) {
+      if (!confirm(_('Create new template? Unsaved changes will be lost.'))) return;
+    }
+    this.template = emptyTemplate();
+    this.clearSelection();
+    this.clearDraft();
+  }
 
   toggleGuides() {
     this.showGuides = !this.showGuides;
@@ -125,6 +136,15 @@ class EditorState {
 
   closeCellDialog() {
     this.cellDialogId = null;
+  }
+
+  openInlineEditor(id: string) {
+    this.selectOne(id);
+    this.inlineCellId = id;
+  }
+
+  closeInlineEditor() {
+    this.inlineCellId = null;
   }
 
   // --- selection ---

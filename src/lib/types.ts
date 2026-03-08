@@ -86,7 +86,7 @@ export interface Template {
 }
 
 // Toolbar group identifiers — controls order and visibility
-export type ToolbarGroupId = 'colors' | 'borders' | 'font' | 'align' | 'cell' | 'structure';
+export type ToolbarGroupId = 'file' | 'colors' | 'borders' | 'font' | 'align' | 'cell' | 'structure';
 
 export interface EditorConfig {
   _type: 'andrep-config'; // file signature — used to validate on load
