@@ -110,6 +110,10 @@ class EditorState {
   inlineCellId = $state<string | null>(null);
   // When set, the inline editor starts with this value instead of cell.content (printable-char trigger)
   inlineCellInitialValue = $state<string | null>(null);
+  // Clipboards (in-memory, independent from system clipboard)
+  cellClipboard = $state<Cell[] | null>(null);
+  rowClipboard  = $state<Row[]  | null>(null);
+
   // Toggle design guides (dashed cell outlines visible only in the editor)
   showGuides = $state(true);
   gridStepX = $state(4); // px — horizontal resize step (keyboard + drag)
@@ -411,6 +415,92 @@ class EditorState {
     cell.x = Math.max(0, props.x);
     cell.height = Math.max(10, props.height);
     this.resizeCell(cellId, Math.max(20, props.width));
+  }
+
+  // --- clipboard ---
+
+  copyCells() {
+    if (this.selectedCells.length === 0) return;
+    this.cellClipboard = JSON.parse(JSON.stringify(this.selectedCells));
+  }
+
+  cutCells() {
+    if (this.selectedCells.length === 0) return;
+    this.copyCells();
+    this.deleteSelectedCells(); // pushes history
+  }
+
+  pasteCells() {
+    if (!this.cellClipboard || !this.activeCellId) return;
+    const row = this.findRowOfCell(this.activeCellId);
+    if (!row) return;
+    this.pushHistory();
+    const activeCell = row.cells.find((c) => c.id === this.activeCellId)!;
+    const idx = row.cells.indexOf(activeCell);
+    let x = activeCell.x;
+    const inserted: Cell[] = [];
+    for (const src of this.cellClipboard) {
+      const cell: Cell = { ...JSON.parse(JSON.stringify(src)), id: uid(), x };
+      x += cell.width;
+      inserted.push(cell);
+    }
+    row.cells.splice(idx, 0, ...inserted);
+    this.selectedCellIds = new Set(inserted.map((c) => c.id));
+    this.activeCellId = inserted[0].id;
+  }
+
+  copyRows() {
+    const rowIds = new Set<string>();
+    for (const cellId of this.selectedCellIds) {
+      const row = this.findRowOfCell(cellId);
+      if (row) rowIds.add(row.id);
+    }
+    const rows = this.template.rows.filter((r) => rowIds.has(r.id));
+    if (rows.length === 0) return;
+    this.rowClipboard = JSON.parse(JSON.stringify(rows));
+  }
+
+  cutRows() {
+    if (this.selectedCellIds.size === 0) return;
+    this.copyRows();
+    this.pushHistory();
+    const rowIds = new Set<string>();
+    for (const cellId of this.selectedCellIds) {
+      const row = this.findRowOfCell(cellId);
+      if (row) rowIds.add(row.id);
+    }
+    // Find a surviving row to land on (first row below, then above)
+    const surviving = this.template.rows.filter((r) => !rowIds.has(r.id));
+    const activeRow = this.activeCellId ? this.findRowOfCell(this.activeCellId) : null;
+    if (activeRow && rowIds.has(activeRow.id)) {
+      const activeIdx = this.template.rows.indexOf(activeRow);
+      const land = this.template.rows.slice(activeIdx + 1).find((r) => !rowIds.has(r.id))
+        ?? this.template.rows.slice(0, activeIdx).reverse().find((r) => !rowIds.has(r.id))
+        ?? null;
+      const landCell = land?.cells[0] ?? null;
+      if (landCell) this.selectOne(landCell.id); else this.activeCellId = null;
+    }
+    this.selectedCellIds = new Set();
+    this.template.rows = surviving;
+  }
+
+  pasteRows() {
+    if (!this.rowClipboard) return;
+    this.pushHistory();
+    const beforeId = this.activeCellId ? this.findRowOfCell(this.activeCellId)?.id : undefined;
+    const cloned: Row[] = this.rowClipboard.map((r) => ({
+      ...JSON.parse(JSON.stringify(r)),
+      id: uid(),
+      cells: (r.cells as Cell[]).map((c) => ({ ...JSON.parse(JSON.stringify(c)), id: uid() })),
+    }));
+    if (beforeId) {
+      const idx = this.template.rows.findIndex((r) => r.id === beforeId);
+      this.template.rows.splice(idx, 0, ...cloned);
+    } else {
+      this.template.rows.push(...cloned);
+    }
+    this.selectedCellIds = new Set(cloned.flatMap((r) => r.cells.map((c) => c.id)));
+    this.activeCellId = cloned[0].cells[0]?.id ?? null;
   }
 
   // --- style ---

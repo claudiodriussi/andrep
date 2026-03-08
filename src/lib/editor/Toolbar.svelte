@@ -8,6 +8,7 @@
   import type { BorderSide, ToolbarGroupId } from '$lib/types';
   import {
     FilePlus, FolderOpen, Save, Undo2, Redo2,
+    Scissors, Copy, ClipboardPaste,
     Bold, Italic, Underline,
     AlignLeft, AlignCenter, AlignRight, AlignJustify,
     AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd,
@@ -184,6 +185,16 @@
         <button class="tb-btn" onclick={() => editor.redo()} disabled={!history.canRedo}
           title={_('Redo (Ctrl+Y / Ctrl+Shift+Z)')}
         ><Redo2 size={14} /></button>
+        <div class="sep-inner"></div>
+        <button class="tb-btn remove-btn" onclick={() => editor.cutCells()} disabled={!hasSelection}
+          title={_('Cut cells (Ctrl+X)\nCut rows: Ctrl+Shift+X')}
+        ><Scissors size={14} /></button>
+        <button class="tb-btn" onclick={() => editor.copyCells()} disabled={!hasSelection}
+          title={_('Copy cells (Ctrl+C)\nCopy rows: Ctrl+Shift+C')}
+        ><Copy size={14} /></button>
+        <button class="tb-btn" onclick={() => editor.pasteCells()} disabled={!editor.cellClipboard}
+          title={_('Paste cells (Ctrl+V)\nPaste rows: Ctrl+Shift+V')}
+        ><ClipboardPaste size={14} /></button>
       </div>
 
     {:else if groupId === 'align'}

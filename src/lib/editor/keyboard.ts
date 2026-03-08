@@ -91,9 +91,19 @@ const SHORTCUTS: Record<string, Handler> = {
   'Ctrl+s': (e) => { e.preventDefault(); editor.saveJson(); },
   'Ctrl+o': (e) => { e.preventDefault(); editor.loadJson(); },
 
+  // Copy / cut / paste — cells
+  'Ctrl+c': (e) => { e.preventDefault(); editor.copyCells(); },
+  'Ctrl+x': (e) => { e.preventDefault(); editor.cutCells(); },
+  'Ctrl+v': (e) => { e.preventDefault(); editor.pasteCells(); },
+
+  // Copy / cut / paste — rows (Shift+Ctrl)
+  'Ctrl+Shift+c': (e) => { e.preventDefault(); editor.copyRows(); },
+  'Ctrl+Shift+x': (e) => { e.preventDefault(); editor.cutRows(); },
+  'Ctrl+Shift+v': (e) => { e.preventDefault(); editor.pasteRows(); },
+
   // Selection
   'Ctrl+a': (e) => { e.preventDefault(); editor.selectAll(); },
-  'Escape': (_) => { editor.clearSelection(); },
+  'Escape': () => { editor.clearSelection(); },
 
   // Text formatting
   'Ctrl+b': (e) => { e.preventDefault(); toggleBold(); },
@@ -128,8 +138,8 @@ const SHORTCUTS: Record<string, Handler> = {
   'Shift+ArrowRight':(e) => { const c = adjacentCell('right'); if (c) { e.preventDefault(); editor.selectAdd(c.id); } },
 
   // Cells
-  'Delete': (_) => { editor.deleteSelectedCells(); },
-  'Insert': (_) => { const r = activeRow(); if (r) editor.addCell(r.id); },
+  'Delete': () => { editor.deleteSelectedCells(); },
+  'Insert': () => { const r = activeRow(); if (r) editor.addCell(r.id); },
   'Ctrl+ArrowLeft':  (e) => { e.preventDefault(); const c = editor.activeCellId ? editor.findCell(editor.activeCellId) : null; if (c) { editor.pushHistory(); editor.resizeCell(c.id, Math.max(20, c.width - editor.gridStepX)); } },
   'Ctrl+ArrowRight': (e) => { e.preventDefault(); const c = editor.activeCellId ? editor.findCell(editor.activeCellId) : null; if (c) { editor.pushHistory(); editor.resizeCell(c.id, c.width + editor.gridStepX); } },
 
@@ -152,7 +162,7 @@ const SHORTCUTS: Record<string, Handler> = {
   // Rows
   'Alt+ArrowUp':    (e) => { e.preventDefault(); const r = activeRow(); if (r) editor.moveRowUp(r.id); },
   'Alt+ArrowDown':  (e) => { e.preventDefault(); const r = activeRow(); if (r) editor.moveRowDown(r.id); },
-  'Alt+Delete':     (_) => { const r = activeRow(); if (r) editor.deleteRow(r.id); },
+  'Alt+Delete':     () => { const r = activeRow(); if (r) editor.deleteRow(r.id); },
   'Alt+Insert':     () => { const name = prompt(_('Band name:'), 'band'); if (name?.trim()) editor.addRow(name.trim(), activeRow()?.id); },
   'Ctrl+ArrowUp':   (e) => { e.preventDefault(); const r = activeRow(); if (r) { editor.pushHistory(); for (const c of r.cells) c.height = Math.max(10, c.height - editor.gridStepY); } },
   'Ctrl+ArrowDown': (e) => { e.preventDefault(); const r = activeRow(); if (r) { editor.pushHistory(); for (const c of r.cells) c.height += editor.gridStepY; } },
