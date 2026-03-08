@@ -12,7 +12,7 @@
   const ALL_SIDES: BorderSideName[] = ['top', 'bottom', 'left', 'right'];
 
   // Groups implemented so far — unimplemented ones are silently skipped
-  const IMPLEMENTED = new Set<ToolbarGroupId>(['colors', 'borders']);
+  const IMPLEMENTED = new Set<ToolbarGroupId>(['colors', 'borders', 'font']);
   const activeGroups = $derived(
     config.config.toolbarGroups.filter((g) => IMPLEMENTED.has(g)),
   );
@@ -27,6 +27,14 @@
     const first = getter(cells[0]);
     return cells.every((c) => getter(c) === first) ? first : null;
   }
+
+  // --- font ---
+
+  const fontFamily     = $derived(uniformVal((c) => c.style.fontFamily));
+  const fontSize       = $derived(uniformVal((c) => c.style.fontSize));
+  const fontWeight     = $derived(uniformVal((c) => c.style.fontWeight));
+  const fontStyleVal   = $derived(uniformVal((c) => c.style.fontStyle));
+  const textDecoration = $derived(uniformVal((c) => c.style.textDecoration));
 
   // --- colors ---
   // Mixed selection (different values) → #808080 as visual placeholder
@@ -120,7 +128,71 @@
   {#each activeGroups as groupId, i (groupId)}
     {#if i > 0}<div class="sep"></div>{/if}
 
-    {#if groupId === 'colors'}
+    {#if groupId === 'font'}
+      <!-- FONT -->
+      <div class="group">
+        <span class="group-label">{_('Font')}</span>
+        <select
+          class="font-select"
+          style="font-family: {fontFamily ?? 'inherit'}"
+          disabled={!hasSelection}
+          title={_('Font family')}
+          onchange={(e) => {
+            const v = (e.target as HTMLSelectElement).value;
+            if (v) editor.applyStyle({ fontFamily: v });
+          }}
+        >
+          {#if fontFamily === null}
+            <option value="" disabled selected>{_('mixed')}</option>
+          {/if}
+          {#each config.config.fontFamilies as f}
+            <option value={f} selected={f === fontFamily} style="font-family: {f}">{f}</option>
+          {/each}
+        </select>
+        <input
+          type="number"
+          class="size-input"
+          value={fontSize ?? ''}
+          min="6"
+          max="144"
+          placeholder={fontSize === null ? '·' : ''}
+          disabled={!hasSelection}
+          title={_('Font size (pt)')}
+          onchange={(e) => {
+            const v = Number((e.target as HTMLInputElement).value);
+            if (v >= 1) editor.applyStyle({ fontSize: v });
+          }}
+        />
+        <span class="unit">pt</span>
+        <div class="fmt-btns">
+          <button
+            class="fmt-btn"
+            class:active={fontWeight === 'bold'}
+            style="font-weight: bold"
+            onclick={() => editor.applyStyle({ fontWeight: fontWeight === 'bold' ? 'normal' : 'bold' })}
+            disabled={!hasSelection}
+            title={_('Bold (Ctrl+B)')}
+          >B</button>
+          <button
+            class="fmt-btn"
+            class:active={fontStyleVal === 'italic'}
+            style="font-style: italic"
+            onclick={() => editor.applyStyle({ fontStyle: fontStyleVal === 'italic' ? 'normal' : 'italic' })}
+            disabled={!hasSelection}
+            title={_('Italic (Ctrl+I)')}
+          >I</button>
+          <button
+            class="fmt-btn"
+            class:active={textDecoration === 'underline'}
+            style="text-decoration: underline"
+            onclick={() => editor.applyStyle({ textDecoration: textDecoration === 'underline' ? 'none' : 'underline' })}
+            disabled={!hasSelection}
+            title={_('Underline (Ctrl+U)')}
+          >U</button>
+        </div>
+      </div>
+
+    {:else if groupId === 'colors'}
       <!-- COLORS -->
       <div class="group">
         <span class="group-label">{_('Colors')}</span>
@@ -363,6 +435,67 @@
   }
 
   .remove-btn:disabled {
+    cursor: default;
+    opacity: 0.4;
+  }
+
+  .font-select {
+    width: 140px;
+    height: 22px;
+    border: 1px solid #cbd5e1;
+    border-radius: 3px;
+    padding: 0 4px;
+    font-size: 12px;
+    background: white;
+  }
+
+  .font-select:disabled {
+    background: #f8fafc;
+    color: #94a3b8;
+  }
+
+  .size-input {
+    width: 40px;
+    height: 22px;
+    border: 1px solid #cbd5e1;
+    border-radius: 3px;
+    padding: 0 4px;
+    font-size: 11px;
+    text-align: right;
+    background: white;
+  }
+
+  .size-input:disabled {
+    background: #f8fafc;
+    color: #94a3b8;
+  }
+
+  .fmt-btns {
+    display: flex;
+    gap: 2px;
+  }
+
+  .fmt-btn {
+    width: 22px;
+    height: 22px;
+    border: 1px solid #cbd5e1;
+    border-radius: 3px;
+    background: white;
+    font-size: 12px;
+    cursor: pointer;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .fmt-btn.active {
+    background: #2563eb;
+    border-color: #1d4ed8;
+    color: white;
+  }
+
+  .fmt-btn:disabled {
     cursor: default;
     opacity: 0.4;
   }

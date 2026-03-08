@@ -97,6 +97,7 @@ export interface EditorConfig {
   defaultFontSize: number;
   bandNamePresets: string[]; // quick-pick list shown on "+ Row"
   showRenderingHints: boolean; // show page_role chips on "+ Row" and var-ref in cell dialog
+  fontFamilies: string[]; // font family list shown in the font picker
   fgPalette: string[]; // foreground (text / border) color swatches
   bgPalette: string[]; // background color swatches
 }

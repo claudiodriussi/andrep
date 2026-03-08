@@ -12,6 +12,13 @@ const DEFAULT_CONFIG: EditorConfig = {
   defaultFontSize: 11,
   bandNamePresets: ['band', 'first_header', 'page_header', 'page_footer', 'last_footer', 'page_filler'],
   showRenderingHints: false,
+  fontFamilies: [
+    'Arial', 'Arial Narrow', 'Helvetica',
+    'Times New Roman', 'Georgia', 'Palatino', 'Garamond',
+    'Courier New',
+    'Verdana', 'Tahoma', 'Trebuchet MS',
+    'Impact',
+  ],
   // Foreground palette: dark tones suitable for text and borders
   fgPalette: [
     '#000000', '#1f2937', '#374151', '#6b7280', '#9ca3af', '#d1d5db', '#ffffff',
