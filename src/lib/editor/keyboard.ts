@@ -1,4 +1,5 @@
 import { editor } from '$lib/store/editor.svelte';
+import { _ } from '$lib/i18n/index.svelte';
 
 // Normalize a KeyboardEvent to a string like 'Ctrl+Shift+ArrowUp', 'Ctrl+b', 'Delete'
 function key(e: KeyboardEvent): string {
@@ -80,6 +81,11 @@ function adjacentRowCell(direction: 'up' | 'down') {
 type Handler = (e: KeyboardEvent) => void;
 
 const SHORTCUTS: Record<string, Handler> = {
+  // Undo / Redo
+  'Ctrl+z': (e) => { e.preventDefault(); editor.undo(); },
+  'Ctrl+Shift+z': (e) => { e.preventDefault(); editor.redo(); },
+  'Ctrl+y':       (e) => { e.preventDefault(); editor.redo(); },
+
   // File
   'Ctrl+n': (e) => { e.preventDefault(); editor.newTemplate(); },
   'Ctrl+s': (e) => { e.preventDefault(); editor.saveJson(); },
@@ -124,8 +130,8 @@ const SHORTCUTS: Record<string, Handler> = {
   // Cells
   'Delete': (_) => { editor.deleteSelectedCells(); },
   'Insert': (_) => { const r = activeRow(); if (r) editor.addCell(r.id); },
-  'Ctrl+ArrowLeft':  (e) => { e.preventDefault(); const c = editor.activeCellId ? editor.findCell(editor.activeCellId) : null; if (c) editor.resizeCell(c.id, Math.max(20, c.width - editor.gridStepX)); },
-  'Ctrl+ArrowRight': (e) => { e.preventDefault(); const c = editor.activeCellId ? editor.findCell(editor.activeCellId) : null; if (c) editor.resizeCell(c.id, c.width + editor.gridStepX); },
+  'Ctrl+ArrowLeft':  (e) => { e.preventDefault(); const c = editor.activeCellId ? editor.findCell(editor.activeCellId) : null; if (c) { editor.pushHistory(); editor.resizeCell(c.id, Math.max(20, c.width - editor.gridStepX)); } },
+  'Ctrl+ArrowRight': (e) => { e.preventDefault(); const c = editor.activeCellId ? editor.findCell(editor.activeCellId) : null; if (c) { editor.pushHistory(); editor.resizeCell(c.id, c.width + editor.gridStepX); } },
 
   // Row navigation
   'ArrowUp':        (e) => { const c = adjacentRowCell('up');   if (c) { e.preventDefault(); editor.selectOne(c.id); } },
@@ -147,8 +153,15 @@ const SHORTCUTS: Record<string, Handler> = {
   'Alt+ArrowUp':    (e) => { e.preventDefault(); const r = activeRow(); if (r) editor.moveRowUp(r.id); },
   'Alt+ArrowDown':  (e) => { e.preventDefault(); const r = activeRow(); if (r) editor.moveRowDown(r.id); },
   'Alt+Delete':     (_) => { const r = activeRow(); if (r) editor.deleteRow(r.id); },
-  'Ctrl+ArrowUp':   (e) => { e.preventDefault(); const r = activeRow(); if (r) for (const c of r.cells) c.height = Math.max(10, c.height - editor.gridStepY); },
-  'Ctrl+ArrowDown': (e) => { e.preventDefault(); const r = activeRow(); if (r) for (const c of r.cells) c.height += editor.gridStepY; },
+  'Alt+Insert':     () => { const name = prompt(_('Band name:'), 'band'); if (name?.trim()) editor.addRow(name.trim(), activeRow()?.id); },
+  'Ctrl+ArrowUp':   (e) => { e.preventDefault(); const r = activeRow(); if (r) { editor.pushHistory(); for (const c of r.cells) c.height = Math.max(10, c.height - editor.gridStepY); } },
+  'Ctrl+ArrowDown': (e) => { e.preventDefault(); const r = activeRow(); if (r) { editor.pushHistory(); for (const c of r.cells) c.height += editor.gridStepY; } },
+};
+
+// Shift+Ctrl+1/2/3/4 — remove specific border side.
+// Uses e.code (Digit1…4) instead of e.key because Shift changes e.key to '!'/'@'/etc. on most locales.
+const REMOVE_BORDER_CODES: Record<string, 'left' | 'right' | 'top' | 'bottom'> = {
+  'Digit1': 'left', 'Digit2': 'right', 'Digit3': 'top', 'Digit4': 'bottom',
 };
 
 export function handleKeydown(e: KeyboardEvent): void {
@@ -156,5 +169,25 @@ export function handleKeydown(e: KeyboardEvent): void {
   const tag = (e.target as HTMLElement).tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
 
-  SHORTCUTS[key(e)]?.(e);
+  // Shift+Ctrl+1/2/3/4 — always remove (uses e.code for locale independence)
+  if (e.ctrlKey && e.shiftKey && !e.altKey) {
+    const side = REMOVE_BORDER_CODES[e.code];
+    if (side) {
+      e.preventDefault();
+      editor.applyBorderSides([side], { width: 0, style: 'none' });
+      return;
+    }
+  }
+
+  // Named shortcuts
+  const handler = SHORTCUTS[key(e)];
+  if (handler) { handler(e); return; }
+
+  // Printable character — open inline editor with that char pre-typed (Excel/Delphi behavior)
+  if (
+    e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey &&
+    editor.activeCellId
+  ) {
+    editor.openInlineEditor(editor.activeCellId, e.key);
+  }
 }

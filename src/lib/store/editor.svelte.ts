@@ -1,5 +1,6 @@
 import type { BorderSide, Cell, CellStyle, CellType, Row, Template } from '$lib/types';
 import { _ } from '$lib/i18n/index.svelte';
+import { history } from './history.svelte';
 
 const STORAGE_KEY = 'andrep-draft';
 
@@ -107,6 +108,8 @@ class EditorState {
   cellDialogId = $state<string | null>(null);
   // Inline text editor — set to a cell id to open the textarea overlay
   inlineCellId = $state<string | null>(null);
+  // When set, the inline editor starts with this value instead of cell.content (printable-char trigger)
+  inlineCellInitialValue = $state<string | null>(null);
   // Toggle design guides (dashed cell outlines visible only in the editor)
   showGuides = $state(true);
   gridStepX = $state(4); // px — horizontal resize step (keyboard + drag)
@@ -117,6 +120,35 @@ class EditorState {
     this.template.rows.flatMap((r) => r.cells).filter((c) => this.selectedCellIds.has(c.id)),
   );
 
+  // --- history ---
+
+  pushHistory() {
+    history.push(this.template);
+  }
+
+  undo() {
+    const prev = history.undo(this.template);
+    if (!prev) return;
+    this.template = prev;
+    syncUid(this.template);
+    this.#restoreSelection();
+  }
+
+  redo() {
+    const next = history.redo(this.template);
+    if (!next) return;
+    this.template = next;
+    syncUid(this.template);
+    this.#restoreSelection();
+  }
+
+  // After undo/redo: keep selection IDs that still exist in the restored template.
+  #restoreSelection() {
+    const allIds = new Set(this.template.rows.flatMap((r) => r.cells.map((c) => c.id)));
+    this.selectedCellIds = new Set([...this.selectedCellIds].filter((id) => allIds.has(id)));
+    if (this.activeCellId && !allIds.has(this.activeCellId)) this.activeCellId = null;
+  }
+
   newTemplate() {
     if (this.template.rows.length > 0) {
       if (!confirm(_('Create new template? Unsaved changes will be lost.'))) return;
@@ -124,6 +156,7 @@ class EditorState {
     this.template = emptyTemplate();
     this.clearSelection();
     this.clearDraft();
+    history.clear();
   }
 
   toggleGuides() {
@@ -138,13 +171,15 @@ class EditorState {
     this.cellDialogId = null;
   }
 
-  openInlineEditor(id: string) {
+  openInlineEditor(id: string, initialValue?: string) {
     this.selectOne(id);
+    this.inlineCellInitialValue = initialValue ?? null;
     this.inlineCellId = id;
   }
 
   closeInlineEditor() {
     this.inlineCellId = null;
+    this.inlineCellInitialValue = null;
   }
 
   // --- selection ---
@@ -190,23 +225,36 @@ class EditorState {
 
   // --- rows ---
 
-  addRow(name: string) {
-    this.template.rows.push(makeRow(name));
+  addRow(name: string, afterRowId?: string) {
+    this.pushHistory();
+    const row = makeRow(name);
+    if (afterRowId) {
+      const idx = this.template.rows.findIndex((r) => r.id === afterRowId);
+      if (idx !== -1) { this.template.rows.splice(idx + 1, 0, row); return; }
+    }
+    this.template.rows.push(row);
   }
 
   deleteRow(rowId: string) {
+    this.pushHistory();
     const idx = this.template.rows.findIndex((r) => r.id === rowId);
     if (idx === -1) return;
     const row = this.template.rows[idx];
     const rowCellIds = new Set(row.cells.map((c) => c.id));
     this.selectedCellIds = new Set([...this.selectedCellIds].filter((id) => !rowCellIds.has(id)));
-    if (this.activeCellId && rowCellIds.has(this.activeCellId)) this.activeCellId = null;
+    // Move active cell to the row below, or above if it was the last
+    if (this.activeCellId && rowCellIds.has(this.activeCellId)) {
+      const next = this.template.rows[idx + 1] ?? this.template.rows[idx - 1] ?? null;
+      const nextCell = next?.cells[0] ?? null;
+      if (nextCell) this.selectOne(nextCell.id); else this.activeCellId = null;
+    }
     this.template.rows.splice(idx, 1);
   }
 
   moveRowUp(rowId: string) {
     const idx = this.template.rows.findIndex((r) => r.id === rowId);
     if (idx <= 0) return;
+    this.pushHistory();
     const [row] = this.template.rows.splice(idx, 1);
     this.template.rows.splice(idx - 1, 0, row);
   }
@@ -214,6 +262,7 @@ class EditorState {
   moveRowDown(rowId: string) {
     const idx = this.template.rows.findIndex((r) => r.id === rowId);
     if (idx === -1 || idx >= this.template.rows.length - 1) return;
+    this.pushHistory();
     const [row] = this.template.rows.splice(idx, 1);
     this.template.rows.splice(idx + 1, 0, row);
   }
@@ -223,6 +272,7 @@ class EditorState {
   addCell(rowId: string) {
     const row = this.template.rows.find((r) => r.id === rowId);
     if (!row) return;
+    this.pushHistory();
     const cell = makeCell();
     // Insert after active cell if it belongs to this row, otherwise append
     const activeIdx = this.activeCellId
@@ -262,6 +312,7 @@ class EditorState {
   }
 
   deleteSelectedCells() {
+    this.pushHistory();
     const ids = this.selectedCellIds;
     if (ids.size === 0) return;
     let nextActiveId: string | null = null;
@@ -282,6 +333,7 @@ class EditorState {
   }
 
   moveCellInRow(cellId: string, direction: 'left' | 'right') {
+    this.pushHistory();
     for (const row of this.template.rows) {
       const idx = row.cells.findIndex((c) => c.id === cellId);
       if (idx === -1) continue;
@@ -317,6 +369,7 @@ class EditorState {
   }
 
   renameRow(rowId: string, name: string) {
+    this.pushHistory();
     const row = this.template.rows.find((r) => r.id === rowId);
     if (row && name.trim()) row.name = name.trim();
   }
@@ -345,6 +398,7 @@ class EditorState {
     rotation: 0 | 90 | 180 | 270 | undefined;
     cssExtra: string | undefined;
   }) {
+    this.pushHistory();
     const cell = this.findCell(cellId);
     if (!cell) return;
     cell.content = props.content;
@@ -362,12 +416,14 @@ class EditorState {
   // --- style ---
 
   applyStyle(patch: Partial<CellStyle>) {
+    this.pushHistory();
     for (const cell of this.selectedCells) {
       Object.assign(cell.style, patch);
     }
   }
 
   applyBorderSides(sides: ('top' | 'bottom' | 'left' | 'right')[], patch: Partial<BorderSide>) {
+    this.pushHistory();
     for (const cell of this.selectedCells) {
       for (const side of sides) {
         Object.assign(cell.style.borders[side], patch);

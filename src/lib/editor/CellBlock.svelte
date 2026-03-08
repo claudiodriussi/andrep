@@ -20,7 +20,7 @@
   let editValue = $state('');
 
   $effect(() => {
-    if (isEditing) editValue = cell.content;
+    if (isEditing) editValue = editor.inlineCellInitialValue ?? cell.content;
   });
 
   function saveInline() {
@@ -32,9 +32,10 @@
     editor.closeInlineEditor();
   }
 
-  function focusAndSelect(node: HTMLTextAreaElement) {
+  function initEditor(node: HTMLTextAreaElement) {
     node.focus();
-    node.select();
+    if (editor.inlineCellInitialValue === null) node.select();
+    // with initialValue: cursor lands at end (default textarea behavior)
   }
 
   // --- resize ---
@@ -45,6 +46,7 @@
   function onRightHandlePointerDown(e: PointerEvent) {
     e.preventDefault();
     e.stopPropagation();
+    editor.pushHistory();
     draggingW = true;
     dragStartX = e.clientX;
     dragStartWidth = cell.width;
@@ -70,6 +72,7 @@
   function onBottomHandlePointerDown(e: PointerEvent) {
     e.preventDefault();
     e.stopPropagation();
+    editor.pushHistory();
     draggingH = true;
     dragStartY = e.clientY;
     dragStartHeight = cell.height;
@@ -142,7 +145,7 @@
     <textarea
       class="inline-editor"
       bind:value={editValue}
-      use:focusAndSelect
+      use:initEditor
       style="
         padding: {s.paddingTop}px {s.paddingRight}px {s.paddingBottom}px {s.paddingLeft}px;
         font-family: {s.fontFamily};
