@@ -42,11 +42,13 @@ export interface Cell {
   id: string;
   content: string;
   type: CellType;
-  embedTarget?: string; // only when type === 'embed': name of the band to expand inside this cell
+  embedTarget?: string;               // only when type === 'embed': name of the band to expand inside this cell
   x: number;
   width: number;
   height: number;
   wrap: boolean;
+  rotation?: 0 | 90 | 180 | 270;     // text rotation in degrees (0 = default)
+  cssExtra?: string;                   // additional CSS properties string appended to inline style
   style: CellStyle;
 }
 
@@ -93,6 +95,7 @@ export interface EditorConfig {
   defaultFont: string;
   defaultFontSize: number;
   bandNamePresets: string[]; // quick-pick list shown on "+ Row"
+  showRenderingHints: boolean; // show page_role chips on "+ Row" and var-ref in cell dialog
   fgPalette: string[]; // foreground (text / border) color swatches
   bgPalette: string[]; // background color swatches
 }

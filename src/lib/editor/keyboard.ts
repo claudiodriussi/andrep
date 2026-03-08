@@ -132,6 +132,9 @@ const SHORTCUTS: Record<string, Handler> = {
   'Shift+ArrowUp':  (e) => { const c = adjacentRowCell('up');   if (c) { e.preventDefault(); editor.selectAdd(c.id); } },
   'Shift+ArrowDown':(e) => { const c = adjacentRowCell('down'); if (c) { e.preventDefault(); editor.selectAdd(c.id); } },
 
+  // Cell properties dialog
+  'Alt+Enter': (e) => { e.preventDefault(); if (editor.activeCellId) editor.openCellDialog(editor.activeCellId); },
+
   // Cell reorder
   'Alt+ArrowLeft':  (e) => { e.preventDefault(); if (editor.activeCellId) editor.moveCellInRow(editor.activeCellId, 'left'); },
   'Alt+ArrowRight': (e) => { e.preventDefault(); if (editor.activeCellId) editor.moveCellInRow(editor.activeCellId, 'right'); },

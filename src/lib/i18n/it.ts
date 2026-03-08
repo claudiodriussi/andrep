@@ -168,6 +168,32 @@ const it: Record<string, string> = {
   'Add': 'Aggiungi',
   'Delete': 'Cancella',
 
+  // variable reference panel
+  'var: lookup / expression': 'lookup / espressione',
+  'var: with formatter': 'con formatter',
+  'var: chained formatters': 'formatter in catena',
+  'var: \\| splits if expr has |': '\\| separa se expr contiene |',
+  'var: locale date': 'data locale',
+  'var: explicit date format': 'data con formato',
+  'var: thousands + 2 decimals': 'migliaia + 2 decimali',
+  'var: currency amount': 'importo con valuta',
+  'var: uppercase': 'maiuscolo',
+  'var: empty if null/zero': 'vuoto se null/zero',
+  'var: image proportional': 'immagine proporzionale',
+  'var: barcode Code 128': 'barcode Code 128',
+  'var: QR code': 'QR code',
+  'System': 'Sistema',
+
+  // cell properties dialog
+  'Content': 'Contenuto',
+  'Type': 'Tipo',
+  'Band target': 'Fascia di destinazione',
+  'Geometry': 'Geometria',
+  'Text rotation': 'Orientamento testo',
+  'CSS extra': 'CSS aggiuntivo',
+  'Variable reference': 'Riferimento variabili',
+  'Cell properties (Alt+Enter)': 'Proprietà cella (Alt+Enter)',
+
   // messages
   'Invalid file: not an AndRep template.': 'File non valido: non è un template AndRep.',
   'Invalid file: not an AndRep config.': 'File non valido: non è una configurazione AndRep.',

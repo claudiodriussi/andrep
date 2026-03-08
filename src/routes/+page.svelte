@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import DesignCanvas from '$lib/editor/DesignCanvas.svelte';
   import Toolbar from '$lib/editor/Toolbar.svelte';
+  import CellPropertiesDialog from '$lib/editor/CellPropertiesDialog.svelte';
   import { editor } from '$lib/store/editor.svelte';
   import { config } from '$lib/store/config.svelte';
   import { _ } from '$lib/i18n/index.svelte';
@@ -106,6 +107,8 @@
   <Toolbar />
 
   <DesignCanvas />
+
+  <CellPropertiesDialog />
 </div>
 
 <style>

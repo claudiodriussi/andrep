@@ -1,5 +1,6 @@
 <script lang="ts">
   import { editor } from '$lib/store/editor.svelte';
+  import { config } from '$lib/store/config.svelte';
   import { _ } from '$lib/i18n/index.svelte';
   import RowBlock from './RowBlock.svelte';
   import { handleKeydown } from './keyboard';
@@ -9,24 +10,30 @@
   let inputEl = $state<HTMLInputElement | null>(null);
 
   // Band column width: adapts to the longest band name.
-  // Estimated 7px/char + 38px for the 3 control buttons (11px × 3 + padding + gap)
-  const BTN_AREA = 38;
-  const CHAR_W = 7;
-  const bandColW = $derived(
-    Math.max(80, ...editor.template.rows.map((r) => r.name.length * CHAR_W + BTN_AREA)),
-  );
+  // 8px/char (bold 11px, slightly generous to avoid clipping) + 42px for controls + padding
+  const BTN_AREA = 42;
+  const CHAR_W = 8;
+  const bandColW = $derived.by(() => {
+    const names = editor.template.rows.map((r) => r.name);
+    // include the name being typed so the column expands in real time
+    if (showRowInput && newRowName.trim()) names.push(newRowName.trim());
+    return Math.max(80, ...names.map((n) => n.length * CHAR_W + BTN_AREA));
+  });
+
+  function addRow(name: string) {
+    editor.addRow(name);
+    newRowName = '';
+    showRowInput = false;
+  }
 
   function confirmAddRow() {
     const name = newRowName.trim();
-    if (name) {
-      editor.addRow(name);
-      newRowName = '';
-      showRowInput = false;
-    }
+    if (name) addRow(name);
   }
 
   function startAddRow() {
     showRowInput = true;
+    newRowName = '';
     setTimeout(() => inputEl?.focus(), 0);
   }
 </script>
@@ -60,30 +67,27 @@
   {/each}
 
   <!-- Add row -->
-  <div class="add-row-area">
+  <div class="add-row-area" role="presentation" onclick={(e) => e.stopPropagation()}>
     {#if showRowInput}
       <input
         bind:this={inputEl}
         bind:value={newRowName}
         class="row-input"
-        placeholder={_('Row name (e.g. Header, Band, Footer)...')}
+        list="band-name-list"
         onclick={(e) => e.stopPropagation()}
         onkeydown={(e) => {
+          e.stopPropagation();
           if (e.key === 'Enter') confirmAddRow();
-          if (e.key === 'Escape') {
-            showRowInput = false;
-            newRowName = '';
-          }
+          if (e.key === 'Escape') { showRowInput = false; newRowName = ''; }
         }}
       />
+      <datalist id="band-name-list">
+        {#each config.config.bandNamePresets as name (name)}
+          <option value={name}></option>
+        {/each}
+      </datalist>
       <button class="btn-ok" onclick={confirmAddRow}>OK</button>
-      <button
-        class="btn-cancel"
-        onclick={() => {
-          showRowInput = false;
-          newRowName = '';
-        }}>×</button
-      >
+      <button class="btn-cancel" onclick={() => { showRowInput = false; newRowName = ''; }}>×</button>
     {:else}
       <button class="add-row-btn" onclick={startAddRow}>{_('+ Row')}</button>
     {/if}
@@ -134,7 +138,7 @@
   .add-row-area {
     padding: 10px 12px 10px calc(var(--band-col-w, 120px) + 8px);
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 6px;
   }
 

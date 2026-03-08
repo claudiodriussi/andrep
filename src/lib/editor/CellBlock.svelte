@@ -9,6 +9,12 @@
   const s = $derived(cell.style);
   const b = $derived(s.borders);
 
+  const flexVA = $derived(
+    ({ top: 'flex-start', middle: 'center', bottom: 'flex-end' } as Record<string, string>)[
+      s.verticalAlignment
+    ] ?? 'flex-start',
+  );
+
   let draggingW = false;
   let dragStartX = 0;
   let dragStartWidth = 0;
@@ -78,6 +84,9 @@
     border-bottom: {b.bottom.width > 0 ? `${b.bottom.width}px ${b.bottom.style} ${b.bottom.color}` : 'none'};
     border-left: {b.left.width > 0 ? `${b.left.width}px ${b.left.style} ${b.left.color}` : 'none'};
     border-right: {b.right.width > 0 ? `${b.right.width}px ${b.right.style} ${b.right.color}` : 'none'};
+    display: flex;
+    align-items: {flexVA};
+    {cell.cssExtra ?? ''}
   "
   role="button"
   tabindex="0"
@@ -89,11 +98,21 @@
       editor.selectOne(cell.id);
     }
   }}
+  ondblclick={(e) => {
+    e.stopPropagation();
+    editor.selectOne(cell.id);
+    editor.openCellDialog(cell.id);
+  }}
   onkeydown={(e) => {
     if (e.key === 'Enter') editor.selectOne(cell.id);
   }}
 >
-  {cell.content || '\u00a0'}
+  <div
+    class="cell-content"
+    style={cell.rotation ? `transform: rotate(${cell.rotation}deg)` : undefined}
+  >
+    {cell.content || '\u00a0'}
+  </div>
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
     class="resize-handle right"
@@ -123,6 +142,13 @@
 
   .cell:focus {
     outline: none;
+  }
+
+  .cell-content {
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    white-space: pre-wrap;
   }
 
   /* Overlay grigio semitrasparente per celle selezionate */

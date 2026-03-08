@@ -1,4 +1,4 @@
-import type { BorderSide, Cell, CellStyle, Row, Template } from '$lib/types';
+import type { BorderSide, Cell, CellStyle, CellType, Row, Template } from '$lib/types';
 import { _ } from '$lib/i18n/index.svelte';
 
 const STORAGE_KEY = 'andrep-draft';
@@ -61,7 +61,7 @@ function makeCell(): Cell {
 }
 
 function makeRow(name: string): Row {
-  return { id: uid(), name, cells: [] };
+  return { id: uid(), name, cells: [makeCell()] };
 }
 
 function emptyTemplate(): Template {
@@ -102,6 +102,8 @@ class EditorState {
   selectedCellIds = $state<Set<string>>(new Set());
   // Last clicked cell — receives the focus border highlight
   activeCellId = $state<string | null>(null);
+  // Cell properties dialog — set to a cell id to open the dialog
+  cellDialogId = $state<string | null>(null);
   // Toggle design guides (dashed cell outlines visible only in the editor)
   showGuides = $state(true);
   gridStepX = $state(4); // px — horizontal resize step (keyboard + drag)
@@ -114,6 +116,14 @@ class EditorState {
 
   toggleGuides() {
     this.showGuides = !this.showGuides;
+  }
+
+  openCellDialog(id: string) {
+    this.cellDialogId = id;
+  }
+
+  closeCellDialog() {
+    this.cellDialogId = null;
   }
 
   // --- selection ---
@@ -300,6 +310,30 @@ class EditorState {
 
   findRowOfCell(cellId: string): Row | null {
     return this.template.rows.find((r) => r.cells.some((c) => c.id === cellId)) ?? null;
+  }
+
+  updateCell(cellId: string, props: {
+    content: string;
+    type: CellType;
+    embedTarget: string | undefined;
+    width: number;
+    height: number;
+    x: number;
+    wrap: boolean;
+    rotation: 0 | 90 | 180 | 270 | undefined;
+    cssExtra: string | undefined;
+  }) {
+    const cell = this.findCell(cellId);
+    if (!cell) return;
+    cell.content = props.content;
+    cell.type = props.type;
+    cell.embedTarget = props.embedTarget || undefined;
+    cell.wrap = props.wrap;
+    cell.rotation = props.rotation || undefined;
+    cell.cssExtra = props.cssExtra || undefined;
+    cell.x = Math.max(0, props.x);
+    cell.height = Math.max(10, props.height);
+    this.resizeCell(cellId, Math.max(20, props.width));
   }
 
   // --- style ---
