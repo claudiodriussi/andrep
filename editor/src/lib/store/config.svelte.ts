@@ -7,6 +7,11 @@ const DEFAULT_CONFIG: EditorConfig = {
   _type: 'andrep-config',
   locale: 'en',
   units: 'px',
+  defaultPreset: 'A4',
+  // ~10mm top/left/right, ~15mm bottom (extra safety for inkjet bottom hardware margin)
+  defaultMargins: { top: 38, bottom: 57, left: 38, right: 38 },
+  defaultLocale: '',
+  defaultCurrency: '',
   toolbarGroups: ['file', 'font', 'align', 'colors', 'borders', 'cell', 'structure'],
   defaultFont: 'Arial',
   defaultFontSize: 11,
@@ -48,6 +53,9 @@ function loadConfig(): EditorConfig {
 
 class ConfigState {
   config = $state<EditorConfig>(loadConfig());
+
+  // Preferences dialog open/close state
+  configOpen = $state(false);
 
   save() {
     try {

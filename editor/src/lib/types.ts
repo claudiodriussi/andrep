@@ -59,7 +59,10 @@ export interface Row {
   cells: Cell[];
 }
 
+export type PagePreset = 'A5' | 'A4' | 'A3' | 'Letter' | 'Legal' | 'custom';
+
 export interface PageConfig {
+  preset: PagePreset;
   width: number;
   height: number;
   marginTop: number;
@@ -67,13 +70,15 @@ export interface PageConfig {
   marginLeft: number;
   marginRight: number;
   orientation: 'portrait' | 'landscape';
+  locale: string;    // e.g. 'it-IT' — for date/number formatting in the renderer
+  currency: string;  // e.g. 'EUR'
 }
 
-export type CompositionRuleType = 'IFNOT' | 'REPLACE' | 'INSBEFORE' | 'INSAFTER' | 'EMBED';
+export type CompositionRuleType = 'IfNot' | 'Replace' | 'InsBefore' | 'InsAfter';
 
 export interface CompositionRule {
   rule: CompositionRuleType;
-  target: string; // name of the referenced template or band
+  target: string; // name of the external template to merge
 }
 
 export interface Template {
@@ -92,6 +97,12 @@ export interface EditorConfig {
   _type: 'andrep-config'; // file signature — used to validate on load
   locale: 'en' | 'it';
   units: 'px' | 'mm' | 'inch';
+  // Defaults applied when creating a new template
+  defaultPreset: PagePreset;
+  defaultMargins: { top: number; bottom: number; left: number; right: number };
+  // Default locale/currency for new templates (empty = not set)
+  defaultLocale: string;
+  defaultCurrency: string;
   toolbarGroups: ToolbarGroupId[]; // ordered list; absent groups are hidden
   defaultFont: string;
   defaultFontSize: number;

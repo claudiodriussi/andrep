@@ -140,6 +140,9 @@ const it: Record<string, string> = {
   'Save config': 'Salva configurazione',
 
   // page setup
+  'Composition': 'Composizione',
+  'No composition rules': 'Nessuna regola di composizione',
+  'Template name': 'Nome template',
   'Margins': 'Margini',
   'Left': 'Sinistra',
   'Right': 'Destra',

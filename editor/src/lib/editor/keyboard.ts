@@ -1,6 +1,94 @@
 import { editor } from '$lib/store/editor.svelte';
 import { _ } from '$lib/i18n/index.svelte';
 
+// --- shortcut documentation ---
+
+export interface ShortcutEntry {
+  keys: string;        // display string e.g. "Ctrl+Z"
+  description: string; // human readable, will be passed through _()
+  group: string;       // group name for display
+}
+
+export const SHORTCUT_DOCS: ShortcutEntry[] = [
+  // File
+  { group: 'File', keys: 'Ctrl+N', description: 'New template' },
+  { group: 'File', keys: 'Ctrl+O', description: 'Open' },
+  { group: 'File', keys: 'Ctrl+S', description: 'Save' },
+
+  // Edit
+  { group: 'Edit', keys: 'Ctrl+Z', description: 'Undo' },
+  { group: 'Edit', keys: 'Ctrl+Shift+Z / Ctrl+Y', description: 'Redo' },
+
+  // Clipboard (cells)
+  { group: 'Clipboard (cells)', keys: 'Ctrl+C', description: 'Copy cells' },
+  { group: 'Clipboard (cells)', keys: 'Ctrl+X', description: 'Cut cells' },
+  { group: 'Clipboard (cells)', keys: 'Ctrl+V', description: 'Paste cells' },
+
+  // Clipboard (rows)
+  { group: 'Clipboard (rows)', keys: 'Ctrl+Shift+C', description: 'Copy rows' },
+  { group: 'Clipboard (rows)', keys: 'Ctrl+Shift+X', description: 'Cut rows' },
+  { group: 'Clipboard (rows)', keys: 'Ctrl+Shift+V', description: 'Paste rows' },
+
+  // Selection
+  { group: 'Selection', keys: 'Ctrl+A', description: 'Select all' },
+  { group: 'Selection', keys: 'Esc', description: 'Clear selection' },
+
+  // Format
+  { group: 'Format', keys: 'Ctrl+B', description: 'Bold' },
+  { group: 'Format', keys: 'Ctrl+I', description: 'Italic' },
+  { group: 'Format', keys: 'Ctrl+U', description: 'Underline' },
+  { group: 'Format', keys: 'Ctrl+]', description: 'Font size +1' },
+  { group: 'Format', keys: 'Ctrl+[', description: 'Font size −1' },
+
+  // Align H
+  { group: 'Align H', keys: 'Ctrl+L', description: 'Left' },
+  { group: 'Align H', keys: 'Ctrl+E', description: 'Center' },
+  { group: 'Align H', keys: 'Ctrl+R', description: 'Right' },
+
+  // Align V
+  { group: 'Align V', keys: 'Ctrl+T', description: 'Top' },
+  { group: 'Align V', keys: 'Ctrl+G', description: 'Middle' },
+  { group: 'Align V', keys: 'Ctrl+M', description: 'Bottom' },
+
+  // Borders toggle
+  { group: 'Borders toggle', keys: 'Ctrl+0', description: 'None' },
+  { group: 'Borders toggle', keys: 'Ctrl+1', description: 'Left' },
+  { group: 'Borders toggle', keys: 'Ctrl+2', description: 'Right' },
+  { group: 'Borders toggle', keys: 'Ctrl+3', description: 'Top' },
+  { group: 'Borders toggle', keys: 'Ctrl+4', description: 'Bottom' },
+
+  // Borders remove
+  { group: 'Borders remove', keys: 'Ctrl+Shift+1', description: 'Remove left' },
+  { group: 'Borders remove', keys: 'Ctrl+Shift+2', description: 'Remove right' },
+  { group: 'Borders remove', keys: 'Ctrl+Shift+3', description: 'Remove top' },
+  { group: 'Borders remove', keys: 'Ctrl+Shift+4', description: 'Remove bottom' },
+
+  // Navigation
+  { group: 'Navigation', keys: 'Arrow keys', description: 'Navigate cells' },
+  { group: 'Navigation', keys: 'Shift+Arrow', description: 'Add to selection' },
+
+  // Cell
+  { group: 'Cell', keys: 'Enter', description: 'Edit content' },
+  { group: 'Cell', keys: 'Alt+Enter', description: 'Properties' },
+  { group: 'Cell', keys: 'Insert', description: 'Add cell' },
+  { group: 'Cell', keys: 'Delete', description: 'Delete cells' },
+  { group: 'Cell', keys: 'Ctrl+←', description: 'Narrow' },
+  { group: 'Cell', keys: 'Ctrl+→', description: 'Widen' },
+  { group: 'Cell', keys: 'Alt+←', description: 'Move left' },
+  { group: 'Cell', keys: 'Alt+→', description: 'Move right' },
+
+  // Row
+  { group: 'Row', keys: 'Alt+↑', description: 'Move row up' },
+  { group: 'Row', keys: 'Alt+↓', description: 'Move row down' },
+  { group: 'Row', keys: 'Alt+Delete', description: 'Delete row' },
+  { group: 'Row', keys: 'Alt+Insert', description: 'Add row' },
+  { group: 'Row', keys: 'Ctrl+↑', description: 'Row shorter' },
+  { group: 'Row', keys: 'Ctrl+↓', description: 'Row taller' },
+
+  // View
+  { group: 'View', keys: '?', description: 'Shortcut cheat sheet' },
+];
+
 // Normalize a KeyboardEvent to a string like 'Ctrl+Shift+ArrowUp', 'Ctrl+b', 'Delete'
 function key(e: KeyboardEvent): string {
   const parts: string[] = [];
@@ -154,6 +242,9 @@ const SHORTCUTS: Record<string, Handler> = {
 
   // Cell properties dialog
   'Alt+Enter': (e) => { e.preventDefault(); if (editor.activeCellId) editor.openCellDialog(editor.activeCellId); },
+
+  // Cheat sheet — '?' requires Shift on most keyboards, so e.shiftKey=true → key()='Shift+?'
+  'Shift+?': () => { editor.cheatSheetOpen = !editor.cheatSheetOpen; },
 
   // Cell reorder
   'Alt+ArrowLeft':  (e) => { e.preventDefault(); if (editor.activeCellId) editor.moveCellInRow(editor.activeCellId, 'left'); },

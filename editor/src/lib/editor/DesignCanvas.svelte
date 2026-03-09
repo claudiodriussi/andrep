@@ -3,11 +3,14 @@
   import { config } from '$lib/store/config.svelte';
   import { _ } from '$lib/i18n/index.svelte';
   import RowBlock from './RowBlock.svelte';
+  import HRuler from './HRuler.svelte';
   import { handleKeydown } from './keyboard';
 
   let newRowName = $state('');
   let showRowInput = $state(false);
   let inputEl = $state<HTMLInputElement | null>(null);
+
+  const page = $derived(editor.template.page);
 
   // Band column width: adapts to the longest band name.
   // 8px/char (bold 11px, slightly generous to avoid clipping) + 42px for controls + padding
@@ -46,27 +49,32 @@
   onclick={() => editor.clearSelection()}
   role="presentation"
 >
-  <!-- Header row: band column label + ruler placeholder -->
+  <!-- Header row: band column label + ruler -->
   <div class="header-row">
     <div class="band-col-header">{_('Band')}</div>
-    <div class="ruler-placeholder">
-      <!-- horizontal ruler — phase 2 -->
-    </div>
+    <HRuler />
   </div>
 
-  <!-- Flat row list -->
-  {#each editor.template.rows as row, i (row.id)}
-    <div role="presentation" onclick={(e) => e.stopPropagation()}>
-      <RowBlock
-        {row}
-        isFirst={i === 0}
-        isLast={i === editor.template.rows.length - 1}
-      />
-    </div>
-  {/each}
+  <!-- Rows wrapper — page guide lines via CSS background -->
+  <div
+    class="rows-wrapper"
+    style="
+      --guide-cw: {bandColW + page.width - page.marginLeft - page.marginRight}px;
+      --guide-pr: {bandColW + page.width}px;
+    "
+  >
+    {#each editor.template.rows as row, i (row.id)}
+      <div role="presentation" onclick={(e) => e.stopPropagation()}>
+        <RowBlock
+          {row}
+          isFirst={i === 0}
+          isLast={i === editor.template.rows.length - 1}
+        />
+      </div>
+    {/each}
 
-  <!-- Add row -->
-  <div class="add-row-area" role="presentation" onclick={(e) => e.stopPropagation()}>
+    <!-- Add row -->
+    <div class="add-row-area" role="presentation" onclick={(e) => e.stopPropagation()}>
     {#if showRowInput}
       <input
         bind:this={inputEl}
@@ -91,6 +99,7 @@
       <button class="add-row-btn" onclick={startAddRow}>{_('+ Row')}</button>
     {/if}
   </div>
+  </div><!-- rows-wrapper -->
 </div>
 
 <style>
@@ -130,8 +139,12 @@
     z-index: 21;
   }
 
-  .ruler-placeholder {
-    flex: 1;
+  /* Page guide lines: left-margin, right-margin, page-right-edge */
+  /* Guide lines: content-width boundary (blue) + physical page edge (gray) */
+  .rows-wrapper {
+    background:
+      linear-gradient(to bottom, #3b82f660, #3b82f660) var(--guide-cw) 0 / 1px 100% no-repeat,
+      linear-gradient(to bottom, #47556980, #47556980) var(--guide-pr) 0 / 1px 100% no-repeat;
   }
 
   .add-row-area {

@@ -1,6 +1,8 @@
-import type { BorderSide, Cell, CellStyle, CellType, Row, Template } from '$lib/types';
+import type { BorderSide, Cell, CellStyle, CellType, CompositionRule, PageConfig, Row, Template } from '$lib/types';
 import { _ } from '$lib/i18n/index.svelte';
 import { history } from './history.svelte';
+import { config } from './config.svelte';
+import { presetToPx } from '$lib/units';
 
 const STORAGE_KEY = 'andrep-draft';
 
@@ -66,19 +68,28 @@ function makeRow(name: string): Row {
   return { id: uid(), name, cells: [makeCell()] };
 }
 
-function emptyTemplate(): Template {
+function emptyTemplate(opts?: {
+  preset?: typeof config.config.defaultPreset;
+  margins?: { top: number; bottom: number; left: number; right: number };
+}): Template {
+  const preset = opts?.preset ?? config.config.defaultPreset;
+  const m      = opts?.margins ?? config.config.defaultMargins;
+  const dims   = presetToPx(preset, 'portrait');
   return {
     _type: 'andrep-template',
     name: 'New template',
     version: '1.0',
     page: {
-      width: 794,
-      height: 1123,
-      marginTop: 40,
-      marginBottom: 40,
-      marginLeft: 30,
-      marginRight: 30,
+      preset,
+      width:        dims.width,
+      height:       dims.height,
+      marginTop:    m.top,
+      marginBottom: m.bottom,
+      marginLeft:   m.left,
+      marginRight:  m.right,
       orientation: 'portrait',
+      locale:   config.config.defaultLocale,
+      currency: config.config.defaultCurrency,
     },
     rows: [],
   };
@@ -113,6 +124,9 @@ class EditorState {
   // Clipboards (in-memory, independent from system clipboard)
   cellClipboard = $state<Cell[] | null>(null);
   rowClipboard  = $state<Row[]  | null>(null);
+
+  // Cheat-sheet overlay (keyboard shortcuts)
+  cheatSheetOpen = $state(false);
 
   // Toggle design guides (dashed cell outlines visible only in the editor)
   showGuides = $state(true);
@@ -161,6 +175,24 @@ class EditorState {
     this.clearSelection();
     this.clearDraft();
     history.clear();
+  }
+
+  // --- page setup dialog ---
+  pageSetupOpen = $state(false);
+
+  openPageSetup() {
+    this.pageSetupOpen = true;
+  }
+
+  closePageSetup() {
+    this.pageSetupOpen = false;
+  }
+
+  applyPageSetup(name: string, page: PageConfig, composition: CompositionRule[]) {
+    this.pushHistory();
+    this.template.name = name;
+    this.template.page = { ...page };
+    this.template.composition = composition.length > 0 ? [...composition] : undefined;
   }
 
   toggleGuides() {

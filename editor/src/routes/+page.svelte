@@ -3,13 +3,49 @@
   import DesignCanvas from '$lib/editor/DesignCanvas.svelte';
   import Toolbar from '$lib/editor/Toolbar.svelte';
   import CellPropertiesDialog from '$lib/editor/CellPropertiesDialog.svelte';
+  import PageSetupDialog from '$lib/editor/PageSetupDialog.svelte';
+  import ShortcutCheatSheet from '$lib/editor/ShortcutCheatSheet.svelte';
+  import ConfigDialog from '$lib/editor/ConfigDialog.svelte';
   import { editor } from '$lib/store/editor.svelte';
   import { config } from '$lib/store/config.svelte';
   import { _ } from '$lib/i18n/index.svelte';
+  import { pxToMm, pxToInch } from '$lib/units';
 
-  const selectedCell = $derived(
-    editor.activeCellId ? editor.findCell(editor.activeCellId) : null,
-  );
+  // Format a px value according to the current unit setting
+  function fmt(px: number): string {
+    const u = config.config.units;
+    if (u === 'mm')   return pxToMm(px).toFixed(1) + 'mm';
+    if (u === 'inch') return pxToInch(px).toFixed(2) + 'in';
+    return px + 'px';
+  }
+
+  const selInfo = $derived.by(() => {
+    const cells = editor.selectedCells;
+    if (cells.length === 0) return null;
+
+    if (cells.length === 1) {
+      const c = cells[0];
+      return `w:${fmt(c.width)} · h:${fmt(c.height)} · x:${fmt(c.x)}`;
+    }
+
+    // Width span: from leftmost x to rightmost edge
+    const x0 = Math.min(...cells.map((c) => c.x));
+    const x1 = Math.max(...cells.map((c) => c.x + c.width));
+
+    // Height: sum of max-heights of unique rows containing selected cells
+    const selIds = new Set(cells.map((c) => c.id));
+    const rowHeights = editor.template.rows
+      .filter((r) => r.cells.some((c) => selIds.has(c.id)))
+      .map((r) => Math.max(...r.cells.map((c) => c.height)));
+    const totalH = rowHeights.reduce((a, b) => a + b, 0);
+
+    return `${cells.length} · w:${fmt(x1 - x0)} · h:${fmt(totalH)}`;
+  });
+
+  function cycleUnits() {
+    const u = config.config.units;
+    config.config.units = u === 'px' ? 'mm' : u === 'mm' ? 'inch' : 'px';
+  }
 
   // Autosave template draft to localStorage on every change (debounced 500ms)
   let templateSaveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -49,14 +85,19 @@
     <button class="hbtn" onclick={() => editor.saveJson()} title={_('Save template (Ctrl+S)')}>
       ⬇ {_('Save')}
     </button>
+    <button class="hbtn" onclick={() => editor.openPageSetup()} title={_('Page setup')}>
+      ▤ {_('Page')}
+    </button>
 
     <div class="spacer"></div>
 
-    {#if selectedCell}
-      <span class="cell-info">
-        w:{selectedCell.width}px · h:{selectedCell.height}px · x:{selectedCell.x}px
-      </span>
+    {#if selInfo}
+      <span class="cell-info">{selInfo}</span>
     {/if}
+
+    <button class="hbtn unit-btn" onclick={cycleUnits} title={_('Cycle units')}>
+      {config.config.units}
+    </button>
 
     <button
       class="hbtn"
@@ -65,6 +106,14 @@
       title={_('Toggle design guides')}
     >
       ⊞ {_('Guides')}
+    </button>
+
+    <button
+      class="hbtn"
+      onclick={() => (editor.cheatSheetOpen = true)}
+      title={_('Keyboard shortcuts (?)')}
+    >
+      ? {_('Keys')}
     </button>
 
     <div class="sep"></div>
@@ -89,6 +138,10 @@
           onkeydown={(e) => e.key === 'Escape' && (showConfigMenu = false)}
         ></div>
         <div class="config-menu">
+          <button class="menu-item" onclick={() => { config.configOpen = true; showConfigMenu = false; }}>
+            ⚙ {_('Preferences...')}
+          </button>
+          <div class="menu-sep"></div>
           <button class="menu-item" onclick={() => { config.loadJson(); showConfigMenu = false; }}>
             ⬆ {_('Load config')}
           </button>
@@ -109,6 +162,9 @@
   <DesignCanvas />
 
   <CellPropertiesDialog />
+  <PageSetupDialog />
+  <ShortcutCheatSheet />
+  <ConfigDialog />
 </div>
 
 <style>
@@ -152,7 +208,17 @@
     font-size: 11px;
     color: #94a3b8;
     font-family: monospace;
-    margin-right: 8px;
+    margin-right: 4px;
+  }
+
+  .unit-btn {
+    font-family: monospace;
+    font-size: 10px;
+    min-width: 34px;
+    text-align: center;
+    text-transform: uppercase;
+    color: #94a3b8;
+    border-color: #334155;
   }
 
   .hbtn {
