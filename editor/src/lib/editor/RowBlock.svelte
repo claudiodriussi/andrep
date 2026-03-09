@@ -4,7 +4,14 @@
   import { _ } from '$lib/i18n/index.svelte';
   import CellBlock from './CellBlock.svelte';
 
-  let { row, isFirst, isLast }: { row: Row; isFirst: boolean; isLast: boolean } = $props();
+  let {
+    row,
+    isFirst,
+    isLast,
+    isFirstOfBand,
+  }: { row: Row; isFirst: boolean; isLast: boolean; isFirstOfBand: boolean } = $props();
+
+  const keepTogether = $derived(editor.getBandOptions(row.name).keepTogether ?? false);
 
   const rowHeight = $derived(
     row.cells.length > 0 ? Math.max(...row.cells.map((c) => c.height)) : 24,
@@ -32,6 +39,16 @@
 
 <div class="row-block" style="height: {rowHeight}px">
   <div class="band-col">
+    {#if isFirstOfBand}
+      <button
+        class="lock-btn"
+        class:locked={keepTogether}
+        onclick={(e) => { e.stopPropagation(); editor.toggleBandKeepTogether(row.name); }}
+        title={keepTogether ? _('Keep together: on') : _('Keep together: off')}
+      >{keepTogether ? '🔒' : '🔓'}</button>
+    {:else}
+      <span class="lock-spacer"></span>
+    {/if}
     {#if editing}
       <input
         bind:this={nameInput}
@@ -107,6 +124,42 @@
     gap: 2px;
     z-index: 10;
     overflow: hidden;
+  }
+
+  .lock-btn {
+    width: 14px;
+    height: 14px;
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font-size: 9px;
+    line-height: 14px;
+    text-align: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    opacity: 0;
+    transition: opacity 0.12s;
+  }
+
+  .band-col:hover .lock-btn {
+    opacity: 0.45;
+  }
+
+  .lock-btn:hover {
+    opacity: 1 !important;
+  }
+
+  .lock-btn.locked {
+    opacity: 1;
+  }
+
+  .lock-spacer {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    box-sizing: border-box;
   }
 
   .band-name {

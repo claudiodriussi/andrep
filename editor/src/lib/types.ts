@@ -72,6 +72,12 @@ export interface PageConfig {
   orientation: 'portrait' | 'landscape';
   locale: string;    // e.g. 'it-IT' — for date/number formatting in the renderer
   currency: string;  // e.g. 'EUR'
+  columns?: number;    // number of columns for label/multi-column layouts (default: 1)
+  columnGap?: number;  // horizontal gap between columns in px (default: 0)
+}
+
+export interface BandOptions {
+  keepTogether?: boolean; // if true, all rows of this band are kept on the same page
 }
 
 export type CompositionRuleType = 'IfNot' | 'Replace' | 'InsBefore' | 'InsAfter';
@@ -87,6 +93,7 @@ export interface Template {
   version: string;
   page: PageConfig;
   rows: Row[];
+  bands?: Record<string, BandOptions>; // per-band options keyed by band name
   composition?: CompositionRule[];
 }
 

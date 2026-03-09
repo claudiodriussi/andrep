@@ -65,6 +65,8 @@ const it: Record<string, string> = {
   'Move up (Alt+↑)': 'Muovi su (Alt+↑)',
   'Move down (Alt+↓)': 'Muovi giù (Alt+↓)',
   'Click to select · Double-click to rename': 'Click per selezionare · Doppio click per rinominare',
+  'Keep together: on': 'Tieni unita: attivo',
+  'Keep together: off': 'Tieni unita: disattivo',
 
   // format
   'Font': 'Font',
@@ -140,6 +142,9 @@ const it: Record<string, string> = {
   'Save config': 'Salva configurazione',
 
   // page setup
+  'Columns': 'Colonne',
+  'Gap': 'Spazio',
+  'Column width': 'Larghezza colonna',
   'Composition': 'Composizione',
   'No composition rules': 'Nessuna regola di composizione',
   'Template name': 'Nome template',

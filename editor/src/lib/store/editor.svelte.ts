@@ -1,4 +1,4 @@
-import type { BorderSide, Cell, CellStyle, CellType, CompositionRule, PageConfig, Row, Template } from '$lib/types';
+import type { BorderSide, BandOptions, Cell, CellStyle, CellType, CompositionRule, PageConfig, Row, Template } from '$lib/types';
 import { _ } from '$lib/i18n/index.svelte';
 import { history } from './history.svelte';
 import { config } from './config.svelte';
@@ -186,6 +186,24 @@ class EditorState {
 
   closePageSetup() {
     this.pageSetupOpen = false;
+  }
+
+  getBandOptions(bandName: string): BandOptions {
+    return this.template.bands?.[bandName] ?? {};
+  }
+
+  toggleBandKeepTogether(bandName: string) {
+    this.pushHistory();
+    const current = this.template.bands?.[bandName]?.keepTogether ?? false;
+    const bands = { ...(this.template.bands ?? {}) };
+    if (current) {
+      // turn off — remove entry, clean up if empty
+      const { [bandName]: _removed, ...rest } = bands;
+      this.template.bands = Object.keys(rest).length > 0 ? rest : undefined;
+    } else {
+      bands[bandName] = { ...bands[bandName], keepTogether: true };
+      this.template.bands = bands;
+    }
   }
 
   applyPageSetup(name: string, page: PageConfig, composition: CompositionRule[]) {

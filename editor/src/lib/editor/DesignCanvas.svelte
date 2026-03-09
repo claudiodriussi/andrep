@@ -12,6 +12,16 @@
 
   const page = $derived(editor.template.page);
 
+  // For each row, whether it is the first global occurrence of its band name
+  const firstOfBand = $derived.by(() => {
+    const seen = new Set<string>();
+    return editor.template.rows.map((row) => {
+      if (seen.has(row.name)) return false;
+      seen.add(row.name);
+      return true;
+    });
+  });
+
   // Band column width: adapts to the longest band name.
   // 8px/char (bold 11px, slightly generous to avoid clipping) + 42px for controls + padding
   const BTN_AREA = 42;
@@ -69,6 +79,7 @@
           {row}
           isFirst={i === 0}
           isLast={i === editor.template.rows.length - 1}
+          isFirstOfBand={firstOfBand[i]}
         />
       </div>
     {/each}
