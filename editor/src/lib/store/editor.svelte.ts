@@ -4,7 +4,19 @@ import { history } from './history.svelte';
 import { config } from './config.svelte';
 import { presetToPx } from '$lib/units';
 
-const STORAGE_KEY = 'andrep-draft';
+function getDraftStorageKey(): string {
+  if (config.config.draftMode === 'session') {
+    let tabId = sessionStorage.getItem('andrep-tab-id');
+    if (!tabId) {
+      tabId = crypto.randomUUID().slice(0, 8);
+      sessionStorage.setItem('andrep-tab-id', tabId);
+    }
+    return `andrep-draft-${tabId}`;
+  }
+  return 'andrep-draft';
+}
+
+const STORAGE_KEY = getDraftStorageKey();
 
 let _uid = 1;
 const uid = () => `r${_uid++}`;
@@ -28,8 +40,8 @@ function borderSide(): BorderSide {
 
 function defaultStyle(): CellStyle {
   return {
-    fontFamily: 'Arial',
-    fontSize: 11,
+    fontFamily: config.config.defaultFont,
+    fontSize: config.config.defaultFontSize,
     fontWeight: 'normal',
     fontStyle: 'normal',
     textDecoration: 'none',
@@ -125,6 +137,9 @@ class EditorState {
   cellClipboard = $state<Cell[] | null>(null);
   rowClipboard  = $state<Row[]  | null>(null);
 
+  // True after any mutation, false after explicit save / new / load
+  dirty = $state(false);
+
   // Cheat-sheet overlay (keyboard shortcuts)
   cheatSheetOpen = $state(false);
 
@@ -142,6 +157,7 @@ class EditorState {
 
   pushHistory() {
     history.push(this.template);
+    this.dirty = true;
   }
 
   undo() {
@@ -172,6 +188,7 @@ class EditorState {
       if (!confirm(_('Create new template? Unsaved changes will be lost.'))) return;
     }
     this.template = emptyTemplate();
+    this.dirty = false;
     this.clearSelection();
     this.clearDraft();
     history.clear();
@@ -588,6 +605,7 @@ class EditorState {
   // --- file ---
 
   saveJson() {
+    this.dirty = false;
     this.clearDraft();
     const json = JSON.stringify(this.template, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
@@ -614,6 +632,7 @@ class EditorState {
           return;
         }
         this.template = data as Template;
+        this.dirty = false;
         syncUid(this.template);
         this.clearSelection();
         this.clearDraft();

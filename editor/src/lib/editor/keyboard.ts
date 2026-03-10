@@ -289,6 +289,7 @@ export function handleKeydown(e: KeyboardEvent): void {
     e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey &&
     editor.activeCellId
   ) {
+    e.preventDefault(); // prevent char from also being typed into the newly focused textarea
     editor.openInlineEditor(editor.activeCellId, e.key);
   }
 }

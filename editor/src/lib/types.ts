@@ -103,6 +103,7 @@ export type ToolbarGroupId = 'file' | 'colors' | 'borders' | 'font' | 'align' | 
 export interface EditorConfig {
   _type: 'andrep-config'; // file signature — used to validate on load
   locale: 'en' | 'it';
+  draftMode: 'single' | 'session'; // 'single' = one shared draft; 'session' = one draft per tab (lost on close)
   units: 'px' | 'mm' | 'inch';
   // Defaults applied when creating a new template
   defaultPreset: PagePreset;

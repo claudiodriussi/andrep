@@ -188,11 +188,21 @@
         </div>
 
         <div class="field-row">
-          <label class="checkbox-label">
-            <input type="checkbox" bind:checked={local.showRenderingHints} />
-            {_('Show rendering hints (page_role, variable refs)')}
-          </label>
+          <span class="field-label">{_('Draft autosave')}</span>
+          <div class="radio-group">
+            <label class="radio-label">
+              <input type="radio" name="cfg-draft" value="single" bind:group={local.draftMode} />
+              {_('Single')}
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="cfg-draft" value="session" bind:group={local.draftMode} />
+              {_('Per tab')}
+            </label>
+          </div>
         </div>
+        {#if local.draftMode === 'session'}
+          <p class="hint-warn">{_('Per-tab mode: draft is lost when the tab is closed. Save the template before closing.')}</p>
+        {/if}
 
         <!-- ─── 2. New template defaults ─── -->
         <div class="section-title">{_('New template defaults')}</div>
@@ -546,13 +556,14 @@
     cursor: pointer;
   }
 
-  .checkbox-label {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    font-size: 12px;
-    color: #1e293b;
-    cursor: pointer;
+  .hint-warn {
+    margin: 0;
+    padding: 6px 8px;
+    font-size: 11px;
+    color: #92400e;
+    background: #fef3c7;
+    border: 1px solid #fcd34d;
+    border-radius: 3px;
   }
 
   /* ── List editor (fontFamilies, bandNamePresets) ── */

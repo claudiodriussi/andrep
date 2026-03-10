@@ -11,6 +11,16 @@
   import { _ } from '$lib/i18n/index.svelte';
   import { pxToMm, pxToInch } from '$lib/units';
 
+  // Warn before closing the tab when in session draft mode and the template has content.
+  // The browser shows a generic "Changes may not be saved" dialog — custom messages are not supported.
+  $effect(() => {
+    const shouldWarn = config.config.draftMode === 'session' && editor.dirty;
+    if (!shouldWarn) return;
+    function handleBeforeUnload(e: BeforeUnloadEvent) { e.preventDefault(); }
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  });
+
   // Format a px value according to the current unit setting
   function fmt(px: number): string {
     const u = config.config.units;

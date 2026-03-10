@@ -6,6 +6,7 @@ const STORAGE_KEY = 'andrep-config';
 const DEFAULT_CONFIG: EditorConfig = {
   _type: 'andrep-config',
   locale: 'en',
+  draftMode: 'single',
   units: 'px',
   defaultPreset: 'A4',
   // ~10mm top/left/right, ~15mm bottom (extra safety for inkjet bottom hardware margin)
