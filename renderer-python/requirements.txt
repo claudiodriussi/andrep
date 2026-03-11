@@ -1,0 +1,16 @@
+# AndRep renderer-python — dependencies
+#
+# Core renderer has no required dependencies (pure stdlib).
+#
+# Install all optional deps:
+#   pip install -r requirements.txt
+
+# --- PDF output ---
+weasyprint
+
+# --- Barcode / QR (SVG output, no Pillow needed) ---
+python-barcode
+qrcode[svg]
+
+# --- Images: uncomment when autoStretch or self-contained HTML is needed ---
+# Pillow
