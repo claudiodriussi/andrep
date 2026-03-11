@@ -1,5 +1,11 @@
 """
-variables.py — parser [expr|formatter] e valutazione espressioni per AndRep.
+variables.py — [expr|formatter] parser and expression evaluation for AndRep.
+
+Public API:
+    resolve_content(content, ctx) -> str   — full resolve (parse + eval + format)
+    _parse_tokens(content)        -> list  — parse once, reuse across many evals
+    eval_expr(expr, ctx)          -> any   — evaluate a single expression
+    _apply_formatter(value, fmt)  -> any   — apply one formatter to a value
 """
 import re
 import types
@@ -171,7 +177,7 @@ def _parse_tokens(content):
                 if current_text:
                     result.append(("".join(current_text), None, None))
                     current_text = []
-                token = content[i + 1 : j - 1]
+                token = content[i + 1: j - 1]
                 expr, formatters = _split_token(token)
                 result.append(("", expr, formatters))
                 i = j

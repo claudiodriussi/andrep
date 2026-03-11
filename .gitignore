@@ -8,6 +8,9 @@ node_modules
 editor/.svelte-kit
 editor/build
 
+renderer-python/sample/output
+renderer-python/sample/sample.db
+
 # OS
 .DS_Store
 Thumbs.db

@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from andrep import AndRepRenderer, FilesystemLoader
 
 TEMPLATES = Path(__file__).parent.parent / "templates"
-OUTPUT    = Path(__file__).parent / "sells_composed.json"
+OUTPUT = Path(__file__).parent / "output" / "sells_composed.json"
 
 loader = FilesystemLoader(base_dir=TEMPLATES)
 renderer = AndRepRenderer("sells", loader=loader)

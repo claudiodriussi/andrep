@@ -1,5 +1,5 @@
 """
-renderer.py — AndRepRenderer class: emit / to_html / to_pdf / save_composed
+renderer.py — AndRepRenderer: emit / compile / to_html / to_pdf / to_json
 """
 import json
 import os
@@ -7,8 +7,8 @@ from datetime import datetime
 from html import escape
 from pathlib import Path
 
-from .loader import FilesystemLoader, TemplateLoader
-from .variables import resolve_content
+from .loader import TemplateLoader
+from .variables import _apply_formatter, _parse_tokens, eval_expr
 
 
 # ---------------------------------------------------------------------------
@@ -30,7 +30,6 @@ def load_template(template, template_dir=None, loader: TemplateLoader = None):
     Returns the final template dict with rows already merged.
     """
     if loader is not None:
-        # loader-based path: template is a name string
         tmpl = loader.load(template) if isinstance(template, str) else dict(template)
     elif isinstance(template, str):
         path = template
@@ -52,7 +51,6 @@ def load_template(template, template_dir=None, loader: TemplateLoader = None):
         if not target:
             continue
 
-        # Load the target template — loader takes priority over template_dir
         if loader is not None:
             try:
                 ref_tmpl = loader.load(target)
@@ -63,16 +61,15 @@ def load_template(template, template_dir=None, loader: TemplateLoader = None):
             if not os.path.exists(ref_path):
                 continue
             ref_tmpl = _load_json(ref_path)
+
         ref_rows = ref_tmpl.get("rows", [])
         main_rows = tmpl.get("rows", [])
 
         if rule in ("insbefore", "insertbefore"):
-            # Group ref rows by band name
             ref_bands: dict[str, list] = {}
             for row in ref_rows:
                 ref_bands.setdefault(row["name"], []).append(row)
 
-            # Insert ref rows before the first main row with the same band name
             new_rows = []
             inserted: set[str] = set()
             for row in main_rows:
@@ -82,7 +79,6 @@ def load_template(template, template_dir=None, loader: TemplateLoader = None):
                     inserted.add(name)
                 new_rows.append(row)
 
-            # Ref bands with no matching main band: prepend at the top
             for name, rows in ref_bands.items():
                 if name not in inserted:
                     new_rows = rows + new_rows
@@ -122,7 +118,6 @@ def load_template(template, template_dir=None, loader: TemplateLoader = None):
                     if name not in seen:
                         new_rows.extend(ref_bands[name])
                         seen.add(name)
-                    # skip original row
                 else:
                     new_rows.append(row)
             tmpl["rows"] = new_rows
@@ -149,45 +144,58 @@ class AndRepRenderer:
 
     Subclass to add accumulators and business logic::
 
-        class SellsReport(AndRepRenderer):
+        class ArticlesReport(AndRepRenderer):
             def on_init(self):
-                self.tot_amount = 0
+                self.count = 0
+                self.total = 0.0
 
             def on_after_band(self, band_name, data):
                 if band_name == "band":
-                    self.tot_amount += data["row"]["amount"]
+                    self.count += 1
+                    self.total += data["row"]["price"]
 
         loader = FilesystemLoader(Path("templates/"))
-        r = SellsReport("sells", loader=loader)
+        r = ArticlesReport("articles", loader=loader)
+        r.title = "Article List"
         for row in data:
             r.emit("band", {"row": row})
         r.emit("totals")
-        html = r.to_html()
-        pdf  = r.to_pdf()   # requires weasyprint
+
+        r.save_output("output.json")   # flat resolved values — JSON / Excel ready
+        html = r.to_html()             # composed.json layout + output.json values
+        pdf  = r.to_pdf()             # requires weasyprint
     """
 
     def __init__(self, template, template_dir=None, loader: TemplateLoader = None):
         self.template = load_template(template, template_dir, loader=loader)
         self.page = self.template.get("page", {})
         self._emissions: list[tuple[str, dict]] = []
+        self._compiled: list[dict] | None = None   # set by compile()
 
         # State — readable in expressions via _r
-        self.cur_band: str = ""    # band currently being emitted
-        self.last_band: str = ""   # band emitted in the previous emit() call
-        self.started: bool = False  # True after first emit()
+        self.cur_band: str = ""
+        self.last_band: str = ""
+        self.started: bool = False
 
         # System variables — override before first emit() if needed
         now = datetime.now()
         self.report_date: str = now.strftime("%d/%m/%Y")   # _date in expressions
         self.report_time: str = now.strftime("%H:%M:%S")   # _time in expressions
         self.report_user: str = os.environ.get("USER", os.environ.get("USERNAME", ""))  # _user
-        self.report_name: str = self.template.get("name", "")  # _name (report title)
-        self.cur_page: int = 1     # _page — incremented by PDF renderer; set manually to continue numbering across reports
+        self.title: str = self.template.get("name", "")    # _r.title — overridable report title
+        self.cur_page: int = 1   # incremented by PDF renderer; set manually to chain reports
 
         # Group rows by band name
         self.bands: dict[str, list] = {}
         for row in self.template.get("rows", []):
             self.bands.setdefault(row["name"], []).append(row)
+
+        # Pre-parse cell content tokens once — eval only at compile time
+        self._cell_tokens: dict[int, list] = {}
+        for band_rows in self.bands.values():
+            for row in band_rows:
+                for cell in row.get("cells", []):
+                    self._cell_tokens[id(cell)] = _parse_tokens(cell.get("content", ""))
 
         self.on_init()
 
@@ -208,10 +216,10 @@ class AndRepRenderer:
         if not self.started:
             self.started = True
             self.on_before()
-        self.on_before_band(band_name, data)   # data is mutable — add variables here
+        self.on_before_band(band_name, data)
         if not silent:
             self._emissions.append((band_name, data))
-        self.on_after_band(band_name, data)    # accumulate totals here
+        self.on_after_band(band_name, data)
         self.last_band = self.cur_band
         self.cur_band = band_name
 
@@ -236,7 +244,7 @@ class AndRepRenderer:
         pass
 
     def on_after(self) -> None:
-        """Called at the start of to_html() / to_pdf(), after all emits."""
+        """Called once at compile time, after all emits."""
         pass
 
     def on_abort(self) -> None:
@@ -252,7 +260,7 @@ class AndRepRenderer:
         return name in self.bands
 
     def page_break(self) -> None:
-        """Insert an explicit page break. PDF only; no-op in HTML output."""
+        """Insert an explicit page break marker into the emission list."""
         self._emissions.append(("__page_break__", {}))
 
     # ------------------------------------------------------------------
@@ -264,9 +272,108 @@ class AndRepRenderer:
             "_date": self.report_date,
             "_time": self.report_time,
             "_user": self.report_user,
-            "_name": self.report_name,
+            "_name": self.template.get("name", ""),   # technical template name — not overridable
             "_page": self.cur_page,
+            "_r": self,
         }
+
+    # ------------------------------------------------------------------
+    # Auto header / footer
+    # ------------------------------------------------------------------
+
+    def _header_band_name(self) -> str | None:
+        for name in ("first_header", "page_header"):
+            if name in self.bands:
+                return name
+        return None
+
+    def _footer_band_name(self) -> str | None:
+        for name in ("last_footer", "page_footer"):
+            if name in self.bands:
+                return name
+        return None
+
+    def _full_emissions(self) -> list[tuple[str, dict]]:
+        """Auto header + caller emissions + auto footer."""
+        result = []
+        header = self._header_band_name()
+        footer = self._footer_band_name()
+        if header:
+            result.append((header, {}))
+        result.extend(self._emissions)
+        if footer:
+            result.append((footer, {}))
+        return result
+
+    # ------------------------------------------------------------------
+    # Compile — resolve all expressions once, produce flat output structure
+    # ------------------------------------------------------------------
+
+    def compile(self) -> None:
+        """Resolve all token expressions and cache the output structure.
+
+        Called automatically by to_html(), to_pdf(), to_json(), save_output().
+        Safe to call multiple times — compiles only once.
+
+        Output structure (self._compiled): list of records, one per emission::
+
+            {"band": "band",    "values": ["ART001", "10 ohm...", 0.45]}
+            {"band": "__page_break__"}
+            {"band": "totals",  "values": [41, 726.75]}
+            {"band": "page_footer"}   # no variables → no values key
+
+        Values are raw (no formatters applied) so they can be used directly
+        for JSON / Excel export.  Formatters are applied only during HTML/PDF rendering.
+        """
+        if self._compiled is not None:
+            return
+
+        self.on_after()
+        sys_ctx = self._sys_ctx()
+        result = []
+
+        for band_name, data in self._full_emissions():
+            if band_name == "__page_break__":
+                result.append({"band": "__page_break__"})
+                continue
+
+            ctx = {**sys_ctx, **data}
+            rows = self.bands.get(band_name, [])
+
+            # Collect raw token values across all rows and cells of this band
+            values = []
+            for row in rows:
+                for cell in row.get("cells", []):
+                    for _, expr, _ in self._cell_tokens[id(cell)]:
+                        if expr is not None:
+                            values.append(eval_expr(expr, ctx))
+
+            record: dict = {"band": band_name}
+            if values:
+                record["values"] = values
+            result.append(record)
+
+        self._compiled = result
+
+    # ------------------------------------------------------------------
+    # Output
+    # ------------------------------------------------------------------
+
+    def save_output(self, path: str | Path) -> None:
+        """Save the compiled output to a JSON file (raw values, no formatters).
+
+        This file is the data source for HTML/PDF rendering and can be used
+        directly for JSON / Excel export.
+        """
+        self.compile()
+        Path(path).write_text(
+            json.dumps(self._compiled, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+
+    def to_json(self) -> str:
+        """Return the compiled output as a JSON string."""
+        self.compile()
+        return json.dumps(self._compiled, ensure_ascii=False, indent=2)
 
     # ------------------------------------------------------------------
     # Cell CSS
@@ -284,10 +391,8 @@ class AndRepRenderer:
     def _cell_style(self, cell: dict) -> str:
         s = cell.get("style", {})
         borders = s.get("borders", {})
-
         va_map = {"top": "flex-start", "middle": "center", "bottom": "flex-end"}
         va = va_map.get(s.get("verticalAlignment", "top"), "flex-start")
-
         parts = [
             "position:absolute",
             f"left:{cell.get('x', 0)}px",
@@ -320,31 +425,36 @@ class AndRepRenderer:
         return ";".join(parts)
 
     # ------------------------------------------------------------------
-    # HTML rendering
+    # HTML rendering — uses compiled values + template for layout/formatters
     # ------------------------------------------------------------------
-
-    def _render_cell(self, cell: dict, ctx: dict) -> str:
-        content = resolve_content(cell.get("content", ""), ctx)
-        content = escape(content).replace("\n", "<br>")
-        style = self._cell_style(cell)
-        return f'<div style="{style}">{content}</div>'
 
     def _row_height(self, row: dict) -> int:
         return max((c.get("height", 24) for c in row.get("cells", [])), default=24)
 
-    def _render_row(self, row: dict, ctx: dict) -> str:
+    def _cell_html(self, cell: dict, values_iter) -> str:
+        """Render one cell to HTML, consuming its token values from values_iter."""
+        tokens = self._cell_tokens[id(cell)]
+        parts = []
+        for text, expr, fmts in tokens:
+            if text:
+                parts.append(escape(text))
+            if expr is not None:
+                v = next(values_iter, None)
+                if fmts:
+                    for fmt in fmts:
+                        v = _apply_formatter(v, fmt)
+                parts.append(escape(str(v) if v is not None else ""))
+        content = "".join(parts).replace("\n", "<br>")
+        return f'<div style="{self._cell_style(cell)}">{content}</div>'
+
+    def _row_html(self, row: dict, values_iter) -> str:
         height = self._row_height(row)
-        cells = "".join(self._render_cell(c, ctx) for c in row.get("cells", []))
+        cells = "".join(self._cell_html(c, values_iter) for c in row.get("cells", []))
         return f'<div style="position:relative;height:{height}px">{cells}</div>\n'
 
-    def _render_band(self, band_name: str, ctx: dict) -> str:
-        rows = self.bands.get(band_name, [])
-        if not rows:
-            return f"<!-- band '{band_name}' not found -->\n"
-        return "".join(self._render_row(row, ctx) for row in rows)
-
     def to_html(self) -> str:
-        """Render all recorded emissions to a complete HTML document."""
+        """Render to a complete HTML document."""
+        self.compile()
         page = self.page
         width = page.get("width", 794)
         mt = page.get("marginTop", 40)
@@ -352,27 +462,29 @@ class AndRepRenderer:
         ml = page.get("marginLeft", 30)
         mr = page.get("marginRight", 30)
 
-        self.on_after()
-        sys_ctx = self._sys_ctx()
         body_parts: list[str] = []
-
-        for band_name, data in self._emissions:
-            ctx = {**sys_ctx, **data}
-            body_parts.append(self._render_band(band_name, ctx))
-
-        body = "".join(body_parts)
+        for record in self._compiled:
+            band_name = record["band"]
+            if band_name == "__page_break__":
+                body_parts.append('<div style="page-break-after:always;height:0"></div>\n')
+                continue
+            rows = self.bands.get(band_name, [])
+            if not rows:
+                body_parts.append(f"<!-- band '{band_name}' not found -->\n")
+                continue
+            values_iter = iter(record.get("values", []))
+            for row in rows:
+                body_parts.append(self._row_html(row, values_iter))
 
         return (
-            "<!DOCTYPE html>\n"
-            "<html><head>\n"
+            "<!DOCTYPE html>\n<html><head>\n"
             '<meta charset="utf-8">\n'
             "<style>\n"
             "* { box-sizing: border-box; margin: 0; padding: 0; }\n"
             f"body {{ width: {width}px; padding: {mt}px {mr}px {mb}px {ml}px; }}\n"
-            "</style>\n"
-            "</head><body>\n"
-            f"{body}"
-            "</body></html>\n"
+            "</style>\n</head><body>\n"
+            + "".join(body_parts)
+            + "</body></html>\n"
         )
 
     def to_pdf(self) -> bytes:
@@ -388,33 +500,6 @@ class AndRepRenderer:
     # ------------------------------------------------------------------
 
     def save_composed(self, path: str | Path) -> None:
-        """Save the resolved template to a JSON file.
-
-        The output is a valid andrep-template with rows in their final order.
-        The 'composition' key is omitted — it has already been applied.
-        """
+        """Save the resolved template to a JSON file (rows merged, no composition key)."""
         out = {k: v for k, v in self.template.items() if k != "composition"}
         Path(path).write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
-
-    # ------------------------------------------------------------------
-    # Debug / serialization
-    # ------------------------------------------------------------------
-
-    def to_json(self) -> str:
-        """Return rendered emissions as JSON. Useful for debugging and tests."""
-        sys_ctx = self._sys_ctx()
-        result = []
-        for band_name, data in self._emissions:
-            ctx = {**sys_ctx, **data}
-            rows = self.bands.get(band_name, [])
-            rendered_rows = []
-            for row in rows:
-                rendered_cells = []
-                for cell in row.get("cells", []):
-                    rendered_cells.append({
-                        "id": cell.get("id"),
-                        "content": resolve_content(cell.get("content", ""), ctx),
-                    })
-                rendered_rows.append(rendered_cells)
-            result.append({"band": band_name, "rows": rendered_rows})
-        return json.dumps(result, ensure_ascii=False, indent=2)
