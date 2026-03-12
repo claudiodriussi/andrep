@@ -16,6 +16,13 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from andrep import AndRepRenderer, FilesystemLoader
 
+name = [
+    "ACME Fireworks & Electronic Components Corp.",
+    "1 Canyon Road, Desert Flats, AZ",
+    "orders@acme-kaboom.example",
+    "VAT: US000001"
+]
+
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
@@ -34,10 +41,10 @@ class ArticlesReport(AndRepRenderer):
         self.count = 0
         self.total = 0.0
 
-    def on_after_band(self, band_name, data):
+    def on_after_band(self, band_name):
         if band_name == "band":
             self.count += 1
-            self.total += data["row"]["price"]
+            self.total += self.data.row.price
 
 
 # ---------------------------------------------------------------------------
@@ -54,6 +61,7 @@ def main():
     loader = FilesystemLoader(base_dir=TEMPLATES)
     r = ArticlesReport("articles", loader=loader)
     r.title = "Article List"
+    r.name = name
 
     con = sqlite3.connect(DB)
     con.row_factory = sqlite3.Row
@@ -66,8 +74,8 @@ def main():
          ORDER BY a.type, c.code, a.code
     """).fetchall()
 
-    for article in articles:
-        r.emit("band", {"row": dict(article)})
+    for row in articles:
+        r.emit("band")
 
     r.emit("totals")
     con.close()

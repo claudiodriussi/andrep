@@ -2,10 +2,14 @@
 variables.py — [expr|formatter] parser and expression evaluation for AndRep.
 
 Public API:
-    resolve_content(content, ctx) -> str   — full resolve (parse + eval + format)
+    resolve_content(content, ns) -> str   — full resolve (parse + eval + format)
     _parse_tokens(content)        -> list  — parse once, reuse across many evals
-    eval_expr(expr, ctx)          -> any   — evaluate a single expression
+    eval_expr(expr, ns)           -> any   — evaluate a single expression
     _apply_formatter(value, fmt)  -> any   — apply one formatter to a value
+
+The `ns` parameter is a pre-built eval namespace dict (already contains
+``__builtins__: {}``).  Build it once per emit() call and reuse for all cells
+in that band — never rebuild per cell.
 """
 import re
 import types
@@ -13,7 +17,14 @@ from datetime import date, datetime
 
 
 def _to_ns(data):
-    """Converte ricorsivamente dict/list in SimpleNamespace per accesso con attributi."""
+    """Recursively convert dict / dict-like / list to SimpleNamespace for
+    attribute access in template expressions.
+
+    - dict           → SimpleNamespace (recursive)
+    - dict-like      → SimpleNamespace (objects with .keys() + [key], e.g. sqlite3.Row)
+    - list           → list of converted items
+    - anything else  → returned as-is (SQLAlchemy Row, Odoo record, int, str, …)
+    """
     if isinstance(data, dict):
         ns = types.SimpleNamespace()
         for k, v in data.items():
@@ -21,16 +32,30 @@ def _to_ns(data):
         return ns
     elif isinstance(data, list):
         return [_to_ns(i) for i in data]
+    elif (
+        not isinstance(data, (str, bytes, int, float, bool, type(None), type))
+        and hasattr(data, "keys")
+        and hasattr(data, "__getitem__")
+    ):
+        # dict-like: sqlite3.Row, collections.OrderedDict subclasses, etc.
+        try:
+            ns = types.SimpleNamespace()
+            for k in data.keys():
+                setattr(ns, k, _to_ns(data[k]))
+            return ns
+        except Exception:
+            pass
     return data
 
 
-def eval_expr(expr, ctx):
-    """Valuta un'espressione nel contesto ctx (dict).
-    Ritorna il valore o '[#expr#]' in caso di errore.
+def eval_expr(expr, ns):
+    """Evaluate *expr* in the pre-built namespace *ns*.
+
+    *ns* must already contain ``"__builtins__": {}`` to restrict access.
+    Returns the computed value or the literal string ``'[#expr#]'`` on error.
     """
     try:
-        ns_locals = {k: _to_ns(v) for k, v in ctx.items()}
-        return eval(expr, {"__builtins__": {}}, ns_locals)  # noqa: S307
+        return eval(expr, ns)  # noqa: S307
     except ZeroDivisionError:
         return 0
     except Exception:
@@ -38,7 +63,7 @@ def eval_expr(expr, ctx):
 
 
 def _apply_formatter(value, fmt):
-    """Applica un singolo formatter a un valore."""
+    """Apply a single formatter to a value."""
     fmt = fmt.strip()
     if not fmt:
         return value
@@ -64,13 +89,13 @@ def _apply_formatter(value, fmt):
     if fmt == "currency":
         try:
             v = float(value)
-            # € 1.234,56  (formato italiano)
+            # € 1.234,56  (Italian format)
             formatted = f"{v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
             return f"€ {formatted}"
         except (TypeError, ValueError):
             return str(value)
 
-    # Formato data esplicito: contiene d/m/y (es. dd/mm/yyyy)
+    # Explicit date format: contains d/m/y (e.g. dd/mm/yyyy)
     if re.match(r"^[dDmMyY/\-\s]+$", fmt) and any(c in fmt.lower() for c in "dmy"):
         if isinstance(value, (date, datetime)):
             py_fmt = (
@@ -85,7 +110,7 @@ def _apply_formatter(value, fmt):
                 pass
         return str(value) if value is not None else ""
 
-    # Formato numerico con sign opzionale: +.2  .2  10.2  10
+    # Numeric format with optional sign: +.2  .2  10.2  10
     sign = ""
     rest = fmt
     if rest.startswith("+"):
@@ -100,7 +125,7 @@ def _apply_formatter(value, fmt):
         try:
             v = float(value)
             formatted = f"{v:{sign},.{decimals}f}"
-            # Separatori italiani
+            # Italian separators
             formatted = formatted.replace(",", "X").replace(".", ",").replace("X", ".")
             if width:
                 formatted = formatted.rjust(width)
@@ -108,7 +133,7 @@ def _apply_formatter(value, fmt):
         except (TypeError, ValueError):
             return str(value)
 
-    # Solo cifre: N decimali fissi senza separatore migliaia
+    # Digits only: N fixed decimals without thousands separator
     if re.match(r"^\d+$", fmt):
         decimals = int(fmt)
         try:
@@ -121,13 +146,13 @@ def _apply_formatter(value, fmt):
 
 
 def _split_token(token):
-    """Divide il contenuto di un token [token] in (expr, [formatter, ...]).
+    """Split token content into (expr, [formatter, ...]).
 
-    Regola:
-    1. Se contiene \\| → separatore esplicito (tutto prima = expr)
-    2. Altrimenti: primo | singolo (non parte di ||) è il separatore
+    Rules:
+    1. If it contains \\| → explicit separator (everything before = expr)
+    2. Otherwise: first single | (not part of ||) is the separator
     """
-    # Passo 1: cerca separatore esplicito \|
+    # Step 1: look for explicit separator \|
     if "\\" + "|" in token:
         idx = token.index("\\" + "|")
         expr = token[:idx]
@@ -135,7 +160,7 @@ def _split_token(token):
         formatters = [f.strip() for f in rest.split("|") if f.strip()]
         return expr.strip(), formatters
 
-    # Passo 2: primo | singolo (non parte di ||)
+    # Step 2: first single | (not part of ||)
     i = 0
     while i < len(token):
         if token[i] == "|":
@@ -152,10 +177,10 @@ def _split_token(token):
 
 
 def _parse_tokens(content):
-    """Parsa una stringa content in lista di (testo_letterale, expr, formatters).
+    """Parse a content string into a list of (literal_text, expr, formatters).
 
-    - (text, None, None) → testo letterale
-    - ('', expr, [fmt, ...]) → token variabile
+    - (text, None, None) → literal text token
+    - ('', expr, [fmt, ...]) → variable token
     """
     result = []
     i = 0
@@ -163,7 +188,7 @@ def _parse_tokens(content):
 
     while i < len(content):
         if content[i] == "[":
-            # Trova il ] corrispondente (gestisce annidate)
+            # Find matching ] (handles nesting)
             depth = 1
             j = i + 1
             while j < len(content) and depth > 0:
@@ -182,7 +207,7 @@ def _parse_tokens(content):
                 result.append(("", expr, formatters))
                 i = j
             else:
-                # Parentesi aperta senza chiusura → letterale
+                # Unclosed bracket → treat as literal
                 current_text.append(content[i])
                 i += 1
         else:
@@ -195,9 +220,9 @@ def _parse_tokens(content):
     return result
 
 
-def resolve_content(content, ctx):
-    """Risolve tutti i token [var|formatter] in content usando il dizionario ctx.
-    Ritorna la stringa con tutti i token sostituiti.
+def resolve_content(content, ns):
+    """Resolve all [var|formatter] tokens in *content* using namespace *ns*.
+    Returns the string with all tokens substituted.
     """
     if not content or "[" not in content:
         return content
@@ -209,7 +234,7 @@ def resolve_content(content, ctx):
         if expr is None:
             parts.append(text)
         else:
-            value = eval_expr(expr, ctx)
+            value = eval_expr(expr, ns)
             if formatters:
                 for fmt in formatters:
                     value = _apply_formatter(value, fmt)

@@ -3,12 +3,14 @@ renderer.py — AndRepRenderer: emit / compile / to_html / to_pdf / to_json
 """
 import json
 import os
+import sys
+import types
 from datetime import datetime
 from html import escape
 from pathlib import Path
 
 from .loader import TemplateLoader
-from .variables import _apply_formatter, _parse_tokens, eval_expr
+from .variables import _apply_formatter, _parse_tokens, _to_ns, eval_expr
 
 
 # ---------------------------------------------------------------------------
@@ -149,28 +151,60 @@ class AndRepRenderer:
                 self.count = 0
                 self.total = 0.0
 
-            def on_after_band(self, band_name, data):
+            def on_after_band(self, band_name):
                 if band_name == "band":
                     self.count += 1
-                    self.total += data["row"]["price"]
+                    self.total += self.data.row.price   # self.data = f_locals at emit time
 
         loader = FilesystemLoader(Path("templates/"))
         r = ArticlesReport("articles", loader=loader)
         r.title = "Article List"
-        for row in data:
-            r.emit("band", {"row": row})
-        r.emit("totals")
 
-        r.save_output("output.json")   # flat resolved values — JSON / Excel ready
-        html = r.to_html()             # composed.json layout + output.json values
-        pdf  = r.to_pdf()             # requires weasyprint
+        for row in data:        # loop variable name = template expression name
+            r.emit("band")      # template: [row.code]  [row.price | .2]
+
+        r.emit("totals")
+        r.save_output("output.json")
+        html = r.to_html()
+        pdf  = r.to_pdf()
+
+    Eval namespace (priority, highest last — later entries win):
+        f_globals of caller    — app, imported functions (only when trusted=True)
+        f_locals of caller     — loop variables, local helpers
+        r._ctx                 — explicit workspace: r["key"] = value
+        r.globals              — callables / objects registered explicitly
+        system vars            — _r, _name, _date, _time, _user, _page
+
+    trusted=False (default): f_globals are NOT exposed automatically.
+    Set trusted=True or register globals explicitly via r.globals["name"] = obj.
     """
 
-    def __init__(self, template, template_dir=None, loader: TemplateLoader = None):
+    def __init__(
+        self,
+        template,
+        template_dir=None,
+        loader: TemplateLoader = None,
+        trusted: bool = False,
+    ):
         self.template = load_template(template, template_dir, loader=loader)
         self.page = self.template.get("page", {})
         self._emissions: list[tuple[str, dict]] = []
         self._compiled: list[dict] | None = None   # set by compile()
+
+        # Eval namespace mode
+        self.trusted: bool = trusted
+
+        # User-registered callables / objects for template expressions
+        # r.globals["fn"] = my_func  →  [fn(row.x)]
+        # r.globals["app"] = app     →  [app.setting]
+        self.globals: dict = {}
+
+        # Explicit workspace: r["key"] = value  →  [key.field] in template
+        self._ctx: dict = {}
+
+        # f_locals captured at the last emit() call — readable in event handlers
+        # as self.data.varname  (same notation as template expressions)
+        self.data: types.SimpleNamespace | None = None
 
         # State — readable in expressions via _r
         self.cur_band: str = ""
@@ -179,11 +213,11 @@ class AndRepRenderer:
 
         # System variables — override before first emit() if needed
         now = datetime.now()
-        self.report_date: str = now.strftime("%d/%m/%Y")   # _date in expressions
-        self.report_time: str = now.strftime("%H:%M:%S")   # _time in expressions
-        self.report_user: str = os.environ.get("USER", os.environ.get("USERNAME", ""))  # _user
-        self.title: str = self.template.get("name", "")    # _r.title — overridable report title
-        self.cur_page: int = 1   # incremented by PDF renderer; set manually to chain reports
+        self.report_date: str = now.strftime("%d/%m/%Y")
+        self.report_time: str = now.strftime("%H:%M:%S")
+        self.report_user: str = os.environ.get("USER", os.environ.get("USERNAME", ""))
+        self.title: str = self.template.get("name", "")   # _r.title — overridable
+        self.cur_page: int = 1   # increment manually to chain reports
 
         # Group rows by band name
         self.bands: dict[str, list] = {}
@@ -200,26 +234,98 @@ class AndRepRenderer:
         self.on_init()
 
     # ------------------------------------------------------------------
+    # Workspace access
+    # ------------------------------------------------------------------
+
+    def __setitem__(self, key: str, value) -> None:
+        """Set a named value in the explicit workspace: r["row"] = article."""
+        self._ctx[key] = value
+
+    def __getitem__(self, key: str):
+        """Get a workspace value with SimpleNamespace conversion applied."""
+        return _to_ns(self._ctx[key])
+
+    # ------------------------------------------------------------------
+    # Eval namespace construction
+    # ------------------------------------------------------------------
+
+    def _sys_vars(self) -> dict:
+        return {
+            "_date": self.report_date,
+            "_time": self.report_time,
+            "_user": self.report_user,
+            "_name": self.template.get("name", ""),
+            "_page": self.cur_page,
+            "_r": self,
+        }
+
+    def _build_eval_ns(self, frame) -> dict:
+        """Build eval namespace from caller frame + workspace + system vars.
+
+        Called once per emit(); the result is stored and reused for every cell
+        in that band emission.
+        """
+        ns: dict = {}
+        if self.trusted:
+            ns.update(frame.f_globals)
+        # f_locals: apply _to_ns so sqlite3.Row / plain dicts get attribute access
+        for k, v in frame.f_locals.items():
+            ns[k] = _to_ns(v)
+        # explicit workspace — overrides locals
+        for k, v in self._ctx.items():
+            ns[k] = _to_ns(v)
+        # registered functions / objects — override locals
+        ns.update(self.globals)
+        # system vars — highest priority
+        ns.update(self._sys_vars())
+        ns["__builtins__"] = {}
+        return ns
+
+    def _sys_eval_ns(self) -> dict:
+        """Eval namespace for auto-inserted bands (header/footer) — no caller frame."""
+        ns: dict = {}
+        for k, v in self._ctx.items():
+            ns[k] = _to_ns(v)
+        ns.update(self.globals)
+        ns.update(self._sys_vars())
+        ns["__builtins__"] = {}
+        return ns
+
+    # ------------------------------------------------------------------
     # Emit
     # ------------------------------------------------------------------
 
-    def emit(self, band_name: str, data: dict | None = None, silent: bool = False) -> None:
-        """Record a band emission with the given data.
+    def emit(self, band_name: str, silent: bool = False) -> None:
+        """Record a band emission.
+
+        The caller's local variables are captured automatically and made
+        available in template expressions.  Name your loop variable to match
+        the template: ``for row in data: r.emit("band")`` → ``[row.price]``.
 
         Args:
             band_name: name of the band to emit.
-            data:      context dict passed to cell expressions.
-            silent:    if True, fire hooks without recording the emission
-                       (useful for preparatory calculations / dry-runs).
+            silent:    fire hooks without recording the emission (dry-run).
         """
-        data = dict(data) if data else {}
+        frame = sys._getframe(1)
+
         if not self.started:
             self.started = True
             self.on_before()
-        self.on_before_band(band_name, data)
+
+        # Snapshot f_locals for event handlers (self.data.row.price)
+        self.data = types.SimpleNamespace(
+            **{k: _to_ns(v) for k, v in frame.f_locals.items()}
+        )
+
+        self.on_before_band(band_name)   # hook may modify self._ctx
+
+        # Build eval namespace AFTER on_before_band so _ctx changes are included
+        ns = self._build_eval_ns(frame)
+
         if not silent:
-            self._emissions.append((band_name, data))
-        self.on_after_band(band_name, data)
+            self._emissions.append((band_name, ns))
+
+        self.on_after_band(band_name)
         self.last_band = self.cur_band
         self.cur_band = band_name
 
@@ -235,12 +341,12 @@ class AndRepRenderer:
         """Called once before the first emit()."""
         pass
 
-    def on_before_band(self, band_name: str, data: dict) -> None:
-        """Called before each emit(). data is mutable — inject extra variables here."""
+    def on_before_band(self, band_name: str) -> None:
+        """Called before each emit(). Modify self._ctx here to inject extra variables."""
         pass
 
-    def on_after_band(self, band_name: str, data: dict) -> None:
-        """Called after each emit(). Accumulate totals here."""
+    def on_after_band(self, band_name: str) -> None:
+        """Called after each emit(). Use self.data to read captured locals."""
         pass
 
     def on_after(self) -> None:
@@ -264,20 +370,6 @@ class AndRepRenderer:
         self._emissions.append(("__page_break__", {}))
 
     # ------------------------------------------------------------------
-    # System context
-    # ------------------------------------------------------------------
-
-    def _sys_ctx(self) -> dict:
-        return {
-            "_date": self.report_date,
-            "_time": self.report_time,
-            "_user": self.report_user,
-            "_name": self.template.get("name", ""),   # technical template name — not overridable
-            "_page": self.cur_page,
-            "_r": self,
-        }
-
-    # ------------------------------------------------------------------
     # Auto header / footer
     # ------------------------------------------------------------------
 
@@ -296,13 +388,14 @@ class AndRepRenderer:
     def _full_emissions(self) -> list[tuple[str, dict]]:
         """Auto header + caller emissions + auto footer."""
         result = []
+        sys_ns = self._sys_eval_ns()
         header = self._header_band_name()
         footer = self._footer_band_name()
         if header:
-            result.append((header, {}))
+            result.append((header, sys_ns))
         result.extend(self._emissions)
         if footer:
-            result.append((footer, {}))
+            result.append((footer, sys_ns))
         return result
 
     # ------------------------------------------------------------------
@@ -329,24 +422,21 @@ class AndRepRenderer:
             return
 
         self.on_after()
-        sys_ctx = self._sys_ctx()
         result = []
 
-        for band_name, data in self._full_emissions():
+        for band_name, ns in self._full_emissions():
             if band_name == "__page_break__":
                 result.append({"band": "__page_break__"})
                 continue
 
-            ctx = {**sys_ctx, **data}
             rows = self.bands.get(band_name, [])
 
-            # Collect raw token values across all rows and cells of this band
             values = []
             for row in rows:
                 for cell in row.get("cells", []):
                     for _, expr, _ in self._cell_tokens[id(cell)]:
                         if expr is not None:
-                            values.append(eval_expr(expr, ctx))
+                            values.append(eval_expr(expr, ns))
 
             record: dict = {"band": band_name}
             if values:
@@ -360,11 +450,7 @@ class AndRepRenderer:
     # ------------------------------------------------------------------
 
     def save_output(self, path: str | Path) -> None:
-        """Save the compiled output to a JSON file (raw values, no formatters).
-
-        This file is the data source for HTML/PDF rendering and can be used
-        directly for JSON / Excel export.
-        """
+        """Save the compiled output to a JSON file (raw values, no formatters)."""
         self.compile()
         Path(path).write_text(
             json.dumps(self._compiled, ensure_ascii=False, indent=2), encoding="utf-8"
