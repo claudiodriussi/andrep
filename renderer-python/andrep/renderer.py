@@ -141,6 +141,44 @@ def load_template(template, template_dir=None, loader: TemplateLoader = None):
 _PAGE_ROLES = {"first_header", "page_header", "page_footer", "last_footer", "page_filler"}
 
 
+# ---------------------------------------------------------------------------
+# Built-in CSS helper functions — available in cssExtra @expressions
+# ---------------------------------------------------------------------------
+
+def _css_highlight(val, lo, hi, css="background:#fff3cd;font-weight:bold"):
+    """Return css if lo <= val <= hi, else ''."""
+    try:
+        return css if float(lo) <= float(val) <= float(hi) else ""
+    except (TypeError, ValueError):
+        return ""
+
+
+def _css_threshold(val, t, css_over="", css_under=""):
+    """Return css_over if val > t, css_under if val < t, else ''."""
+    try:
+        v = float(val)
+        if v > float(t): return css_over
+        if v < float(t): return css_under
+        return ""
+    except (TypeError, ValueError):
+        return ""
+
+
+def _css_striped(n, css="background:#f0f4f8"):
+    """Return css if n is odd — use with _r.count for zebra striping."""
+    try:
+        return css if int(n) % 2 == 1 else ""
+    except (TypeError, ValueError):
+        return ""
+
+
+_BUILTIN_CSS = {
+    "highlight":  _css_highlight,
+    "threshold":  _css_threshold,
+    "striped":    _css_striped,
+}
+
+
 class AndRepRenderer:
     """Band-based renderer for AndRep templates.
 
@@ -205,6 +243,11 @@ class AndRepRenderer:
         # f_locals captured at the last emit() call — readable in event handlers
         # as self.data.varname  (same notation as template expressions)
         self.data: types.SimpleNamespace | None = None
+
+        # Per-emission style overrides — set via patch_band() / patch() in on_before_band()
+        # Captured at emit() time and reset automatically after each emission.
+        self._band_css: str = ""      # CSS applied to ALL cells in the band
+        self._cell_patches: dict = {} # {content_match: css_string}
 
         # State — readable in expressions via _r
         self.cur_band: str = ""
@@ -274,7 +317,8 @@ class AndRepRenderer:
         # explicit workspace — overrides locals
         for k, v in self._ctx.items():
             ns[k] = _to_ns(v)
-        # registered functions / objects — override locals
+        # built-in CSS helpers + registered globals — override locals
+        ns.update(_BUILTIN_CSS)
         ns.update(self.globals)
         # system vars — highest priority
         ns.update(self._sys_vars())
@@ -286,6 +330,7 @@ class AndRepRenderer:
         ns: dict = {}
         for k, v in self._ctx.items():
             ns[k] = _to_ns(v)
+        ns.update(_BUILTIN_CSS)
         ns.update(self.globals)
         ns.update(self._sys_vars())
         ns["__builtins__"] = {}
@@ -317,13 +362,17 @@ class AndRepRenderer:
             **{k: _to_ns(v) for k, v in frame.f_locals.items()}
         )
 
-        self.on_before_band(band_name)   # hook may modify self._ctx
+        self.on_before_band(band_name)   # hook may modify self._ctx / call patch_band / patch
 
         # Build eval namespace AFTER on_before_band so _ctx changes are included
         ns = self._build_eval_ns(frame)
 
         if not silent:
-            self._emissions.append((band_name, ns))
+            self._emissions.append((band_name, ns, self._band_css, dict(self._cell_patches)))
+
+        # Reset per-emission overrides
+        self._band_css = ""
+        self._cell_patches = {}
 
         self.on_after_band(band_name)
         self.last_band = self.cur_band
@@ -367,7 +416,23 @@ class AndRepRenderer:
 
     def page_break(self) -> None:
         """Insert an explicit page break marker into the emission list."""
-        self._emissions.append(("__page_break__", {}))
+        self._emissions.append(("__page_break__", {}, "", {}))
+
+    def patch_band(self, cssExtra: str = "") -> None:
+        """Apply CSS to ALL cells of the current band emission.
+
+        Call from on_before_band().  Reset automatically after each emit().
+        Example: self.patch_band(cssExtra="background:#f0f4f8")
+        """
+        self._band_css = cssExtra
+
+    def patch(self, content_match: str, cssExtra: str = "") -> None:
+        """Apply CSS to cells whose content contains content_match.
+
+        Call from on_before_band().  Reset automatically after each emit().
+        Example: self.patch("[row.price", cssExtra="color:red;font-weight:bold")
+        """
+        self._cell_patches[content_match] = cssExtra
 
     # ------------------------------------------------------------------
     # Auto header / footer
@@ -385,17 +450,17 @@ class AndRepRenderer:
                 return name
         return None
 
-    def _full_emissions(self) -> list[tuple[str, dict]]:
+    def _full_emissions(self) -> list[tuple[str, dict, str, dict]]:
         """Auto header + caller emissions + auto footer."""
         result = []
         sys_ns = self._sys_eval_ns()
         header = self._header_band_name()
         footer = self._footer_band_name()
         if header:
-            result.append((header, sys_ns))
+            result.append((header, sys_ns, "", {}))
         result.extend(self._emissions)
         if footer:
-            result.append((footer, sys_ns))
+            result.append((footer, sys_ns, "", {}))
         return result
 
     # ------------------------------------------------------------------
@@ -424,7 +489,7 @@ class AndRepRenderer:
         self.on_after()
         result = []
 
-        for band_name, ns in self._full_emissions():
+        for band_name, ns, band_css, cell_patches in self._full_emissions():
             if band_name == "__page_break__":
                 result.append({"band": "__page_break__"})
                 continue
@@ -432,15 +497,36 @@ class AndRepRenderer:
             rows = self.bands.get(band_name, [])
 
             values = []
+            css_extras = []
             for row in rows:
                 for cell in row.get("cells", []):
+                    # token values
                     for _, expr, _ in self._cell_tokens[id(cell)]:
                         if expr is not None:
                             values.append(eval_expr(expr, ns))
 
+                    # cssExtra: static or @dynamic
+                    raw = cell.get("cssExtra", "")
+                    if raw.startswith("@"):
+                        res = eval_expr(raw[1:], ns)
+                        cell_css = str(res) if res else ""
+                    else:
+                        cell_css = raw
+
+                    # patch() overrides by content match
+                    content = cell.get("content", "")
+                    for match, patch_css in cell_patches.items():
+                        if match in content:
+                            cell_css = f"{cell_css};{patch_css}".strip(";") if cell_css else patch_css
+
+                    css_extras.append(cell_css)
+
             record: dict = {"band": band_name}
             if values:
                 record["values"] = values
+            if band_css or any(css_extras):
+                record["css_extras"] = css_extras
+                record["band_css"] = band_css
             result.append(record)
 
         self._compiled = result
@@ -474,7 +560,7 @@ class AndRepRenderer:
             return "none"
         return f"{w}px {st} {c}"
 
-    def _cell_style(self, cell: dict) -> str:
+    def _cell_style(self, cell: dict, css_extra: str = "", band_css: str = "") -> str:
         s = cell.get("style", {})
         borders = s.get("borders", {})
         va_map = {"top": "flex-start", "middle": "center", "bottom": "flex-end"}
@@ -485,6 +571,7 @@ class AndRepRenderer:
             f"width:{cell.get('width', 100)}px",
             f"height:{cell.get('height', 24)}px",
             "overflow:hidden",
+            f"white-space:{'nowrap' if not cell.get('wrap', True) else 'normal'}",
             "display:flex",
             "flex-direction:column",
             f"justify-content:{va}",
@@ -508,6 +595,11 @@ class AndRepRenderer:
             f"border-right:{self._border_css(borders, 'right')}",
             "box-sizing:border-box",
         ]
+        # css_extra and band_css appended last — override base properties
+        if css_extra:
+            parts.append(css_extra)
+        if band_css:
+            parts.append(band_css)
         return ";".join(parts)
 
     # ------------------------------------------------------------------
@@ -517,7 +609,7 @@ class AndRepRenderer:
     def _row_height(self, row: dict) -> int:
         return max((c.get("height", 24) for c in row.get("cells", [])), default=24)
 
-    def _cell_html(self, cell: dict, values_iter) -> str:
+    def _cell_html(self, cell: dict, values_iter, css_extra: str = "", band_css: str = "") -> str:
         """Render one cell to HTML, consuming its token values from values_iter."""
         tokens = self._cell_tokens[id(cell)]
         parts = []
@@ -531,11 +623,14 @@ class AndRepRenderer:
                         v = _apply_formatter(v, fmt)
                 parts.append(escape(str(v) if v is not None else ""))
         content = "".join(parts).replace("\n", "<br>")
-        return f'<div style="{self._cell_style(cell)}">{content}</div>'
+        return f'<div style="{self._cell_style(cell, css_extra, band_css)}">{content}</div>'
 
-    def _row_html(self, row: dict, values_iter) -> str:
+    def _row_html(self, row: dict, values_iter, css_extras_iter, band_css: str = "") -> str:
         height = self._row_height(row)
-        cells = "".join(self._cell_html(c, values_iter) for c in row.get("cells", []))
+        cells = "".join(
+            self._cell_html(c, values_iter, next(css_extras_iter, ""), band_css)
+            for c in row.get("cells", [])
+        )
         return f'<div style="position:relative;height:{height}px">{cells}</div>\n'
 
     def to_html(self) -> str:
@@ -559,8 +654,10 @@ class AndRepRenderer:
                 body_parts.append(f"<!-- band '{band_name}' not found -->\n")
                 continue
             values_iter = iter(record.get("values", []))
+            css_extras_iter = iter(record.get("css_extras", []))
+            band_css = record.get("band_css", "")
             for row in rows:
-                body_parts.append(self._row_html(row, values_iter))
+                body_parts.append(self._row_html(row, values_iter, css_extras_iter, band_css))
 
         return (
             "<!DOCTYPE html>\n<html><head>\n"

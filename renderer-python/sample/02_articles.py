@@ -41,6 +41,15 @@ class ArticlesReport(AndRepRenderer):
         self.count = 0
         self.total = 0.0
 
+    def on_before_band(self, band_name):
+        if band_name == "band":
+            # zebra striping — odd rows get a light background
+            if self.count % 2 == 1:
+                self.patch_band(cssExtra="background:#f0f4f8")
+            # SRV articles: italic description
+            if self.data and self.data.row.type == "SRV":
+                self.patch("[row.description", cssExtra="font-style:italic;color:#555555")
+
     def on_after_band(self, band_name):
         if band_name == "band":
             self.count += 1
