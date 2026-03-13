@@ -292,6 +292,16 @@ class AndRepRenderer:
     # Eval namespace construction
     # ------------------------------------------------------------------
 
+    def _r_snapshot(self) -> types.SimpleNamespace:
+        """Frozen snapshot of public renderer attributes for _r in template expressions.
+
+        Called once per emit() so that compile() reads accumulator values as
+        they were at emission time, not after on_after_band() has reset them.
+        """
+        return types.SimpleNamespace(**{
+            k: v for k, v in vars(self).items() if not k.startswith("_")
+        })
+
     def _sys_vars(self) -> dict:
         return {
             "_date": self.report_date,
@@ -299,7 +309,7 @@ class AndRepRenderer:
             "_user": self.report_user,
             "_name": self.template.get("name", ""),
             "_page": self.cur_page,
-            "_r": self,
+            "_r": self._r_snapshot(),
         }
 
     def _build_eval_ns(self, frame) -> dict:
