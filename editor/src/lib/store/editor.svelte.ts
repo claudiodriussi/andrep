@@ -486,9 +486,29 @@ class EditorState {
 
   // --- clipboard ---
 
+  static readonly CLIPBOARD_CELLS_KEY = 'andrep-clipboard-cells';
+  static readonly CLIPBOARD_ROWS_KEY  = 'andrep-clipboard-rows';
+
+  #readCellClipboard(): Cell[] | null {
+    if (this.cellClipboard) return this.cellClipboard;
+    try {
+      const raw = localStorage.getItem(EditorState.CLIPBOARD_CELLS_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  }
+
+  #readRowClipboard(): Row[] | null {
+    if (this.rowClipboard) return this.rowClipboard;
+    try {
+      const raw = localStorage.getItem(EditorState.CLIPBOARD_ROWS_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  }
+
   copyCells() {
     if (this.selectedCells.length === 0) return;
     this.cellClipboard = JSON.parse(JSON.stringify(this.selectedCells));
+    try { localStorage.setItem(EditorState.CLIPBOARD_CELLS_KEY, JSON.stringify(this.cellClipboard)); } catch { /* quota */ }
   }
 
   cutCells() {
@@ -498,7 +518,8 @@ class EditorState {
   }
 
   pasteCells() {
-    if (!this.cellClipboard || !this.activeCellId) return;
+    const clipboard = this.#readCellClipboard();
+    if (!clipboard || !this.activeCellId) return;
     const row = this.findRowOfCell(this.activeCellId);
     if (!row) return;
     this.pushHistory();
@@ -506,7 +527,7 @@ class EditorState {
     const idx = row.cells.indexOf(activeCell);
     let x = activeCell.x;
     const inserted: Cell[] = [];
-    for (const src of this.cellClipboard) {
+    for (const src of clipboard) {
       const cell: Cell = { ...JSON.parse(JSON.stringify(src)), id: uid(), x };
       x += cell.width;
       inserted.push(cell);
@@ -525,6 +546,7 @@ class EditorState {
     const rows = this.template.rows.filter((r) => rowIds.has(r.id));
     if (rows.length === 0) return;
     this.rowClipboard = JSON.parse(JSON.stringify(rows));
+    try { localStorage.setItem(EditorState.CLIPBOARD_ROWS_KEY, JSON.stringify(this.rowClipboard)); } catch { /* quota */ }
   }
 
   cutRows() {
@@ -552,10 +574,11 @@ class EditorState {
   }
 
   pasteRows() {
-    if (!this.rowClipboard) return;
+    const clipboard = this.#readRowClipboard();
+    if (!clipboard) return;
     this.pushHistory();
     const beforeId = this.activeCellId ? this.findRowOfCell(this.activeCellId)?.id : undefined;
-    const cloned: Row[] = this.rowClipboard.map((r) => ({
+    const cloned: Row[] = clipboard.map((r) => ({
       ...JSON.parse(JSON.stringify(r)),
       id: uid(),
       cells: (r.cells as Cell[]).map((c) => ({ ...JSON.parse(JSON.stringify(c)), id: uid() })),
