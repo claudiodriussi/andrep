@@ -48,6 +48,8 @@ name = [
     "VAT: US000001",
 ]
 
+SUMMARY = "-s" in sys.argv or "summary" in sys.argv  # omit movement rows, keep totals
+
 SAMPLE_DIR = Path(__file__).parent
 TEMPLATES = SAMPLE_DIR.parent / "templates"
 DB = SAMPLE_DIR / "sample.db"
@@ -146,7 +148,7 @@ def main():
             if movements:
                 r.emit("mov_header")
                 for mov in movements:
-                    r.emit("movement")
+                    r.emit("movement", silent=SUMMARY)
 
             r.emit("art_footer")
 

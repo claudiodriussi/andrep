@@ -157,8 +157,10 @@ def _css_threshold(val, t, css_over="", css_under=""):
     """Return css_over if val > t, css_under if val < t, else ''."""
     try:
         v = float(val)
-        if v > float(t): return css_over
-        if v < float(t): return css_under
+        if v > float(t):
+            return css_over
+        if v < float(t):
+            return css_under
         return ""
     except (TypeError, ValueError):
         return ""
@@ -173,9 +175,9 @@ def _css_striped(n, css="background:#f0f4f8"):
 
 
 _BUILTIN_CSS = {
-    "highlight":  _css_highlight,
-    "threshold":  _css_threshold,
-    "striped":    _css_striped,
+    "highlight": _css_highlight,
+    "threshold": _css_threshold,
+    "striped": _css_striped,
 }
 
 
@@ -246,8 +248,8 @@ class AndRepRenderer:
 
         # Per-emission style overrides — set via patch_band() / patch() in on_before_band()
         # Captured at emit() time and reset automatically after each emission.
-        self._band_css: str = ""      # CSS applied to ALL cells in the band
-        self._cell_patches: dict = {} # {content_match: css_string}
+        self._band_css: str = ""  # CSS applied to ALL cells in the band
+        self._cell_patches: dict = {}  # {content_match: css_string}
 
         # State — readable in expressions via _r
         self.cur_band: str = ""
@@ -292,16 +294,6 @@ class AndRepRenderer:
     # Eval namespace construction
     # ------------------------------------------------------------------
 
-    def _r_snapshot(self) -> types.SimpleNamespace:
-        """Frozen snapshot of public renderer attributes for _r in template expressions.
-
-        Called once per emit() so that compile() reads accumulator values as
-        they were at emission time, not after on_after_band() has reset them.
-        """
-        return types.SimpleNamespace(**{
-            k: v for k, v in vars(self).items() if not k.startswith("_")
-        })
-
     def _sys_vars(self) -> dict:
         return {
             "_date": self.report_date,
@@ -309,7 +301,7 @@ class AndRepRenderer:
             "_user": self.report_user,
             "_name": self.template.get("name", ""),
             "_page": self.cur_page,
-            "_r": self._r_snapshot(),
+            "_r": self,  # live reference — safe because eval is immediate (before on_after_band)
         }
 
     def _build_eval_ns(self, frame) -> dict:
@@ -346,12 +338,41 @@ class AndRepRenderer:
         ns["__builtins__"] = {}
         return ns
 
+    def _compile_band(self, band_name: str, ns: dict, band_css: str, cell_patches: dict) -> dict:
+        """Evaluate all cell expressions for one band. Returns a compiled record."""
+        rows = self.bands.get(band_name, [])
+        values = []
+        css_extras = []
+        for row in rows:
+            for cell in row.get("cells", []):
+                for _, expr, _ in self._cell_tokens[id(cell)]:
+                    if expr is not None:
+                        values.append(eval_expr(expr, ns))
+                raw = cell.get("cssExtra", "")
+                if raw.startswith("@"):
+                    res = eval_expr(raw[1:], ns)
+                    cell_css = str(res) if res else ""
+                else:
+                    cell_css = raw
+                content = cell.get("content", "")
+                for match, patch_css in cell_patches.items():
+                    if match in content:
+                        cell_css = f"{cell_css};{patch_css}".strip(";") if cell_css else patch_css
+                css_extras.append(cell_css)
+        record: dict = {"band": band_name}
+        if values:
+            record["values"] = values
+        if band_css or any(css_extras):
+            record["css_extras"] = css_extras
+            record["band_css"] = band_css
+        return record
+
     # ------------------------------------------------------------------
     # Emit
     # ------------------------------------------------------------------
 
     def emit(self, band_name: str, silent: bool = False) -> None:
-        """Record a band emission.
+        """Compile and record a band emission.
 
         The caller's local variables are captured automatically and made
         available in template expressions.  Name your loop variable to match
@@ -359,7 +380,7 @@ class AndRepRenderer:
 
         Args:
             band_name: name of the band to emit.
-            silent:    fire hooks without recording the emission (dry-run).
+            silent:    fire hooks without recording the emission (summary mode).
         """
         frame = sys._getframe(1)
 
@@ -374,11 +395,13 @@ class AndRepRenderer:
 
         self.on_before_band(band_name)   # hook may modify self._ctx / call patch_band / patch
 
-        # Build eval namespace AFTER on_before_band so _ctx changes are included
-        ns = self._build_eval_ns(frame)
-
+        # Build eval namespace AFTER on_before_band so _ctx changes are included.
+        # _r is a live reference — safe because eval happens here, before on_after_band resets.
         if not silent:
-            self._emissions.append((band_name, ns, self._band_css, dict(self._cell_patches)))
+            ns = self._build_eval_ns(frame)
+            self._emissions.append(
+                self._compile_band(band_name, ns, self._band_css, dict(self._cell_patches))
+            )
 
         # Reset per-emission overrides
         self._band_css = ""
@@ -426,7 +449,7 @@ class AndRepRenderer:
 
     def page_break(self) -> None:
         """Insert an explicit page break marker into the emission list."""
-        self._emissions.append(("__page_break__", {}, "", {}))
+        self._emissions.append({"band": "__page_break__"})
 
     def patch_band(self, cssExtra: str = "") -> None:
         """Apply CSS to ALL cells of the current band emission.
@@ -460,84 +483,33 @@ class AndRepRenderer:
                 return name
         return None
 
-    def _full_emissions(self) -> list[tuple[str, dict, str, dict]]:
-        """Auto header + caller emissions + auto footer."""
-        result = []
-        sys_ns = self._sys_eval_ns()
-        header = self._header_band_name()
-        footer = self._footer_band_name()
-        if header:
-            result.append((header, sys_ns, "", {}))
-        result.extend(self._emissions)
-        if footer:
-            result.append((footer, sys_ns, "", {}))
-        return result
-
     # ------------------------------------------------------------------
-    # Compile — resolve all expressions once, produce flat output structure
+    # Compile — assemble header + emissions + footer
     # ------------------------------------------------------------------
 
     def compile(self) -> None:
-        """Resolve all token expressions and cache the output structure.
+        """Assemble the final output: auto header + emissions + auto footer.
 
         Called automatically by to_html(), to_pdf(), to_json(), save_output().
-        Safe to call multiple times — compiles only once.
-
-        Output structure (self._compiled): list of records, one per emission::
-
-            {"band": "band",    "values": ["ART001", "10 ohm...", 0.45]}
-            {"band": "__page_break__"}
-            {"band": "totals",  "values": [41, 726.75]}
-            {"band": "page_footer"}   # no variables → no values key
-
-        Values are raw (no formatters applied) so they can be used directly
-        for JSON / Excel export.  Formatters are applied only during HTML/PDF rendering.
+        Safe to call multiple times — runs only once.
+        Band expressions were already evaluated at emit() time.
         """
         if self._compiled is not None:
             return
 
         self.on_after()
+        sys_ns = self._sys_eval_ns()
         result = []
 
-        for band_name, ns, band_css, cell_patches in self._full_emissions():
-            if band_name == "__page_break__":
-                result.append({"band": "__page_break__"})
-                continue
+        header = self._header_band_name()
+        if header:
+            result.append(self._compile_band(header, sys_ns, "", {}))
 
-            rows = self.bands.get(band_name, [])
+        result.extend(self._emissions)
 
-            values = []
-            css_extras = []
-            for row in rows:
-                for cell in row.get("cells", []):
-                    # token values
-                    for _, expr, _ in self._cell_tokens[id(cell)]:
-                        if expr is not None:
-                            values.append(eval_expr(expr, ns))
-
-                    # cssExtra: static or @dynamic
-                    raw = cell.get("cssExtra", "")
-                    if raw.startswith("@"):
-                        res = eval_expr(raw[1:], ns)
-                        cell_css = str(res) if res else ""
-                    else:
-                        cell_css = raw
-
-                    # patch() overrides by content match
-                    content = cell.get("content", "")
-                    for match, patch_css in cell_patches.items():
-                        if match in content:
-                            cell_css = f"{cell_css};{patch_css}".strip(";") if cell_css else patch_css
-
-                    css_extras.append(cell_css)
-
-            record: dict = {"band": band_name}
-            if values:
-                record["values"] = values
-            if band_css or any(css_extras):
-                record["css_extras"] = css_extras
-                record["band_css"] = band_css
-            result.append(record)
+        footer = self._footer_band_name()
+        if footer:
+            result.append(self._compile_band(footer, sys_ns, "", {}))
 
         self._compiled = result
 
