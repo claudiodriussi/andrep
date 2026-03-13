@@ -209,6 +209,25 @@ class EditorState {
     return this.template.bands?.[bandName] ?? {};
   }
 
+  setBandColumns(bandName: string, columns: number, columnGap: number) {
+    this.pushHistory();
+    const bands = { ...(this.template.bands ?? {}) };
+    const existing = bands[bandName] ?? {};
+    if (columns <= 1 && !columnGap) {
+      const { columns: _c, columnGap: _g, ...rest } = existing;
+      if (Object.keys(rest).length === 0) {
+        const { [bandName]: _removed, ...remaining } = bands;
+        this.template.bands = Object.keys(remaining).length > 0 ? remaining : undefined;
+      } else {
+        bands[bandName] = rest;
+        this.template.bands = bands;
+      }
+    } else {
+      bands[bandName] = { ...existing, columns, columnGap: columnGap || undefined };
+      this.template.bands = bands;
+    }
+  }
+
   toggleBandKeepTogether(bandName: string) {
     this.pushHistory();
     const current = this.template.bands?.[bandName]?.keepTogether ?? false;
@@ -480,7 +499,7 @@ class EditorState {
     cell.rotation = props.rotation || undefined;
     cell.cssExtra = props.cssExtra || undefined;
     cell.x = Math.max(0, props.x);
-    cell.height = Math.max(10, props.height);
+    cell.height = Math.max(0, props.height);
     this.resizeCell(cellId, Math.max(20, props.width));
   }
 

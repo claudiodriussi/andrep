@@ -24,7 +24,7 @@
 
   // Band column width: adapts to the longest band name.
   // 8px/char (bold 11px, slightly generous to avoid clipping) + 42px for controls + padding
-  const BTN_AREA = 42;
+  const BTN_AREA = 57; // padding(6) + opts-btn(14) + gaps(4) + controls(33)
   const CHAR_W = 8;
   const bandColW = $derived.by(() => {
     const names = editor.template.rows.map((r) => r.name);

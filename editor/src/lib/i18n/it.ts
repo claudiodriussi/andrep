@@ -51,6 +51,8 @@ const it: Record<string, string> = {
   'Merge cells horizontally (Ctrl+Q)': 'Unisci celle orizzontalmente (Ctrl+Q)',
 
   // band / row
+  'Band options': 'Opzioni fascia',
+  'Keep together': 'Tieni unita',
   'Add row': 'Aggiungi riga',
   'Delete row': 'Cancella riga',
   'Copy rows': 'Copia righe',

@@ -78,6 +78,8 @@ export interface PageConfig {
 
 export interface BandOptions {
   keepTogether?: boolean; // if true, all rows of this band are kept on the same page
+  columns?: number;       // number of columns for multi-column bands (default: 1)
+  columnGap?: number;     // horizontal gap between columns in px (default: 0)
 }
 
 export type CompositionRuleType = 'IfNot' | 'Replace' | 'InsBefore' | 'InsAfter';

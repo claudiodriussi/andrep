@@ -28,8 +28,6 @@
   let rightD      = $state(10);
   let locale      = $state('');
   let currency    = $state('');
-  let columns     = $state(1);
-  let columnGapD  = $state(0); // in display units
 
   // Composition rules
   let composition = $state<CompositionRule[]>([]);
@@ -51,8 +49,6 @@
     rightD      = pxToPageUnit(p.marginRight,  dUnit);
     locale      = p.locale    || config.config.defaultLocale;
     currency    = p.currency  || config.config.defaultCurrency;
-    columns     = p.columns   ?? 1;
-    columnGapD  = pxToPageUnit(p.columnGap ?? 0, dUnit);
     preset      = p.preset ?? detectPreset();
     composition = JSON.parse(JSON.stringify(editor.template.composition ?? []));
   });
@@ -96,10 +92,6 @@
   const contentH    = $derived(Math.max(0, heightD - topD   - bottomD));
   const contentWPx  = $derived(pageUnitToPx(contentW, dUnit));
   const contentHPx  = $derived(pageUnitToPx(contentH, dUnit));
-  const columnW     = $derived(columns > 1
-    ? Math.max(0, (contentW - columnGapD * (columns - 1)) / columns)
-    : contentW);
-  const columnWPx   = $derived(pageUnitToPx(columnW, dUnit));
 
   function ok() {
     const page: PageConfig = {
@@ -113,8 +105,6 @@
       marginRight:  pageUnitToPx(rightD,   dUnit),
       locale,
       currency,
-      columns:     columns > 1 ? columns : undefined,
-      columnGap:   columns > 1 && columnGapD > 0 ? pageUnitToPx(columnGapD, dUnit) : undefined,
     };
     editor.applyPageSetup(name.trim() || 'Template', page, composition);
     editor.closePageSetup();
@@ -202,16 +192,6 @@
             bind:value={heightD} oninput={onSizeInput} />
           <span class="unit">{dLabel}</span>
         </div>
-        <div class="field-row">
-          <label class="field-label" for="ps-cols">{_('Columns')}</label>
-          <input id="ps-cols" class="field-num narrow" type="number" min="1" max="10" step="1" bind:value={columns} />
-          {#if columns > 1}
-            <label class="field-label ml" for="ps-cgap">{_('Gap')}</label>
-            <input id="ps-cgap" class="field-num" type="number" min="0" max="100" step={dStep} bind:value={columnGapD} />
-            <span class="unit">{dLabel}</span>
-          {/if}
-        </div>
-
         <!-- Margins -->
         <div class="section-title">{_('Margins')}</div>
 
@@ -236,11 +216,6 @@
               <span class="content-label">{_('Content area')}</span>
               <span class="content-val">{contentW.toFixed(dUnit === 'inch' ? 2 : 1)} × {contentH.toFixed(dUnit === 'inch' ? 2 : 1)} {dLabel}</span>
               <span class="content-px">{contentWPx} × {contentHPx} px</span>
-              {#if columns > 1}
-                <span class="content-label" style="margin-top:4px">{_('Column width')}</span>
-                <span class="content-val">{columnW.toFixed(dUnit === 'inch' ? 2 : 1)} {dLabel}</span>
-                <span class="content-px">{columnWPx} px</span>
-              {/if}
             </div>
 
             <div class="mg-side">
@@ -408,8 +383,6 @@
     font-size: 12px;
     padding: 4px 6px;
   }
-
-  .field-num.narrow { width: 48px; }
 
   .field-num {
     width: 64px;
