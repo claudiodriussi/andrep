@@ -591,8 +591,44 @@ class AndRepRenderer:
     def _row_height(self, row: dict) -> int:
         return max((c.get("height", 24) for c in row.get("cells", [])), default=24)
 
+    # CSS flex alignment maps
+    _ALIGN_ITEMS  = {"left": "flex-start", "center": "center", "right": "flex-end"}
+    _JUSTIFY_CONT = {"top": "flex-start",  "middle": "center", "bottom": "flex-end"}
+
     def _cell_html(self, cell: dict, values_iter, css_extra: str = "", band_css: str = "") -> str:
         """Render one cell to HTML, consuming its token values from values_iter."""
+        cell_type = cell.get("type", "text")
+
+        if cell_type in ("barcode", "qrcode"):
+            tokens = self._cell_tokens[id(cell)]
+            svg = None
+            for _, expr, fmts in tokens:
+                if expr is not None:
+                    v = next(values_iter, None)
+                    if fmts:
+                        for fmt in fmts:
+                            v = _apply_formatter(v, fmt)
+                    if isinstance(v, str) and v.startswith("<svg"):
+                        svg = v   # formatter produced an SVG — use it directly
+                    else:
+                        # No barcode formatter → use cell properties
+                        svg = self._graphic_svg(cell, str(v) if v is not None else "")
+                    break  # barcode cells have exactly one expression token
+            if svg is None:
+                svg = self._graphic_svg(cell, "")
+            return self._graphic_cell_html(cell, svg, css_extra, band_css)
+
+        if cell_type == "image":
+            v = next(values_iter, None)
+            src = str(v) if v is not None else ""
+            auto = cell.get("autoStretch", False)
+            if auto:
+                img = f'<img src="{escape(src)}" style="width:100%;height:auto;display:block">'
+            else:
+                img = f'<img src="{escape(src)}" style="max-width:100%;max-height:100%;object-fit:contain;display:block">'
+            return self._graphic_cell_html(cell, img, css_extra, band_css)
+
+        # ---- text / markdown / embed ----------------------------------------
         tokens = self._cell_tokens[id(cell)]
         parts = []
         for text, expr, fmts in tokens:
@@ -603,9 +639,57 @@ class AndRepRenderer:
                 if fmts:
                     for fmt in fmts:
                         v = _apply_formatter(v, fmt)
-                parts.append(escape(str(v) if v is not None else ""))
-        content = "".join(parts).replace("\n", "<br>")
+                # Inline barcode: formatter returned an SVG string
+                if isinstance(v, str) and v.startswith("<svg"):
+                    # SVGs from new barcode.py are already in pixels; if not (legacy),
+                    # fall back to embedding with block display.
+                    if 'mm"' not in v[:300]:
+                        v = v.replace("<svg ", '<svg style="display:block" ', 1)
+                    parts.append(v)
+                else:
+                    parts.append(escape(str(v) if v is not None else ""))
+        content = "".join(
+            p if p.startswith("<svg") else p.replace("\n", "<br>")
+            for p in parts
+        )
         return f'<div style="{self._cell_style(cell, css_extra, band_css)}">{content}</div>'
+
+    def _graphic_svg(self, cell: dict, value: str) -> str:
+        """Generate a barcode/qrcode SVG for a dedicated graphic cell."""
+        from .barcode import barcode_svg, qr_svg, _PYBARCODE_TYPES, _error_svg
+        w         = cell.get("width",     100)
+        h         = cell.get("height",     50)
+        bc_type   = cell.get("barcodeType", "ean13")
+        show_text = cell.get("showText",   True)
+        font_size = cell.get("fontSize",   4)
+        cell_type = cell.get("type", "barcode")
+        # Empty / None value → blank placeholder (not an error)
+        if not value or value == "None":
+            return f'<svg width="{w}" height="{h}"></svg>'
+
+        if cell_type == "qrcode" or bc_type == "qr":
+            return qr_svg(value, w, h)
+        if bc_type in _PYBARCODE_TYPES:
+            return barcode_svg(bc_type, value, w, h, show_text, font_size)
+        return (
+            f'<svg width="{w}" height="{h}">'
+            f'<text x="2" y="14" font-size="9" fill="red">unknown: {bc_type}</text>'
+            f'</svg>'
+        )
+
+    def _graphic_cell_html(self, cell: dict, content_html: str, css_extra: str, band_css: str) -> str:
+        """Wrap a graphic element (SVG, img) in a correctly aligned cell div.
+
+        For graphic cells we override text-align with align-items on the flex
+        container so the SVG/img is positioned horizontally per the cell's
+        alignment setting.
+        """
+        s     = cell.get("style", {})
+        align = s.get("alignment", "left")
+        extra = f"align-items:{self._ALIGN_ITEMS.get(align, 'flex-start')}"
+        if css_extra:
+            extra = f"{css_extra};{extra}"
+        return f'<div style="{self._cell_style(cell, extra, band_css)}">{content_html}</div>'
 
     def _row_html(self, row: dict, values_iter, css_extras_iter, band_css: str = "") -> str:
         height = self._row_height(row)
@@ -624,22 +708,69 @@ class AndRepRenderer:
         mb = page.get("marginBottom", 40)
         ml = page.get("marginLeft", 30)
         mr = page.get("marginRight", 30)
+        content_width = width - ml - mr
+        bands_cfg: dict = self.template.get("bands", {})
 
         body_parts: list[str] = []
+        in_flex = False  # True while inside a multi-column flex container
+
+        def _open_flex(columns: int, gap: int) -> str:
+            col_w = int((content_width - (columns - 1) * gap) / columns)
+            return (
+                f'<div style="display:flex;flex-wrap:wrap;'
+                f'gap:{gap}px;align-items:flex-start" '
+                f'data-col-width="{col_w}">\n'
+            )
+
+        def _close_flex() -> str:
+            return '</div>\n'
+
         for record in self._compiled:
             band_name = record["band"]
+
             if band_name == "__page_break__":
+                if in_flex:
+                    body_parts.append(_close_flex())
+                    in_flex = False
                 body_parts.append('<div style="page-break-after:always;height:0"></div>\n')
                 continue
+
             rows = self.bands.get(band_name, [])
             if not rows:
                 body_parts.append(f"<!-- band '{band_name}' not found -->\n")
                 continue
+
+            cfg = bands_cfg.get(band_name, {})
+            columns = cfg.get("columns", 1)
+            gap = cfg.get("columnGap", 0)
+            col_w = int((content_width - (columns - 1) * gap) / columns) if columns > 1 else None
+
+            if columns > 1 and not in_flex:
+                body_parts.append(_open_flex(columns, gap))
+                in_flex = True
+            elif columns <= 1 and in_flex:
+                body_parts.append(_close_flex())
+                in_flex = False
+
             values_iter = iter(record.get("values", []))
             css_extras_iter = iter(record.get("css_extras", []))
             band_css = record.get("band_css", "")
-            for row in rows:
-                body_parts.append(self._row_html(row, values_iter, css_extras_iter, band_css))
+
+            if col_w is not None:
+                # wrap all rows of this emission in a single flex item
+                inner = "".join(
+                    self._row_html(row, values_iter, css_extras_iter, band_css)
+                    for row in rows
+                )
+                body_parts.append(
+                    f'<div style="position:relative;width:{col_w}px">{inner}</div>\n'
+                )
+            else:
+                for row in rows:
+                    body_parts.append(self._row_html(row, values_iter, css_extras_iter, band_css))
+
+        if in_flex:
+            body_parts.append(_close_flex())
 
         return (
             "<!DOCTYPE html>\n<html><head>\n"

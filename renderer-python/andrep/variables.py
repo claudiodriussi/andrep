@@ -142,6 +142,33 @@ def _apply_formatter(value, fmt):
         except (TypeError, ValueError):
             return str(value)
 
+    # Barcode formatters — return an SVG string; renderer detects <svg and embeds raw.
+    #
+    # Syntax: name[,w[,h[,show[,font_size]]]]
+    #   All numeric params are pixels.
+    #
+    #   ean13                → EAN-13, renderer uses cell dimensions
+    #   ean13,200            → 200 px wide, height proportional
+    #   ean13,200,52         → 200×52 px
+    #   ean13,200,52,0       → 200×52 px, bars only (no text)
+    #   ean13,200,52,0,4     → 200×52 px, no text, font 4 pt
+    #   code128,200,52       → Code-128 200×52 px
+    #   qr                   → QR code, renderer uses cell dimensions
+    #   qr,100               → QR code 100×100 px
+    m_bc = re.match(r"^([\w\-]+)(?:,(\d+)(?:,(\d+)(?:,(0|1)(?:,(\d+))?)?)?)?$", fmt)
+    if m_bc:
+        name, p1, p2, p3, p4 = m_bc.groups()
+        from .barcode import _PYBARCODE_TYPES, barcode_svg, qr_svg  # lazy import
+        w         = int(p1) if p1 else 0
+        h         = int(p2) if p2 else 0
+        show_text = (p3 != "0") if p3 is not None else True
+        font_size = int(p4) if p4 else 4
+        code      = str(value) if value is not None else ""
+        if name == "qr":
+            return qr_svg(code, w, h)
+        if name in _PYBARCODE_TYPES:
+            return barcode_svg(name, code, w, h, show_text, font_size)
+
     return str(value) if value is not None else ""
 
 
