@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80" viewBox="0 0 120 80">
+  <rect width="120" height="80" rx="6" fill="#f0fdf4"/>
+  <rect x="8" y="14" width="104" height="52" rx="4" fill="#dcfce7" stroke="#86efac" stroke-width="1"/>
+  <rect x="12" y="18" width="96" height="44" rx="2" fill="#f0fdf4"/>
+  <!-- grid of holes -->
+  <g fill="#6b7280">
+    <circle cx="20" cy="26" r="2"/><circle cx="28" cy="26" r="2"/><circle cx="36" cy="26" r="2"/>
+    <circle cx="44" cy="26" r="2"/><circle cx="52" cy="26" r="2"/><circle cx="60" cy="26" r="2"/>
+    <circle cx="68" cy="26" r="2"/><circle cx="76" cy="26" r="2"/><circle cx="84" cy="26" r="2"/>
+    <circle cx="92" cy="26" r="2"/><circle cx="100" cy="26" r="2"/>
+    <circle cx="20" cy="34" r="2"/><circle cx="28" cy="34" r="2"/><circle cx="36" cy="34" r="2"/>
+    <circle cx="44" cy="34" r="2"/><circle cx="52" cy="34" r="2"/><circle cx="60" cy="34" r="2"/>
+    <circle cx="68" cy="34" r="2"/><circle cx="76" cy="34" r="2"/><circle cx="84" cy="34" r="2"/>
+    <circle cx="92" cy="34" r="2"/><circle cx="100" cy="34" r="2"/>
+    <circle cx="20" cy="46" r="2"/><circle cx="28" cy="46" r="2"/><circle cx="36" cy="46" r="2"/>
+    <circle cx="44" cy="46" r="2"/><circle cx="52" cy="46" r="2"/><circle cx="60" cy="46" r="2"/>
+    <circle cx="68" cy="46" r="2"/><circle cx="76" cy="46" r="2"/><circle cx="84" cy="46" r="2"/>
+    <circle cx="92" cy="46" r="2"/><circle cx="100" cy="46" r="2"/>
+    <circle cx="20" cy="54" r="2"/><circle cx="28" cy="54" r="2"/><circle cx="36" cy="54" r="2"/>
+    <circle cx="44" cy="54" r="2"/><circle cx="52" cy="54" r="2"/><circle cx="60" cy="54" r="2"/>
+    <circle cx="68" cy="54" r="2"/><circle cx="76" cy="54" r="2"/><circle cx="84" cy="54" r="2"/>
+    <circle cx="92" cy="54" r="2"/><circle cx="100" cy="54" r="2"/>
+  </g>
+  <!-- power rails -->
+  <line x1="12" y1="40" x2="108" y2="40" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="3,2"/>
+  <line x1="12" y1="42" x2="108" y2="42" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="3,2"/>
+  <text x="60" y="74" font-family="Arial" font-size="8" fill="#16a34a" text-anchor="middle">ART033</text>
+</svg>

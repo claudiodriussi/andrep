@@ -1,0 +1,3 @@
+PCB design and layout service — 2 to 8 layer boards, impedance-controlled stackups, DFM review included.
+Deliverables: schematic in KiCad or Altium, Gerber/ODB++ production files, BOM with approved alternates, assembly drawing and 3D STEP model.
+Typical turnaround: 5–10 working days depending on complexity. Urgent 48-hour service available at 1.5x rate.

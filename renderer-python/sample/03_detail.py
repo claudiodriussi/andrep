@@ -51,7 +51,7 @@ name = [
 SUMMARY = "-s" in sys.argv or "summary" in sys.argv  # omit movement rows, keep totals
 
 SAMPLE_DIR = Path(__file__).parent
-TEMPLATES = SAMPLE_DIR.parent / "templates"
+TEMPLATES = SAMPLE_DIR / "templates"
 DB = SAMPLE_DIR / "sample.db"
 OUTPUT = SAMPLE_DIR / "output"
 

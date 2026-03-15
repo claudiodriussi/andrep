@@ -1,0 +1,3 @@
+STM32F103C8T6 — ARM Cortex-M3 at 72 MHz, 64 KB flash, 20 KB SRAM. Peripherals: 2x SPI, 2x I2C, 3x USART, 1x USB FS, 10x 12-bit ADC channels, 3x 16-bit timers.
+Supplied in LQFP-48 package. Operating range 2.0–3.6 V. Available on the popular "Blue Pill" development board.
+Ideal for motor control, industrial I/O and USB HID devices. Supported by STM32CubeIDE, PlatformIO and libopencm3.

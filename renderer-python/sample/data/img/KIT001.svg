@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80" viewBox="0 0 120 80">
+  <rect width="120" height="80" rx="6" fill="#eff6ff"/>
+  <rect x="15" y="12" width="90" height="56" rx="4" fill="#dbeafe" stroke="#93c5fd" stroke-width="1"/>
+  <!-- PCB traces -->
+  <line x1="25" y1="30" x2="55" y2="30" stroke="#bfdbfe" stroke-width="2"/>
+  <line x1="55" y1="30" x2="55" y2="50" stroke="#bfdbfe" stroke-width="2"/>
+  <line x1="55" y1="50" x2="95" y2="50" stroke="#bfdbfe" stroke-width="2"/>
+  <line x1="70" y1="30" x2="95" y2="30" stroke="#bfdbfe" stroke-width="2"/>
+  <line x1="70" y1="30" x2="70" y2="50" stroke="#bfdbfe" stroke-width="2"/>
+  <!-- MCU chip -->
+  <rect x="42" y="22" width="26" height="26" rx="2" fill="#1e3a5f" stroke="#3b82f6" stroke-width="1"/>
+  <text x="55" y="38" font-family="monospace" font-size="6" fill="#93c5fd" text-anchor="middle">STM32</text>
+  <!-- pins -->
+  <g fill="#64748b">
+    <rect x="38" y="25" width="4" height="2" rx="1"/>
+    <rect x="38" y="30" width="4" height="2" rx="1"/>
+    <rect x="38" y="35" width="4" height="2" rx="1"/>
+    <rect x="38" y="40" width="4" height="2" rx="1"/>
+    <rect x="68" y="25" width="4" height="2" rx="1"/>
+    <rect x="68" y="30" width="4" height="2" rx="1"/>
+    <rect x="68" y="35" width="4" height="2" rx="1"/>
+    <rect x="68" y="40" width="4" height="2" rx="1"/>
+  </g>
+  <!-- USB connector -->
+  <rect x="22" y="54" width="14" height="8" rx="1" fill="#475569"/>
+  <rect x="24" y="56" width="10" height="4" rx="1" fill="#0f172a"/>
+  <text x="60" y="74" font-family="Arial" font-size="8" fill="#1d4ed8" text-anchor="middle">KIT001</text>
+</svg>

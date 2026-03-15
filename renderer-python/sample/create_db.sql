@@ -16,7 +16,9 @@ CREATE TABLE articles (
     uom         TEXT    NOT NULL,
     price       REAL    NOT NULL,
     ean         TEXT,               -- EAN-13 barcode
-    url         TEXT                -- QR code URL
+    url         TEXT,               -- QR code URL (product page)
+    image       TEXT,               -- product image: @data/img/xxx.svg  or  https://...
+    notes       TEXT                -- extended notes: inline, @data/xxx.txt, @https://...
 );
 
 CREATE TABLE movements (
@@ -44,57 +46,59 @@ INSERT INTO categories VALUES
 
 -- -----------------------------------------------------------------------
 -- Articles  (30+ rows to span multiple PDF pages)
+-- image: @data/img/xxx.svg = local SVG,  https://... = remote URL,  NULL = no image
+-- notes: @data/xxx.txt/.md = local file, inline text, or NULL
 -- -----------------------------------------------------------------------
 INSERT INTO articles VALUES
   -- Passive
-  ( 1, 'ART001', '10 ohm ceramic resistor 1/4W',        'STD', 1, 'PCS',   0.45, '5901234123457', 'https://parts.example.com/ART001'),
-  ( 2, 'ART002', '100 ohm ceramic resistor 1/4W',       'STD', 1, 'PCS',   0.45, '5901234123464', 'https://parts.example.com/ART002'),
-  ( 3, 'ART003', '1K ohm resistor 1/4W',                'STD', 1, 'PCS',   0.45, '5901234123471', 'https://parts.example.com/ART003'),
-  ( 4, 'ART004', '10K ohm resistor 1/4W',               'STD', 1, 'PCS',   0.45, '5901234123488', 'https://parts.example.com/ART004'),
-  ( 5, 'ART005', '100nF ceramic capacitor 50V',         'STD', 1, 'PCS',   0.30, '5901234123495', 'https://parts.example.com/ART005'),
-  ( 6, 'ART006', '10uF electrolytic capacitor 25V',     'STD', 1, 'PCS',   0.55, '5901234123501', 'https://parts.example.com/ART006'),
-  ( 7, 'ART007', '100uF electrolytic capacitor 25V',    'STD', 1, 'PCS',   0.80, '5901234123518', 'https://parts.example.com/ART007'),
-  ( 8, 'ART008', '470uF electrolytic capacitor 16V',    'STD', 1, 'PCS',   0.95, '5901234123525', 'https://parts.example.com/ART008'),
-  ( 9, 'ART009', '10uH inductor SMD 2A',                'STD', 1, 'PCS',   1.20, '5901234123532', 'https://parts.example.com/ART009'),
-  (10, 'ART010', 'Crystal 16MHz HC-49',                 'STD', 1, 'PCS',   0.90, '5901234123549', 'https://parts.example.com/ART010'),
+  ( 1, 'ART001', '10 ohm ceramic resistor 1/4W',        'STD', 1, 'PCS',   0.45, '5901234123457', 'https://parts.example.com/ART001', NULL, NULL),
+  ( 2, 'ART002', '100 ohm ceramic resistor 1/4W',       'STD', 1, 'PCS',   0.45, '5901234123464', 'https://parts.example.com/ART002', NULL, NULL),
+  ( 3, 'ART003', '1K ohm resistor 1/4W',                'STD', 1, 'PCS',   0.45, '5901234123471', 'https://parts.example.com/ART003', NULL, NULL),
+  ( 4, 'ART004', '10K ohm resistor 1/4W',               'STD', 1, 'PCS',   0.45, '5901234123488', 'https://parts.example.com/ART004', NULL, NULL),
+  ( 5, 'ART005', '100nF ceramic capacitor 50V',         'STD', 1, 'PCS',   0.30, '5901234123495', 'https://parts.example.com/ART005', NULL, NULL),
+  ( 6, 'ART006', '10uF electrolytic capacitor 25V',     'STD', 1, 'PCS',   0.55, '5901234123501', 'https://parts.example.com/ART006', NULL, NULL),
+  ( 7, 'ART007', '100uF electrolytic capacitor 25V',    'STD', 1, 'PCS',   0.80, '5901234123518', 'https://parts.example.com/ART007', NULL, NULL),
+  ( 8, 'ART008', '470uF electrolytic capacitor 16V',    'STD', 1, 'PCS',   0.95, '5901234123525', 'https://parts.example.com/ART008', NULL, NULL),
+  ( 9, 'ART009', '10uH inductor SMD 2A',                'STD', 1, 'PCS',   1.20, '5901234123532', 'https://parts.example.com/ART009', NULL, NULL),
+  (10, 'ART010', 'Crystal 16MHz HC-49',                 'STD', 1, 'PCS',   0.90, '5901234123549', 'https://parts.example.com/ART010', NULL, NULL),
   -- Semiconductors
-  (11, 'ART011', '1N4148 signal diode',                 'STD', 2, 'PCS',   0.12, '5901234123556', 'https://parts.example.com/ART011'),
-  (12, 'ART012', '1N4007 rectifier diode 1A',           'STD', 2, 'PCS',   0.18, '5901234123563', 'https://parts.example.com/ART012'),
-  (13, 'ART013', 'LED red 5mm',                         'STD', 2, 'PCS',   0.15, '5901234123570', 'https://parts.example.com/ART013'),
-  (14, 'ART014', 'LED green 5mm',                       'STD', 2, 'PCS',   0.15, '5901234123587', 'https://parts.example.com/ART014'),
-  (15, 'ART015', 'BC547 NPN transistor',                'STD', 2, 'PCS',   0.20, '5901234123594', 'https://parts.example.com/ART015'),
-  (16, 'ART016', 'IRF540N N-channel MOSFET',            'STD', 2, 'PCS',   1.80, '5901234123600', 'https://parts.example.com/ART016'),
-  (17, 'ART017', 'LM358 dual op-amp DIP8',              'STD', 2, 'PCS',   0.65, '5901234123617', 'https://parts.example.com/ART017'),
-  (18, 'ART018', 'NE555 timer DIP8',                    'STD', 2, 'PCS',   0.55, '5901234123624', 'https://parts.example.com/ART018'),
+  (11, 'ART011', '1N4148 signal diode',                 'STD', 2, 'PCS',   0.12, '5901234123556', 'https://parts.example.com/ART011', NULL, NULL),
+  (12, 'ART012', '1N4007 rectifier diode 1A',           'STD', 2, 'PCS',   0.18, '5901234123563', 'https://parts.example.com/ART012', NULL, NULL),
+  (13, 'ART013', 'LED red 5mm',                         'STD', 2, 'PCS',   0.15, '5901234123570', 'https://parts.example.com/ART013', NULL, NULL),
+  (14, 'ART014', 'LED green 5mm',                       'STD', 2, 'PCS',   0.15, '5901234123587', 'https://parts.example.com/ART014', NULL, NULL),
+  (15, 'ART015', 'BC547 NPN transistor',                'STD', 2, 'PCS',   0.20, '5901234123594', 'https://parts.example.com/ART015', NULL, NULL),
+  (16, 'ART016', 'IRF540N N-channel MOSFET',            'STD', 2, 'PCS',   1.80, '5901234123600', 'https://parts.example.com/ART016', NULL, NULL),
+  (17, 'ART017', 'LM358 dual op-amp DIP8',              'STD', 2, 'PCS',   0.65, '5901234123617', 'https://parts.example.com/ART017', NULL, NULL),
+  (18, 'ART018', 'NE555 timer DIP8',                    'STD', 2, 'PCS',   0.55, '5901234123624', 'https://parts.example.com/ART018', NULL, NULL),
   -- Connectors
-  (19, 'ART019', 'USB-C cable 1m',                      'STD', 3, 'PCS',   3.50, '5901234123631', 'https://parts.example.com/ART019'),
-  (20, 'ART020', 'USB-A to micro-B cable 2m',           'STD', 3, 'PCS',   2.80, '5901234123648', 'https://parts.example.com/ART020'),
-  (21, 'ART021', '2.54mm pin header 40p straight',      'STD', 3, 'PCS',   0.60, '5901234123655', 'https://parts.example.com/ART021'),
-  (22, 'ART022', 'JST-XH 2p connector set',             'STD', 3, 'PCS',   0.35, '5901234123662', 'https://parts.example.com/ART022'),
-  -- MCU / SBC
-  (23, 'ART023', 'STM32F103C8T6 microcontroller',       'STD', 4, 'PCS',   4.20, '5901234123679', 'https://parts.example.com/ART023'),
-  (24, 'ART024', 'ESP32-WROOM-32 module',               'STD', 4, 'PCS',   5.90, '5901234123686', 'https://parts.example.com/ART024'),
-  (25, 'ART025', 'Raspberry Pi Pico',                   'STD', 4, 'PCS',   6.50, '5901234123693', 'https://parts.example.com/ART025'),
-  (26, 'ART026', 'Arduino Nano clone',                  'STD', 4, 'PCS',   4.80, '5901234123709', 'https://parts.example.com/ART026'),
+  (19, 'ART019', 'USB-C cable 1m',                      'STD', 3, 'PCS',   3.50, '5901234123631', 'https://parts.example.com/ART019', NULL, NULL),
+  (20, 'ART020', 'USB-A to micro-B cable 2m',           'STD', 3, 'PCS',   2.80, '5901234123648', 'https://parts.example.com/ART020', NULL, NULL),
+  (21, 'ART021', '2.54mm pin header 40p straight',      'STD', 3, 'PCS',   0.60, '5901234123655', 'https://parts.example.com/ART021', NULL, NULL),
+  (22, 'ART022', 'JST-XH 2p connector set',             'STD', 3, 'PCS',   0.35, '5901234123662', 'https://parts.example.com/ART022', NULL, NULL),
+  -- MCU / SBC — image: remote URL, notes: local file or inline
+  (23, 'ART023', 'STM32F103C8T6 microcontroller',       'STD', 4, 'PCS',   4.20, '5901234123679', 'https://parts.example.com/ART023', 'https://picsum.photos/seed/stm32/120/80',  '@data/ART023.txt'),
+  (24, 'ART024', 'ESP32-WROOM-32 module',               'STD', 4, 'PCS',   5.90, '5901234123686', 'https://parts.example.com/ART024', 'https://picsum.photos/seed/esp32/120/80',  '@data/ART024.md'),
+  (25, 'ART025', 'Raspberry Pi Pico',                   'STD', 4, 'PCS',   6.50, '5901234123693', 'https://parts.example.com/ART025', 'https://picsum.photos/seed/pico/120/80',   'RP2040 dual-core Cortex-M0+ at 133 MHz, 264 KB SRAM, 2 MB flash, 26 GPIO, USB 1.1. Ideal for MicroPython and C/C++ projects.'),
+  (26, 'ART026', 'Arduino Nano clone',                  'STD', 4, 'PCS',   4.80, '5901234123709', 'https://parts.example.com/ART026', 'https://picsum.photos/seed/arduino/120/80', NULL),
   -- Power
-  (27, 'ART027', 'LM7805 5V regulator TO-220',          'STD', 5, 'PCS',   0.75, '5901234123716', 'https://parts.example.com/ART027'),
-  (28, 'ART028', 'LM317 adjustable regulator',          'STD', 5, 'PCS',   0.85, '5901234123723', 'https://parts.example.com/ART028'),
-  (29, 'ART029', 'DC-DC step-down module 3A',           'STD', 5, 'PCS',   3.20, '5901234123730', 'https://parts.example.com/ART029'),
-  (30, 'ART030', '12V 2A switching power supply',       'STD', 5, 'PCS',  14.50, '5901234123747', 'https://parts.example.com/ART030'),
-  -- Tools
-  (31, 'ART031', 'Digital multimeter pocket',           'STD', 6, 'PCS',  18.00, '5901234123754', 'https://parts.example.com/ART031'),
-  (32, 'ART032', 'Soldering iron 60W adjustable',       'STD', 6, 'PCS',  32.00, '5901234123761', 'https://parts.example.com/ART032'),
-  (33, 'ART033', 'Breadboard 830 tie-points',           'STD', 6, 'PCS',   5.50, '5901234123778', 'https://parts.example.com/ART033'),
-  -- Services
-  (34, 'SRV001', 'Technical support',                   'SRV', 7, 'HRS',  85.00, NULL, NULL),
-  (35, 'SRV002', 'Testing and certification',           'SRV', 7, 'HRS',  95.00, NULL, NULL),
-  (36, 'SRV003', 'PCB design and layout',               'SRV', 7, 'HRS', 110.00, NULL, NULL),
-  (37, 'SRV004', 'Firmware development',                'SRV', 7, 'HRS', 120.00, NULL, NULL),
-  -- Kits
-  (38, 'KIT001', 'STM32 development starter kit',       'KIT', 8, 'PCS',  38.00, '5901234123785', 'https://parts.example.com/KIT001'),
-  (39, 'KIT002', 'Environmental sensors kit',           'KIT', 8, 'PCS',  52.00, '5901234123792', 'https://parts.example.com/KIT002'),
-  (40, 'KIT003', 'ESP32 IoT prototyping kit',           'KIT', 8, 'PCS',  65.00, '5901234123808', 'https://parts.example.com/KIT003'),
-  (41, 'KIT004', 'Power electronics learning kit',      'KIT', 8, 'PCS',  48.00, '5901234123815', 'https://parts.example.com/KIT004');
+  (27, 'ART027', 'LM7805 5V regulator TO-220',          'STD', 5, 'PCS',   0.75, '5901234123716', 'https://parts.example.com/ART027', NULL, NULL),
+  (28, 'ART028', 'LM317 adjustable regulator',          'STD', 5, 'PCS',   0.85, '5901234123723', 'https://parts.example.com/ART028', NULL, NULL),
+  (29, 'ART029', 'DC-DC step-down module 3A',           'STD', 5, 'PCS',   3.20, '5901234123730', 'https://parts.example.com/ART029', NULL, NULL),
+  (30, 'ART030', '12V 2A switching power supply',       'STD', 5, 'PCS',  14.50, '5901234123747', 'https://parts.example.com/ART030', NULL, NULL),
+  -- Tools — image: local SVG file, notes: local file
+  (31, 'ART031', 'Digital multimeter pocket',           'STD', 6, 'PCS',  18.00, '5901234123754', 'https://parts.example.com/ART031', '@data/img/ART031.svg', '@data/ART031.txt'),
+  (32, 'ART032', 'Soldering iron 60W adjustable',       'STD', 6, 'PCS',  32.00, '5901234123761', 'https://parts.example.com/ART032', '@data/img/ART032.svg', NULL),
+  (33, 'ART033', 'Breadboard 830 tie-points',           'STD', 6, 'PCS',   5.50, '5901234123778', 'https://parts.example.com/ART033', '@data/img/ART033.svg', NULL),
+  -- Services — no image, notes inline or file
+  (34, 'SRV001', 'Technical support',                   'SRV', 7, 'HRS',  85.00, NULL, NULL, NULL, NULL),
+  (35, 'SRV002', 'Testing and certification',           'SRV', 7, 'HRS',  95.00, NULL, NULL, NULL, NULL),
+  (36, 'SRV003', 'PCB design and layout',               'SRV', 7, 'HRS', 110.00, NULL, NULL, NULL, '@data/SRV003.txt'),
+  (37, 'SRV004', 'Firmware development',                'SRV', 7, 'HRS', 120.00, NULL, NULL, NULL, 'Custom firmware for STM32, ESP32 and RP2040. Includes HAL/BSP setup, RTOS integration, unit tests and documentation.'),
+  -- Kits — image: local SVG or remote, notes: markdown file
+  (38, 'KIT001', 'STM32 development starter kit',       'KIT', 8, 'PCS',  38.00, '5901234123785', 'https://parts.example.com/KIT001', '@data/img/KIT001.svg',                      '@data/KIT001.md'),
+  (39, 'KIT002', 'Environmental sensors kit',           'KIT', 8, 'PCS',  52.00, '5901234123792', 'https://parts.example.com/KIT002', 'https://picsum.photos/seed/kit002/120/80',  NULL),
+  (40, 'KIT003', 'ESP32 IoT prototyping kit',           'KIT', 8, 'PCS',  65.00, '5901234123808', 'https://parts.example.com/KIT003', 'https://picsum.photos/seed/kit003/120/80',  '@data/KIT003.md'),
+  (41, 'KIT004', 'Power electronics learning kit',      'KIT', 8, 'PCS',  48.00, '5901234123815', 'https://parts.example.com/KIT004', 'https://picsum.photos/seed/kit004/120/80',  NULL);
 
 -- -----------------------------------------------------------------------
 -- Movements  (subset of articles for demo purposes)

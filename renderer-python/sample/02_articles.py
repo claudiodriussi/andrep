@@ -28,7 +28,7 @@ name = [
 # ---------------------------------------------------------------------------
 
 SAMPLE_DIR = Path(__file__).parent
-TEMPLATES = SAMPLE_DIR.parent / "templates"
+TEMPLATES = SAMPLE_DIR / "templates"
 DB = SAMPLE_DIR / "sample.db"
 OUTPUT = SAMPLE_DIR / "output"
 

@@ -1,0 +1,2 @@
+Pocket digital multimeter, auto-ranging. Measures DC/AC voltage (600 V max), DC/AC current (10 A max), resistance (40 MΩ), continuity with buzzer and diode test.
+Display: 4000-count LCD with backlight. CAT II 600 V safety rating. Includes test leads and 9 V battery. Dimensions: 130 × 68 × 28 mm.
