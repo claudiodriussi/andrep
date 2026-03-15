@@ -5,11 +5,15 @@ Public API:
     resolve_content(content, ns) -> str   — full resolve (parse + eval + format)
     _parse_tokens(content)        -> list  — parse once, reuse across many evals
     eval_expr(expr, ns)           -> any   — evaluate a single expression
-    _apply_formatter(value, fmt)  -> any   — apply one formatter to a value
+    _apply_formatter(value, fmt, r=None) -> any  — apply one formatter to a value
 
 The `ns` parameter is a pre-built eval namespace dict (already contains
 ``__builtins__: {}``).  Build it once per emit() call and reuse for all cells
 in that band — never rebuild per cell.
+
+The optional `r` parameter is the AndRepRenderer instance.  It is used by
+context-aware built-in formatters (e.g. ``load``) and by the per-renderer
+formatter registry ``r.formatters``.  Pass ``r=self`` from ``_cell_html``.
 """
 import re
 import types
@@ -62,11 +66,84 @@ def eval_expr(expr, ns):
         return f"[#{expr}#]"
 
 
-def _apply_formatter(value, fmt):
-    """Apply a single formatter to a value."""
+def _fmt_load(value, params, r):
+    """Built-in ``load`` formatter — resolves ``@ref`` references.
+
+    If *value* starts with ``@`` it is treated as a reference:
+      - ``@https://...`` / ``@http://...``  — HTTP fetch
+      - ``@/abs/path``  or  ``@rel/path``   — local filesystem
+        Relative paths are resolved against ``r.base_dir`` when set,
+        otherwise against ``Path.cwd()``.
+
+    If *value* does not start with ``@`` it is returned unchanged (inline).
+
+    Parameters (comma-separated after ``load``):
+      ``base64``   — return a ``data:mime;base64,...`` string instead of text
+      ``silent``   — return ``""`` on any error (default: ``"[#ref#]"``)
+      encoding     — text encoding for local files, default ``utf-8``
+    """
+    import base64 as _b64
+    import mimetypes
+    import urllib.request
+    from pathlib import Path
+
+    if value is None:
+        return ""
+    val = str(value)
+    if not val.startswith("@"):
+        return val                          # inline value — pass through unchanged
+
+    ref     = val[1:]
+    silent  = "silent"  in params
+    binary  = "base64"  in params
+    enc     = next(
+        (p for p in params if p not in ("silent", "base64") and p),
+        "utf-8",
+    )
+
+    try:
+        if ref.startswith(("http://", "https://")):
+            with urllib.request.urlopen(ref) as resp:
+                data = resp.read()
+                if binary:
+                    mime = resp.headers.get_content_type() or "application/octet-stream"
+                    return f"data:{mime};base64,{_b64.b64encode(data).decode()}"
+                return data.decode(enc)
+        else:
+            base_dir = getattr(r, "base_dir", None) or Path.cwd()
+            p = Path(ref)
+            if not p.is_absolute():
+                p = Path(base_dir) / p
+            p = p.resolve()
+            if binary:
+                data = p.read_bytes()
+                mime = mimetypes.guess_type(str(p))[0] or "application/octet-stream"
+                return f"data:{mime};base64,{_b64.b64encode(data).decode()}"
+            return p.read_text(encoding=enc)
+    except Exception:
+        return "" if silent else f"[#{ref}#]"
+
+
+def _apply_formatter(value, fmt, r=None):
+    """Apply a single formatter to a value.
+
+    Args:
+        value: the value to transform.
+        fmt:   formatter string, e.g. ``"upper"``, ``".2"``, ``"load,silent"``.
+        r:     optional AndRepRenderer instance — required by context-aware
+               formatters (``load``) and checked against ``r.formatters`` for
+               per-renderer custom formatters.
+    """
     fmt = fmt.strip()
     if not fmt:
         return value
+
+    # ---- per-renderer custom formatters (r.formatters registry) --------
+    name = fmt.split(",")[0].strip()
+    if r is not None:
+        custom = getattr(r, "formatters", {}).get(name)
+        if custom is not None:
+            return custom(value, fmt, r)
 
     if fmt == "upper":
         return str(value).upper() if value is not None else ""
@@ -141,6 +218,11 @@ def _apply_formatter(value, fmt):
             return f"{v:{sign}.{decimals}f}"
         except (TypeError, ValueError):
             return str(value)
+
+    # ---- load formatter ------------------------------------------------
+    if name == "load":
+        params = {p.strip() for p in fmt.split(",")[1:]}
+        return _fmt_load(value, params, r)
 
     # Barcode formatters — return an SVG string; renderer detects <svg and embeds raw.
     #
@@ -247,9 +329,12 @@ def _parse_tokens(content):
     return result
 
 
-def resolve_content(content, ns):
+def resolve_content(content, ns, r=None):
     """Resolve all [var|formatter] tokens in *content* using namespace *ns*.
     Returns the string with all tokens substituted.
+
+    Pass ``r`` (the renderer instance) to enable context-aware formatters
+    such as ``load`` and per-renderer ``r.formatters``.
     """
     if not content or "[" not in content:
         return content
@@ -264,7 +349,7 @@ def resolve_content(content, ns):
             value = eval_expr(expr, ns)
             if formatters:
                 for fmt in formatters:
-                    value = _apply_formatter(value, fmt)
+                    value = _apply_formatter(value, fmt, r=r)
                 parts.append(str(value) if value is not None else "")
             else:
                 parts.append("" if value is None else str(value))

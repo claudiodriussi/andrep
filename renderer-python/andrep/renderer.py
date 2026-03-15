@@ -239,6 +239,15 @@ class AndRepRenderer:
         # r.globals["app"] = app     →  [app.setting]
         self.globals: dict = {}
 
+        # Per-renderer custom formatters — checked before built-ins
+        # r.formatters["indent"] = lambda v, fmt, r: "\u00a0" * 4 * int(v)
+        # template: [row.level | indent]
+        self.formatters: dict = {}
+
+        # Base directory for the load formatter — resolves @relative/path refs
+        # r.base_dir = Path(__file__).parent / "data"
+        self.base_dir = None
+
         # Explicit workspace: r["key"] = value  →  [key.field] in template
         self._ctx: dict = {}
 
@@ -607,7 +616,7 @@ class AndRepRenderer:
                     v = next(values_iter, None)
                     if fmts:
                         for fmt in fmts:
-                            v = _apply_formatter(v, fmt)
+                            v = _apply_formatter(v, fmt, r=self)
                     if isinstance(v, str) and v.startswith("<svg"):
                         svg = v   # formatter produced an SVG — use it directly
                     else:
@@ -638,7 +647,7 @@ class AndRepRenderer:
                 v = next(values_iter, None)
                 if fmts:
                     for fmt in fmts:
-                        v = _apply_formatter(v, fmt)
+                        v = _apply_formatter(v, fmt, r=self)
                 # Inline barcode: formatter returned an SVG string
                 if isinstance(v, str) and v.startswith("<svg"):
                     # SVGs from new barcode.py are already in pixels; if not (legacy),
@@ -763,7 +772,7 @@ class AndRepRenderer:
                     for row in rows
                 )
                 body_parts.append(
-                    f'<div style="position:relative;width:{col_w}px">{inner}</div>\n'
+                    f'<div style="position:relative;width:{col_w}px;overflow:hidden">{inner}</div>\n'
                 )
             else:
                 for row in rows:
