@@ -556,13 +556,26 @@ class AndRepRenderer:
         borders = s.get("borders", {})
         va_map = {"top": "flex-start", "middle": "center", "bottom": "flex-end"}
         va = va_map.get(s.get("verticalAlignment", "top"), "flex-start")
+        wrap = cell.get("wrap", True)
+        auto_stretch = cell.get("autoStretch", False)
+        h = cell.get("height", 24)
+
+        # autoStretch + wrap: cell may grow beyond template height; row adapts.
+        # Fixed cells keep their height; in mixed rows borders won't be aligned
+        # (acceptable for HTML — PDF will enforce uniform heights via phantom pass).
+        if wrap and auto_stretch:
+            size_css = f"min-height:{h}px"
+            overflow = ""
+        else:
+            size_css = f"height:{h}px"
+            overflow = "overflow:hidden"
+
         parts = [
-            "position:absolute",
-            f"left:{cell.get('x', 0)}px",
             f"width:{cell.get('width', 100)}px",
-            f"height:{cell.get('height', 24)}px",
-            "overflow:hidden",
-            f"white-space:{'nowrap' if not cell.get('wrap', True) else 'normal'}",
+            size_css,
+            "flex-shrink:0",
+            overflow,
+            f"white-space:{'nowrap' if not wrap else 'normal'}",
             "display:flex",
             "flex-direction:column",
             f"justify-content:{va}",
@@ -586,12 +599,11 @@ class AndRepRenderer:
             f"border-right:{self._border_css(borders, 'right')}",
             "box-sizing:border-box",
         ]
-        # css_extra and band_css appended last — override base properties
         if css_extra:
             parts.append(css_extra)
         if band_css:
             parts.append(band_css)
-        return ";".join(parts)
+        return ";".join(p for p in parts if p)
 
     # ------------------------------------------------------------------
     # HTML rendering — uses compiled values + template for layout/formatters
@@ -628,8 +640,18 @@ class AndRepRenderer:
             return self._graphic_cell_html(cell, svg, css_extra, band_css)
 
         if cell_type == "image":
+            tokens = self._cell_tokens[id(cell)]
             v = next(values_iter, None)
-            src = str(v) if v is not None else ""
+            # Apply formatters (img formatter returns a full <img> tag)
+            for _, expr, fmts in tokens:
+                if expr is not None and fmts:
+                    for fmt in fmts:
+                        v = _apply_formatter(v, fmt, r=self)
+                break
+            if isinstance(v, str) and (v.startswith("<img") or v.startswith("<svg")):
+                return self._graphic_cell_html(cell, v, css_extra, band_css)
+            # No formatter or formatter returned a plain URL — legacy behaviour
+            src  = str(v) if v is not None else ""
             auto = cell.get("autoStretch", False)
             if auto:
                 img = f'<img src="{escape(src)}" style="width:100%;height:auto;display:block">'
@@ -655,10 +677,12 @@ class AndRepRenderer:
                     if 'mm"' not in v[:300]:
                         v = v.replace("<svg ", '<svg style="display:block" ', 1)
                     parts.append(v)
+                elif isinstance(v, str) and v.startswith("<img"):
+                    parts.append(v)
                 else:
                     parts.append(escape(str(v) if v is not None else ""))
         content = "".join(
-            p if p.startswith("<svg") else p.replace("\n", "<br>")
+            p if (p.startswith("<svg") or p.startswith("<img")) else p.replace("\n", "<br>")
             for p in parts
         )
         return f'<div style="{self._cell_style(cell, css_extra, band_css)}">{content}</div>'
@@ -702,11 +726,25 @@ class AndRepRenderer:
 
     def _row_html(self, row: dict, values_iter, css_extras_iter, band_css: str = "") -> str:
         height = self._row_height(row)
-        cells = "".join(
-            self._cell_html(c, values_iter, next(css_extras_iter, ""), band_css)
-            for c in row.get("cells", [])
+        # Cells sorted by x — insert spacer divs for gaps between cells.
+        # The editor guarantees no overlap, so gaps are always >= 0.
+        sorted_cells = sorted(row.get("cells", []), key=lambda c: c.get("x", 0))
+        parts: list[str] = []
+        prev_end = 0
+        for cell in sorted_cells:
+            x = cell.get("x", 0)
+            gap = x - prev_end
+            if gap > 0:
+                parts.append(f'<div style="width:{gap}px;flex-shrink:0"></div>')
+            parts.append(
+                self._cell_html(cell, values_iter, next(css_extras_iter, ""), band_css)
+            )
+            prev_end = x + cell.get("width", 100)
+        return (
+            f'<div style="display:flex;min-height:{height}px;align-items:stretch">'
+            + "".join(parts)
+            + "</div>\n"
         )
-        return f'<div style="position:relative;height:{height}px">{cells}</div>\n'
 
     def to_html(self) -> str:
         """Render to a complete HTML document."""
@@ -772,7 +810,7 @@ class AndRepRenderer:
                     for row in rows
                 )
                 body_parts.append(
-                    f'<div style="position:relative;width:{col_w}px;overflow:hidden">{inner}</div>\n'
+                    f'<div style="width:{col_w}px;overflow:hidden">{inner}</div>\n'
                 )
             else:
                 for row in rows:

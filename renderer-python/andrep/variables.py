@@ -124,6 +124,49 @@ def _fmt_load(value, params, r):
         return "" if silent else f"[#{ref}#]"
 
 
+def _fmt_img(value, params):
+    """Built-in ``img`` formatter — renders an HTML ``<img>`` element.
+
+    Syntax: ``img[,contain|cover|natural]``
+
+    Parameters:
+      *(none)*   — ``width:100%; height:auto`` — proportional fill-width,
+                   height adapts to aspect ratio. Best with ``autoStretch=true``.
+      ``contain`` — ``object-fit:contain`` — full image visible, may leave
+                   empty margins. Best with ``autoStretch=false``.
+      ``cover``   — ``object-fit:cover`` — fills cell box, clips excess edges.
+      ``natural`` — ``max-width/max-height:100%`` — no upscaling; image stays
+                   at its natural size, clipped if larger than cell.
+
+    The returned ``<img ...>`` string is detected by the renderer and embedded
+    as raw HTML (same mechanism as inline SVG barcodes).  Works in both
+    ``image`` and ``text`` cell types.  Combine with ``load`` to resolve
+    ``@ref`` references first::
+
+        [row.image | img,cover]
+        [row.image | load | img,contain]
+        ["@data/logo.png" | load,base64 | img,natural]
+    """
+    from html import escape as _esc
+
+    if not value:
+        return ""
+    src = str(value)
+
+    mode = next((p for p in params if p in ("contain", "cover", "natural")), None)
+
+    if mode == "cover":
+        style = "width:100%;height:100%;object-fit:cover;display:block"
+    elif mode == "contain":
+        style = "width:100%;height:100%;object-fit:contain;display:block"
+    elif mode == "natural":
+        style = "max-width:100%;max-height:100%;display:block"
+    else:
+        style = "width:100%;height:auto;display:block"
+
+    return f'<img src="{_esc(src)}" style="{style}">'
+
+
 def _apply_formatter(value, fmt, r=None):
     """Apply a single formatter to a value.
 
@@ -223,6 +266,11 @@ def _apply_formatter(value, fmt, r=None):
     if name == "load":
         params = {p.strip() for p in fmt.split(",")[1:]}
         return _fmt_load(value, params, r)
+
+    # ---- img formatter — returns <img ...> string; renderer embeds raw --
+    if name == "img":
+        params = [p.strip() for p in fmt.split(",")[1:]]
+        return _fmt_img(value, params)
 
     # Barcode formatters — return an SVG string; renderer detects <svg and embeds raw.
     #
