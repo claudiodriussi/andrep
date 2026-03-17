@@ -352,11 +352,18 @@ class AndRepRenderer:
         rows = self.bands.get(band_name, [])
         values = []
         css_extras = []
+        embeds: dict = {}
         for row in rows:
             for cell in row.get("cells", []):
-                for _, expr, _ in self._cell_tokens[id(cell)]:
-                    if expr is not None:
-                        values.append(eval_expr(expr, ns))
+                if cell.get("type") == "embed":
+                    target = cell.get("embedTarget", "")
+                    if target and target in self.bands:
+                        embeds[id(cell)] = self._compile_band(target, ns, "", {})
+                    # embed cells carry no token values; cssExtra still applies
+                else:
+                    for _, expr, _ in self._cell_tokens[id(cell)]:
+                        if expr is not None:
+                            values.append(eval_expr(expr, ns))
                 raw = cell.get("cssExtra", "")
                 if raw.startswith("@"):
                     res = eval_expr(raw[1:], ns)
@@ -374,6 +381,8 @@ class AndRepRenderer:
         if band_css or any(css_extras):
             record["css_extras"] = css_extras
             record["band_css"] = band_css
+        if embeds:
+            record["embeds"] = embeds
         return record
 
     # ------------------------------------------------------------------
@@ -554,21 +563,53 @@ class AndRepRenderer:
     def _cell_style(self, cell: dict, css_extra: str = "", band_css: str = "") -> str:
         s = cell.get("style", {})
         borders = s.get("borders", {})
-        va_map = {"top": "flex-start", "middle": "center", "bottom": "flex-end"}
-        va = va_map.get(s.get("verticalAlignment", "top"), "flex-start")
         wrap = cell.get("wrap", True)
         auto_stretch = cell.get("autoStretch", False)
         h = cell.get("height", 24)
 
+        # Rotation — applied to the cell container div.
+        # For 90° / 270°: writing-mode changes the inline axis to vertical, so
+        # flex-direction:row aligns items along the vertical (inline) direction.
+        # justify-content then controls vertical positioning as expected, and
+        # text-align handles horizontal centering within each item.
+        # For 180°: simple transform; flex-direction stays column.
+        rotation = cell.get("rotation", 0)
+
+        # verticalAlignment → justify-content.
+        # rotation=90 uses writing-mode:vertical-rl + rotate(180deg): the 180°
+        # transform visually inverts the flex main axis, so top/bottom must be swapped.
+        if rotation == 90:
+            va_map = {"top": "flex-end", "middle": "center", "bottom": "flex-start"}
+        else:
+            va_map = {"top": "flex-start", "middle": "center", "bottom": "flex-end"}
+        va = va_map.get(s.get("verticalAlignment", "top"), va_map["top"])
+
         # autoStretch + wrap: cell may grow beyond template height; row adapts.
+        # Rotated 90/270 cells also use min-height so align-items:stretch on the
+        # parent row can extend them to fill the row's actual (taller) height.
         # Fixed cells keep their height; in mixed rows borders won't be aligned
         # (acceptable for HTML — PDF will enforce uniform heights via phantom pass).
         if wrap and auto_stretch:
             size_css = f"min-height:{h}px"
             overflow = ""
+        elif rotation in (90, 270):
+            size_css = f"min-height:{h}px"
+            overflow = "overflow:hidden"
         else:
             size_css = f"height:{h}px"
             overflow = "overflow:hidden"
+        if rotation == 90:
+            flex_dir = "row"
+            rotation_parts = ["writing-mode:vertical-rl", "transform:rotate(180deg)"]
+        elif rotation == 270:
+            flex_dir = "row"
+            rotation_parts = ["writing-mode:vertical-lr"]
+        elif rotation == 180:
+            flex_dir = "column"
+            rotation_parts = ["transform:rotate(180deg)"]
+        else:
+            flex_dir = "column"
+            rotation_parts = []
 
         parts = [
             f"width:{cell.get('width', 100)}px",
@@ -577,7 +618,7 @@ class AndRepRenderer:
             overflow,
             f"white-space:{'nowrap' if not wrap else 'normal'}",
             "display:flex",
-            "flex-direction:column",
+            f"flex-direction:{flex_dir}",
             f"justify-content:{va}",
             f"font-family:{s.get('fontFamily', 'Arial')},sans-serif",
             f"font-size:{s.get('fontSize', 11)}pt",
@@ -599,6 +640,7 @@ class AndRepRenderer:
             f"border-right:{self._border_css(borders, 'right')}",
             "box-sizing:border-box",
         ]
+        parts.extend(rotation_parts)
         if css_extra:
             parts.append(css_extra)
         if band_css:
@@ -616,9 +658,13 @@ class AndRepRenderer:
     _ALIGN_ITEMS  = {"left": "flex-start", "center": "center", "right": "flex-end"}
     _JUSTIFY_CONT = {"top": "flex-start",  "middle": "center", "bottom": "flex-end"}
 
-    def _cell_html(self, cell: dict, values_iter, css_extra: str = "", band_css: str = "") -> str:
+    def _cell_html(self, cell: dict, values_iter, css_extra: str = "", band_css: str = "", embed_map: dict = None) -> str:
         """Render one cell to HTML, consuming its token values from values_iter."""
         cell_type = cell.get("type", "text")
+
+        if cell_type == "embed":
+            sub_record = (embed_map or {}).get(id(cell), {})
+            return self._embed_cell_html(cell, sub_record, css_extra, band_css)
 
         if cell_type in ("barcode", "qrcode"):
             tokens = self._cell_tokens[id(cell)]
@@ -758,7 +804,53 @@ class AndRepRenderer:
             )
         return f'<div style="{self._cell_style(cell, extra, band_css)}">{content_html}</div>'
 
-    def _row_html(self, row: dict, values_iter, css_extras_iter, band_css: str = "") -> str:
+    def _embed_cell_html(self, cell: dict, sub_record: dict, css_extra: str = "", band_css: str = "") -> str:
+        """Render an embed cell by expanding its target band inside a container div.
+
+        The container inherits borders and background from the embed cell's style
+        but has no fixed height — it grows with the embedded content.
+        In HTML the parent row's flex align-items:stretch ensures both embed
+        containers reach the same height. Vertical borders on the containers
+        therefore span the full row height without any pre-measurement.
+        (In PDF, borders that must match variable-height rows require the phantom
+        pass; that is deferred to the PDF renderer implementation.)
+        """
+        target = cell.get("embedTarget", "")
+        rows = self.bands.get(target, [])
+        s = cell.get("style", {})
+        borders = s.get("borders", {})
+        parts = [
+            f"width:{cell.get('width', 100)}px",
+            "flex-shrink:0",
+            f"border-top:{self._border_css(borders, 'top')}",
+            f"border-bottom:{self._border_css(borders, 'bottom')}",
+            f"border-left:{self._border_css(borders, 'left')}",
+            f"border-right:{self._border_css(borders, 'right')}",
+            f"background-color:{s.get('backgroundColor', 'transparent')}",
+            "box-sizing:border-box",
+            "overflow:hidden",
+        ]
+        if css_extra:
+            parts.append(css_extra)
+        if band_css:
+            parts.append(band_css)
+        style = ";".join(p for p in parts if p)
+
+        if not rows:
+            return f'<div style="{style}"></div>'
+
+        sub_values_iter = iter(sub_record.get("values", []))
+        sub_css_iter = iter(sub_record.get("css_extras", []))
+        sub_band_css = sub_record.get("band_css", "")
+        sub_embed_map = sub_record.get("embeds", {})
+
+        inner = "".join(
+            self._row_html(row, sub_values_iter, sub_css_iter, sub_band_css, sub_embed_map)
+            for row in rows
+        )
+        return f'<div style="{style}">{inner}</div>'
+
+    def _row_html(self, row: dict, values_iter, css_extras_iter, band_css: str = "", embed_map: dict = None) -> str:
         height = self._row_height(row)
         # Cells sorted by x — insert spacer divs for gaps between cells.
         # The editor guarantees no overlap, so gaps are always >= 0.
@@ -771,7 +863,7 @@ class AndRepRenderer:
             if gap > 0:
                 parts.append(f'<div style="width:{gap}px;flex-shrink:0"></div>')
             parts.append(
-                self._cell_html(cell, values_iter, next(css_extras_iter, ""), band_css)
+                self._cell_html(cell, values_iter, next(css_extras_iter, ""), band_css, embed_map)
             )
             prev_end = x + cell.get("width", 100)
         return (
@@ -836,11 +928,12 @@ class AndRepRenderer:
             values_iter = iter(record.get("values", []))
             css_extras_iter = iter(record.get("css_extras", []))
             band_css = record.get("band_css", "")
+            embed_map = record.get("embeds", {})
 
             if col_w is not None:
                 # wrap all rows of this emission in a single flex item
                 inner = "".join(
-                    self._row_html(row, values_iter, css_extras_iter, band_css)
+                    self._row_html(row, values_iter, css_extras_iter, band_css, embed_map)
                     for row in rows
                 )
                 body_parts.append(
@@ -848,7 +941,7 @@ class AndRepRenderer:
                 )
             else:
                 for row in rows:
-                    body_parts.append(self._row_html(row, values_iter, css_extras_iter, band_css))
+                    body_parts.append(self._row_html(row, values_iter, css_extras_iter, band_css, embed_map))
 
         if in_flex:
             body_parts.append(_close_flex())
