@@ -272,6 +272,7 @@ class AndRepRenderer:
         self.report_user: str = os.environ.get("USER", os.environ.get("USERNAME", ""))
         self.title: str = self.template.get("name", "")   # _r.title — overridable
         self.cur_page: int = 1   # increment manually to chain reports
+        self._pdf_mode: bool = False   # True while generating PDF HTML (disables writing-mode)
 
         # Group rows by band name
         self.bands: dict[str, list] = {}
@@ -652,14 +653,23 @@ class AndRepRenderer:
     # ------------------------------------------------------------------
 
     def _row_height(self, row: dict) -> int:
-        return max((c.get("height", 24) for c in row.get("cells", [])), default=24)
+        heights = []
+        for c in row.get("cells", []):
+            if c.get("type") == "embed":
+                target = c.get("embedTarget", "")
+                sub_rows = self.bands.get(target, [])
+                h = sum(self._row_height(r) for r in sub_rows) if sub_rows else c.get("height", 24)
+            else:
+                h = c.get("height", 24)
+            heights.append(h)
+        return max(heights, default=24)
 
     # CSS flex alignment maps
     _ALIGN_ITEMS  = {"left": "flex-start", "center": "center", "right": "flex-end"}
     _JUSTIFY_CONT = {"top": "flex-start",  "middle": "center", "bottom": "flex-end"}
 
     def _cell_html(self, cell: dict, values_iter, css_extra: str = "", band_css: str = "",
-                   embed_map: dict = None) -> str:
+                   embed_map: dict = None, row_height: int = 0) -> str:
         """Render one cell to HTML, consuming its token values from values_iter."""
         cell_type = cell.get("type", "text")
 
@@ -703,8 +713,7 @@ class AndRepRenderer:
             if auto:
                 img = f'<img src="{escape(src)}" style="width:100%;height:auto;display:block">'
             else:
-                img = f'<img src="{escape(src)}" '
-                'style="max-width:100%;max-height:100%;object-fit:contain;display:block">'
+                img = f'<img src="{escape(src)}" style="max-width:100%;max-height:100%;object-fit:contain;display:block">'
             return self._graphic_cell_html(cell, img, css_extra, band_css)
 
         # ---- markdown -------------------------------------------------------
@@ -754,7 +763,82 @@ class AndRepRenderer:
             p if (p.startswith("<svg") or p.startswith("<img")) else p.replace("\n", "<br>")
             for p in parts
         )
+        if self._pdf_mode and cell.get("rotation", 0) in (90, 270):
+            return self._rotated_pdf_cell_html(cell, content, css_extra, band_css, row_height)
         return f'<div style="{self._cell_style(cell, css_extra, band_css)}">{content}</div>'
+
+    def _rotated_pdf_cell_html(self, cell: dict, content: str, css_extra: str, band_css: str,
+                               row_height: int = 0) -> str:
+        """Two-div structure for rotated text cells in PDF (WeasyPrint has no writing-mode).
+
+        Outer div: min-height so flex align-items:stretch can grow it to match the row.
+        Inner div: swapped dimensions (inner_h × cell_w), absolutely positioned and rotated
+                   via transform:rotate so the text fills the outer box.
+        inner_h = row_height if provided (recursively estimated embed height), else cell.height.
+        """
+        s = cell.get("style", {})
+        borders = s.get("borders", {})
+        rotation = cell.get("rotation", 0)
+        cell_w = cell.get("width", 100)
+        cell_h = cell.get("height", 24)
+        inner_h = row_height if row_height > cell_h else cell_h
+
+        if rotation == 90:
+            va_map = {"top": "flex-end", "middle": "center", "bottom": "flex-start"}
+            pos_css = f"top:{inner_h}px;left:0"
+            rot_css = "transform:rotate(-90deg);transform-origin:0 0"
+        else:  # 270
+            va_map = {"top": "flex-start", "middle": "center", "bottom": "flex-end"}
+            pos_css = f"top:0;left:{cell_w}px"
+            rot_css = "transform:rotate(90deg);transform-origin:0 0"
+        va = va_map.get(s.get("verticalAlignment", "top"), va_map["top"])
+
+        outer_css = ";".join([
+            f"width:{cell_w}px",
+            f"min-height:{cell_h}px",
+            "align-self:stretch",
+            "flex-shrink:0",
+            "overflow:hidden",
+            "position:relative",
+            f"background-color:{s.get('backgroundColor', '#ffffff')}",
+            f"border-top:{self._border_css(borders, 'top')}",
+            f"border-bottom:{self._border_css(borders, 'bottom')}",
+            f"border-left:{self._border_css(borders, 'left')}",
+            f"border-right:{self._border_css(borders, 'right')}",
+            "box-sizing:border-box",
+        ])
+
+        padding = (
+            f"padding:{s.get('paddingTop', 2)}px "
+            f"{s.get('paddingRight', 4)}px "
+            f"{s.get('paddingBottom', 2)}px "
+            f"{s.get('paddingLeft', 4)}px"
+        )
+        inner_parts = [
+            "position:absolute",
+            f"width:{inner_h}px",
+            f"height:{cell_w}px",
+            pos_css,
+            rot_css,
+            "display:flex",
+            "flex-direction:column",
+            f"justify-content:{va}",
+            f"font-family:{s.get('fontFamily', 'Arial')},sans-serif",
+            f"font-size:{s.get('fontSize', 11)}pt",
+            f"font-weight:{s.get('fontWeight', 'normal')}",
+            f"font-style:{s.get('fontStyle', 'normal')}",
+            f"text-decoration:{s.get('textDecoration', 'none')}",
+            f"color:{s.get('color', '#000000')}",
+            f"text-align:{s.get('alignment', 'left')}",
+            padding,
+            "box-sizing:border-box",
+        ]
+        if css_extra:
+            inner_parts.append(css_extra)
+        if band_css:
+            inner_parts.append(band_css)
+        inner_css = ";".join(p for p in inner_parts if p)
+        return f'<div style="{outer_css}"><div style="{inner_css}">{content}</div></div>'
 
     def _graphic_svg(self, cell: dict, value: str) -> str:
         """Generate a barcode/qrcode SVG for a dedicated graphic cell."""
@@ -803,6 +887,13 @@ class AndRepRenderer:
             obj_pos = self._OBJ_POS.get(va, "center top")
             content_html = content_html.replace(
                 "display:block", f"object-position:{obj_pos};display:block", 1
+            )
+        # SVG barcodes/QR: constrain to the cell bounds so they don't overflow.
+        # In browsers, SVG flex items shrink automatically; WeasyPrint renders at
+        # intrinsic size and clips — max-width/max-height prevent the clipping.
+        if content_html.startswith("<svg"):
+            content_html = content_html.replace(
+                "<svg ", '<svg style="max-width:100%;max-height:100%;display:block" ', 1
             )
         return f'<div style="{self._cell_style(cell, extra, band_css)}">{content_html}</div>'
 
@@ -865,7 +956,8 @@ class AndRepRenderer:
             if gap > 0:
                 parts.append(f'<div style="width:{gap}px;flex-shrink:0"></div>')
             parts.append(
-                self._cell_html(cell, values_iter, next(css_extras_iter, ""), band_css, embed_map)
+                self._cell_html(cell, values_iter, next(css_extras_iter, ""), band_css, embed_map,
+                                row_height=height)
             )
             prev_end = x + cell.get("width", 100)
         return (
@@ -1239,7 +1331,12 @@ class AndRepRenderer:
             from weasyprint import HTML  # type: ignore
         except ImportError as e:
             raise ImportError("weasyprint is not installed: pip install weasyprint") from e
-        return HTML(string=self._to_pdf_html()).write_pdf()
+        self._pdf_mode = True
+        try:
+            html = self._to_pdf_html()
+        finally:
+            self._pdf_mode = False
+        return HTML(string=html).write_pdf()
 
     # ------------------------------------------------------------------
     # Composed template export

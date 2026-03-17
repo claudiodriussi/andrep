@@ -854,7 +854,7 @@
             "color": "#1e3a5f",
             "backgroundColor": "#dbeafe",
             "alignment": "center",
-            "verticalAlignment": "top",
+            "verticalAlignment": "middle",
             "paddingTop": 4,
             "paddingBottom": 4,
             "paddingLeft": 4,
