@@ -104,7 +104,8 @@
   const singleCell = $derived(cells.length === 1 ? cells[0] : null);
   function sideHasBorder(side: BorderSideName): boolean {
     if (!singleCell) return false;
-    const b = singleCell.style.borders[side];
+    const b = singleCell.style.borders?.[side];
+    if (!b) return false;
     return b.width > 0 && b.style !== 'none';
   }
 
@@ -117,7 +118,11 @@
     void selectionKey;
     untrack(() => {
       if (cells.length === 1) {
-        const borders = cells[0].style.borders;
+        const rawBorders = cells[0].style.borders ?? {};
+        const _noB = { width: 0, style: 'none' as const, color: '#000000' };
+        const borders = Object.fromEntries(
+          ALL_SIDES.map((s) => [s, rawBorders[s] ?? _noB]),
+        ) as Record<BorderSideName, typeof _noB>;
         const firstActive = ALL_SIDES.find(
           (s) => borders[s].width > 0 && borders[s].style !== 'none',
         );

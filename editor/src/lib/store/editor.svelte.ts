@@ -625,6 +625,9 @@ class EditorState {
     this.pushHistory();
     for (const cell of this.selectedCells) {
       for (const side of sides) {
+        if (!cell.style.borders[side]) {
+          cell.style.borders[side] = { width: 0, style: 'none', color: '#000000' };
+        }
         Object.assign(cell.style.borders[side], patch);
       }
     }

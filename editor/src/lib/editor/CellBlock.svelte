@@ -7,7 +7,13 @@
   const selected = $derived(editor.selectedCellIds.has(cell.id));
   const active = $derived(editor.activeCellId === cell.id);
   const s = $derived(cell.style);
-  const b = $derived(s.borders);
+  const _noB = { width: 0, style: 'none', color: '#000000' };
+  const b = $derived({
+    top:    s.borders?.top    ?? _noB,
+    bottom: s.borders?.bottom ?? _noB,
+    left:   s.borders?.left   ?? _noB,
+    right:  s.borders?.right  ?? _noB,
+  });
 
   const flexVA = $derived(
     ({ top: 'flex-start', middle: 'center', bottom: 'flex-end' } as Record<string, string>)[

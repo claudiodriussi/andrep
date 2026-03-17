@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import type { CompositionRule, CompositionRuleType, PageConfig, PagePreset } from '$lib/types';
   import { editor } from '$lib/store/editor.svelte';
   import { config } from '$lib/store/config.svelte';
@@ -34,23 +35,32 @@
   let newRule     = $state<CompositionRuleType>('InsBefore');
   let newTarget   = $state('');
 
-  // Sync from template when dialog opens
+  // Sync from template when dialog opens.
+  // All writes are inside untrack() so that reading $state locals (e.g. in
+  // detectPreset) does not register them as effect dependencies — otherwise
+  // writing widthD/heightD and then reading them in detectPreset() creates a
+  // read-write cycle that triggers effect_update_depth_exceeded.
   $effect(() => {
     if (!editor.pageSetupOpen) return;
-    dUnit       = pageUnitFromConfig(config.config.units);
-    const p     = editor.template.page;
-    name        = editor.template.name;
-    orientation = p.orientation;
-    widthD      = pxToPageUnit(p.width,        dUnit);
-    heightD     = pxToPageUnit(p.height,       dUnit);
-    topD        = pxToPageUnit(p.marginTop,    dUnit);
-    bottomD     = pxToPageUnit(p.marginBottom, dUnit);
-    leftD       = pxToPageUnit(p.marginLeft,   dUnit);
-    rightD      = pxToPageUnit(p.marginRight,  dUnit);
-    locale      = p.locale    || config.config.defaultLocale;
-    currency    = p.currency  || config.config.defaultCurrency;
-    preset      = p.preset ?? detectPreset();
-    composition = JSON.parse(JSON.stringify(editor.template.composition ?? []));
+    untrack(() => {
+      const newDUnit = pageUnitFromConfig(config.config.units);
+      const p        = editor.template.page;
+      const newW     = pxToPageUnit(p.width,        newDUnit);
+      const newH     = pxToPageUnit(p.height,       newDUnit);
+      dUnit       = newDUnit;
+      name        = editor.template.name;
+      orientation = p.orientation ?? 'portrait';
+      widthD      = newW;
+      heightD     = newH;
+      topD        = pxToPageUnit(p.marginTop,    newDUnit);
+      bottomD     = pxToPageUnit(p.marginBottom, newDUnit);
+      leftD       = pxToPageUnit(p.marginLeft,   newDUnit);
+      rightD      = pxToPageUnit(p.marginRight,  newDUnit);
+      locale      = p.locale    || config.config.defaultLocale;
+      currency    = p.currency  || config.config.defaultCurrency;
+      preset      = p.preset ?? detectPreset();
+      composition = JSON.parse(JSON.stringify(editor.template.composition ?? []));
+    });
   });
 
   // Detect preset by converting display values to mm and comparing
