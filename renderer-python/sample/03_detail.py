@@ -162,8 +162,11 @@ def main():
     r.save_output(OUTPUT / "03_detail.json")
     out_file = OUTPUT / "03_detail.html"
     out_file.write_text(r.to_html(), encoding="utf-8")
+    pdf_file = OUTPUT / "03_detail.pdf"
+    pdf_file.write_bytes(r.to_pdf())
     print(
         f"Written: {out_file}\n"
+        f"         {pdf_file}\n"
         f"  {r.art_count} articles, {r.mov_count} movements\n"
         f"  Purchased: {r.grand_in:,.2f}   Sold: {r.grand_out:,.2f}"
     )

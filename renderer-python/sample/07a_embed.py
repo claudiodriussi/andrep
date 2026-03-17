@@ -56,7 +56,10 @@ def main():
 
     OUTPUT.parent.mkdir(exist_ok=True)
     OUTPUT.write_text(r.to_html(), encoding="utf-8")
+    pdf_path = OUTPUT.with_suffix(".pdf")
+    pdf_path.write_bytes(r.to_pdf())
     print(f"Written: {OUTPUT}  ({len(rows)} articles)")
+    print(f"         {pdf_path}")
 
 
 if __name__ == "__main__":

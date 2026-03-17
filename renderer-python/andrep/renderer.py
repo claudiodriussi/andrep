@@ -959,13 +959,267 @@ class AndRepRenderer:
             + "</body></html>\n"
         )
 
+    def _render_band_html(self, record: dict, content_w: int) -> str:
+        """Render a compiled band record to HTML rows (for page headers/footers)."""
+        band_name = record["band"]
+        rows = self.bands.get(band_name, [])
+        if not rows:
+            return ""
+        values_iter     = iter(record.get("values",     []))
+        css_extras_iter = iter(record.get("css_extras", []))
+        band_css        = record.get("band_css", "")
+        embed_map       = record.get("embeds", {})
+        return "".join(
+            self._row_html(row, values_iter, css_extras_iter, band_css, embed_map)
+            for row in rows
+        )
+
+    def _to_pdf_html(self) -> str:
+        """Generate paginated HTML for WeasyPrint.
+
+        Strategy (no phantom pass):
+          1. Pre-render all emission rows to (html, height, flex_gap|None).
+             Single-column bands → one item per row.
+             Multi-column bands  → one item per row-of-columns (packed group).
+          2. Paginate items using template heights as estimates.
+          3. Re-compile page_header / page_footer per page with correct _page.
+          4. Assemble one fixed-size <div> per page; @page CSS sets size/margin=0.
+        """
+        self.compile()   # triggers on_after(); populates self._emissions
+
+        page      = self.page
+        pw        = page.get("width") or 794
+        ph        = page.get("height") or 1123   # A4 portrait at 96 dpi; fallback for null/custom
+        mt        = page.get("marginTop",     40)
+        mb        = page.get("marginBottom",  40)
+        ml        = page.get("marginLeft",    30)
+        mr        = page.get("marginRight",   30)
+        content_h = ph - mt - mb
+        content_w = pw - ml - mr
+        bands_cfg: dict = self.template.get("bands", {})
+
+        # ── special-band heights ────────────────────────────────────────────
+        def _band_h(name: str) -> int:
+            return sum(self._row_height(r) for r in self.bands.get(name, []))
+
+        has_first_hdr = "first_header" in self.bands
+        has_page_hdr  = "page_header"  in self.bands
+        has_page_ftr  = "page_footer"  in self.bands
+        has_last_ftr  = "last_footer"  in self.bands
+        has_filler    = "page_filler"  in self.bands
+
+        first_hdr_h = _band_h("first_header")
+        page_hdr_h  = _band_h("page_header")
+        page_ftr_h  = _band_h("page_footer")
+        last_ftr_h  = _band_h("last_footer")
+
+        def _hdr_h(is_first: bool) -> int:
+            return first_hdr_h if (is_first and has_first_hdr) else (page_hdr_h if has_page_hdr else 0)
+
+        def _ftr_h(is_last: bool) -> int:
+            return last_ftr_h if (is_last and has_last_ftr) else (page_ftr_h if has_page_ftr else 0)
+
+        # Conservative available height: use the larger footer for estimate
+        max_ftr_h = max(page_ftr_h if has_page_ftr else 0, last_ftr_h if has_last_ftr else 0)
+
+        def _avail(is_first: bool) -> int:
+            return content_h - _hdr_h(is_first) - max_ftr_h
+
+        # ── pre-render emissions → flat list of (html, height, flex_gap|None) ──
+        # flex_gap = None  → normal single-column row
+        # flex_gap = int   → this html is a packed row-of-columns; wrap in flex
+        items: list[tuple[str, int, "int | None"]] = []
+
+        multi_buf: list[tuple[str, int]] = []
+        multi_columns = 0
+        multi_gap     = 0
+        multi_col_w   = 0
+
+        def _flush_multi() -> None:
+            if not multi_buf:
+                return
+            for i in range(0, len(multi_buf), multi_columns):
+                group    = multi_buf[i : i + multi_columns]
+                row_h    = max(h for _, h in group)
+                row_html = "".join(html for html, _ in group)
+                items.append((row_html, row_h, multi_gap))
+            multi_buf.clear()
+
+        for record in self._emissions:
+            band_name = record["band"]
+
+            if band_name == "__page_break__":
+                _flush_multi()
+                items.append(("__break__", 0, None))
+                continue
+
+            rows = self.bands.get(band_name, [])
+            if not rows:
+                continue
+
+            cfg     = bands_cfg.get(band_name, {})
+            columns = cfg.get("columns", 1)
+            gap     = cfg.get("columnGap", 0)
+            col_w   = int((content_w - (columns - 1) * gap) / columns) if columns > 1 else 0
+
+            values_iter     = iter(record.get("values",     []))
+            css_extras_iter = iter(record.get("css_extras", []))
+            band_css        = record.get("band_css", "")
+            embed_map       = record.get("embeds", {})
+
+            if columns > 1:
+                if columns != multi_columns or gap != multi_gap:
+                    _flush_multi()
+                    multi_columns = columns
+                    multi_gap     = gap
+                    multi_col_w   = col_w
+                inner     = "".join(
+                    self._row_html(row, values_iter, css_extras_iter, band_css, embed_map)
+                    for row in rows
+                )
+                item_html = f'<div style="width:{multi_col_w}px;overflow:hidden">{inner}</div>\n'
+                item_h    = sum(self._row_height(r) for r in rows)
+                multi_buf.append((item_html, item_h))
+            else:
+                _flush_multi()
+                multi_columns = 0
+                for row in rows:
+                    row_html = self._row_html(row, values_iter, css_extras_iter, band_css, embed_map)
+                    row_h    = self._row_height(row)
+                    items.append((row_html, row_h, None))
+
+        _flush_multi()
+
+        # ── paginate items into pages ────────────────────────────────────────
+        pages: "list[list[tuple[str, int, int | None]]]" = []
+        cur: "list[tuple[str, int, int | None]]" = []
+        cur_h    = 0
+        is_first = True
+        avail    = _avail(is_first=True)
+
+        for html, h, tag in items:
+            if html == "__break__":
+                pages.append(cur)
+                cur, cur_h, is_first = [], 0, False
+                avail = _avail(is_first=False)
+                continue
+            if cur_h + h > avail and cur:
+                pages.append(cur)
+                cur, cur_h, is_first = [], 0, False
+                avail = _avail(is_first=False)
+            cur.append((html, h, tag))
+            cur_h += h
+
+        pages.append(cur)
+        total_pages = len(pages)
+
+        # ── render each page ────────────────────────────────────────────────
+        page_divs: list[str] = []
+
+        for page_idx, page_items in enumerate(pages):
+            page_num   = page_idx + 1
+            is_first_p = page_idx == 0
+            is_last_p  = page_idx == total_pages - 1
+
+            # Build eval ns with the correct _page value for this page
+            saved_page, self.cur_page = self.cur_page, page_num
+            ns = self._sys_eval_ns()
+            self.cur_page = saved_page
+
+            # Header
+            hdr_html = ""
+            if is_first_p and has_first_hdr:
+                hdr_html = self._render_band_html(
+                    self._compile_band("first_header", ns, "", {}), content_w
+                )
+            elif has_page_hdr:
+                hdr_html = self._render_band_html(
+                    self._compile_band("page_header", ns, "", {}), content_w
+                )
+
+            # Footer
+            ftr_html = ""
+            if is_last_p and has_last_ftr:
+                ftr_html = self._render_band_html(
+                    self._compile_band("last_footer", ns, "", {}), content_w
+                )
+            elif has_page_ftr:
+                ftr_html = self._render_band_html(
+                    self._compile_band("page_footer", ns, "", {}), content_w
+                )
+
+            # Content rows — manage flex containers for multi-column
+            content_parts: list[str] = []
+            in_flex_gap: "int | None" = None
+
+            for html, _h, tag in page_items:
+                if tag is not None:
+                    if in_flex_gap != tag:
+                        if in_flex_gap is not None:
+                            content_parts.append("</div>\n")
+                        content_parts.append(
+                            f'<div style="display:flex;flex-wrap:wrap;'
+                            f'gap:{tag}px;align-items:flex-start">\n'
+                        )
+                        in_flex_gap = tag
+                else:
+                    if in_flex_gap is not None:
+                        content_parts.append("</div>\n")
+                        in_flex_gap = None
+                content_parts.append(html)
+
+            if in_flex_gap is not None:
+                content_parts.append("</div>\n")
+
+            content_html = "".join(content_parts)
+
+            # Page filler — spacer between content and footer
+            filler_html = ""
+            if has_filler:
+                used_h = sum(h for _, h, _ in page_items)
+                space  = content_h - _hdr_h(is_first_p) - _ftr_h(is_last_p) - used_h
+                if space > 0:
+                    filler_inner = self._render_band_html(
+                        self._compile_band("page_filler", ns, "", {}), content_w
+                    )
+                    filler_html = (
+                        f'<div style="height:{space}px;overflow:hidden">'
+                        + filler_inner
+                        + "</div>\n"
+                    )
+
+            pb = "" if is_last_p else "page-break-after:always;"
+            page_divs.append(
+                f'<div style="width:{pw}px;height:{ph}px;{pb}'
+                f'padding:{mt}px {mr}px {mb}px {ml}px;box-sizing:border-box;overflow:hidden">\n'
+                + hdr_html
+                + content_html
+                + filler_html
+                + ftr_html
+                + "</div>\n"
+            )
+
+        return (
+            "<!DOCTYPE html>\n<html><head>\n"
+            '<meta charset="utf-8">\n'
+            "<style>\n"
+            "* { box-sizing: border-box; margin: 0; padding: 0; }\n"
+            f"@page {{ size: {pw}px {ph}px; margin: 0; }}\n"
+            "body { margin: 0; padding: 0; }\n"
+            "ul, ol { padding-left: 1.4em; }\n"
+            "li { margin-bottom: 0.15em; }\n"
+            "</style>\n</head><body>\n"
+            + "".join(page_divs)
+            + "</body></html>\n"
+        )
+
     def to_pdf(self) -> bytes:
         """Render to PDF via WeasyPrint. Requires: pip install weasyprint"""
         try:
             from weasyprint import HTML  # type: ignore
         except ImportError as e:
             raise ImportError("weasyprint is not installed: pip install weasyprint") from e
-        return HTML(string=self.to_html()).write_pdf()
+        return HTML(string=self._to_pdf_html()).write_pdf()
 
     # ------------------------------------------------------------------
     # Composed template export

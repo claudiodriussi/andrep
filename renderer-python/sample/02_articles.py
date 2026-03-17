@@ -93,7 +93,10 @@ def main():
     r.save_output(OUTPUT / "02_articles.json")
     out_file = OUTPUT / "02_articles.html"
     out_file.write_text(r.to_html(), encoding="utf-8")
+    pdf_file = OUTPUT / "02_articles.pdf"
+    pdf_file.write_bytes(r.to_pdf())
     print(f"Written: {out_file}  ({r.count} articles, total price {r.total:,.2f})")
+    print(f"         {pdf_file}")
 
 
 if __name__ == "__main__":

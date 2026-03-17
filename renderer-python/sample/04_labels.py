@@ -42,7 +42,10 @@ def main():
     OUTPUT.mkdir(exist_ok=True)
     out_file = OUTPUT / "04_labels.html"
     out_file.write_text(r.to_html(), encoding="utf-8")
+    pdf_file = OUTPUT / "04_labels.pdf"
+    pdf_file.write_bytes(r.to_pdf())
     print(f"Written: {out_file}  ({len(articles)} labels)")
+    print(f"         {pdf_file}")
 
 
 if __name__ == "__main__":

@@ -164,6 +164,11 @@ def main():
     oks    = html.count('class="ok"')
     print(f"  OK: {oks}   Errors: {errors}")
 
+    from weasyprint import HTML
+    pdf_file = OUTPUT / "05_barcode_test.pdf"
+    pdf_file.write_bytes(HTML(string=html).write_pdf())
+    print(f"         {pdf_file}")
+
 
 if __name__ == "__main__":
     main()
