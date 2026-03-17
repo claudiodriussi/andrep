@@ -658,7 +658,8 @@ class AndRepRenderer:
     _ALIGN_ITEMS  = {"left": "flex-start", "center": "center", "right": "flex-end"}
     _JUSTIFY_CONT = {"top": "flex-start",  "middle": "center", "bottom": "flex-end"}
 
-    def _cell_html(self, cell: dict, values_iter, css_extra: str = "", band_css: str = "", embed_map: dict = None) -> str:
+    def _cell_html(self, cell: dict, values_iter, css_extra: str = "", band_css: str = "",
+                   embed_map: dict = None) -> str:
         """Render one cell to HTML, consuming its token values from values_iter."""
         cell_type = cell.get("type", "text")
 
@@ -702,7 +703,8 @@ class AndRepRenderer:
             if auto:
                 img = f'<img src="{escape(src)}" style="width:100%;height:auto;display:block">'
             else:
-                img = f'<img src="{escape(src)}" style="max-width:100%;max-height:100%;object-fit:contain;display:block">'
+                img = f'<img src="{escape(src)}" '
+                'style="max-width:100%;max-height:100%;object-fit:contain;display:block">'
             return self._graphic_cell_html(cell, img, css_extra, band_css)
 
         # ---- markdown -------------------------------------------------------
@@ -756,7 +758,7 @@ class AndRepRenderer:
 
     def _graphic_svg(self, cell: dict, value: str) -> str:
         """Generate a barcode/qrcode SVG for a dedicated graphic cell."""
-        from .barcode import barcode_svg, qr_svg, _PYBARCODE_TYPES, _error_svg
+        from .barcode import barcode_svg, qr_svg, _PYBARCODE_TYPES
         w         = cell.get("width",     100)
         h         = cell.get("height",     50)
         bc_type   = cell.get("barcodeType", "ean13")
@@ -959,6 +961,108 @@ class AndRepRenderer:
             + "</body></html>\n"
         )
 
+    def _records_to_items(
+        self,
+        records: "list[dict]",
+        content_w: int,
+        bands_cfg: dict,
+    ) -> "list[tuple[str, int, int | None]]":
+        """Convert compiled records to a flat list of (html, height, flex_gap|None).
+
+        Single-column bands → one item per row.
+        Multi-column bands  → one item per packed row-of-C-columns (height = max in group).
+        Page-break markers  → ("__break__", 0, None).
+
+        flex_gap = None  → normal row; no flex wrapper needed.
+        flex_gap = int   → row is a horizontal group of multi-column items;
+                           caller wraps consecutive same-gap items in a flex container.
+        """
+        items: list[tuple[str, int, "int | None"]] = []
+        multi_buf: list[tuple[str, int]] = []
+        multi_columns = 0
+        multi_gap     = 0
+        multi_col_w   = 0
+
+        def _flush() -> None:
+            if not multi_buf:
+                return
+            for i in range(0, len(multi_buf), multi_columns):
+                group = multi_buf[i: i + multi_columns]
+                items.append(("".join(h for h, _ in group), max(h for _, h in group), multi_gap))
+            multi_buf.clear()
+
+        for record in records:
+            band_name = record["band"]
+
+            if band_name == "__page_break__":
+                _flush()
+                items.append(("__break__", 0, None))
+                continue
+
+            rows = self.bands.get(band_name, [])
+            if not rows:
+                continue
+
+            cfg     = bands_cfg.get(band_name, {})
+            columns = cfg.get("columns", 1)
+            gap     = cfg.get("columnGap", 0)
+            col_w   = int((content_w - (columns - 1) * gap) / columns) if columns > 1 else 0
+
+            values_iter     = iter(record.get("values",     []))
+            css_extras_iter = iter(record.get("css_extras", []))
+            band_css        = record.get("band_css", "")
+            embed_map       = record.get("embeds", {})
+
+            if columns > 1:
+                if columns != multi_columns or gap != multi_gap:
+                    _flush()
+                    multi_columns, multi_gap, multi_col_w = columns, gap, col_w
+                inner = "".join(
+                    self._row_html(row, values_iter, css_extras_iter, band_css, embed_map)
+                    for row in rows
+                )
+                multi_buf.append((
+                    f'<div style="width:{multi_col_w}px;overflow:hidden">{inner}</div>\n',
+                    sum(self._row_height(r) for r in rows),
+                ))
+            else:
+                _flush()
+                multi_columns = 0
+                for row in rows:
+                    items.append((
+                        self._row_html(row, values_iter, css_extras_iter, band_css, embed_map),
+                        self._row_height(row),
+                        None,
+                    ))
+
+        _flush()
+        return items
+
+    def _items_to_html(self, items: "list[tuple[str, int, int | None]]") -> str:
+        """Assemble a flat items list to HTML, managing flex containers for multi-column."""
+        parts: list[str] = []
+        in_flex_gap: "int | None" = None
+
+        for html, _h, tag in items:
+            if tag is not None:
+                if in_flex_gap != tag:
+                    if in_flex_gap is not None:
+                        parts.append("</div>\n")
+                    parts.append(
+                        f'<div style="display:flex;flex-wrap:wrap;'
+                        f'gap:{tag}px;align-items:flex-start">\n'
+                    )
+                    in_flex_gap = tag
+            else:
+                if in_flex_gap is not None:
+                    parts.append("</div>\n")
+                    in_flex_gap = None
+            parts.append(html)
+
+        if in_flex_gap is not None:
+            parts.append("</div>\n")
+        return "".join(parts)
+
     def _render_band_html(self, record: dict, content_w: int) -> str:
         """Render a compiled band record to HTML rows (for page headers/footers)."""
         band_name = record["band"]
@@ -1025,70 +1129,8 @@ class AndRepRenderer:
         def _avail(is_first: bool) -> int:
             return content_h - _hdr_h(is_first) - max_ftr_h
 
-        # ── pre-render emissions → flat list of (html, height, flex_gap|None) ──
-        # flex_gap = None  → normal single-column row
-        # flex_gap = int   → this html is a packed row-of-columns; wrap in flex
-        items: list[tuple[str, int, "int | None"]] = []
-
-        multi_buf: list[tuple[str, int]] = []
-        multi_columns = 0
-        multi_gap     = 0
-        multi_col_w   = 0
-
-        def _flush_multi() -> None:
-            if not multi_buf:
-                return
-            for i in range(0, len(multi_buf), multi_columns):
-                group    = multi_buf[i : i + multi_columns]
-                row_h    = max(h for _, h in group)
-                row_html = "".join(html for html, _ in group)
-                items.append((row_html, row_h, multi_gap))
-            multi_buf.clear()
-
-        for record in self._emissions:
-            band_name = record["band"]
-
-            if band_name == "__page_break__":
-                _flush_multi()
-                items.append(("__break__", 0, None))
-                continue
-
-            rows = self.bands.get(band_name, [])
-            if not rows:
-                continue
-
-            cfg     = bands_cfg.get(band_name, {})
-            columns = cfg.get("columns", 1)
-            gap     = cfg.get("columnGap", 0)
-            col_w   = int((content_w - (columns - 1) * gap) / columns) if columns > 1 else 0
-
-            values_iter     = iter(record.get("values",     []))
-            css_extras_iter = iter(record.get("css_extras", []))
-            band_css        = record.get("band_css", "")
-            embed_map       = record.get("embeds", {})
-
-            if columns > 1:
-                if columns != multi_columns or gap != multi_gap:
-                    _flush_multi()
-                    multi_columns = columns
-                    multi_gap     = gap
-                    multi_col_w   = col_w
-                inner     = "".join(
-                    self._row_html(row, values_iter, css_extras_iter, band_css, embed_map)
-                    for row in rows
-                )
-                item_html = f'<div style="width:{multi_col_w}px;overflow:hidden">{inner}</div>\n'
-                item_h    = sum(self._row_height(r) for r in rows)
-                multi_buf.append((item_html, item_h))
-            else:
-                _flush_multi()
-                multi_columns = 0
-                for row in rows:
-                    row_html = self._row_html(row, values_iter, css_extras_iter, band_css, embed_map)
-                    row_h    = self._row_height(row)
-                    items.append((row_html, row_h, None))
-
-        _flush_multi()
+        # ── pre-render emissions → items ────────────────────────────────────
+        items = self._records_to_items(self._emissions, content_w, bands_cfg)
 
         # ── paginate items into pages ────────────────────────────────────────
         pages: "list[list[tuple[str, int, int | None]]]" = []
@@ -1148,30 +1190,8 @@ class AndRepRenderer:
                     self._compile_band("page_footer", ns, "", {}), content_w
                 )
 
-            # Content rows — manage flex containers for multi-column
-            content_parts: list[str] = []
-            in_flex_gap: "int | None" = None
-
-            for html, _h, tag in page_items:
-                if tag is not None:
-                    if in_flex_gap != tag:
-                        if in_flex_gap is not None:
-                            content_parts.append("</div>\n")
-                        content_parts.append(
-                            f'<div style="display:flex;flex-wrap:wrap;'
-                            f'gap:{tag}px;align-items:flex-start">\n'
-                        )
-                        in_flex_gap = tag
-                else:
-                    if in_flex_gap is not None:
-                        content_parts.append("</div>\n")
-                        in_flex_gap = None
-                content_parts.append(html)
-
-            if in_flex_gap is not None:
-                content_parts.append("</div>\n")
-
-            content_html = "".join(content_parts)
+            # Content
+            content_html = self._items_to_html(page_items)
 
             # Page filler — spacer between content and footer
             filler_html = ""
