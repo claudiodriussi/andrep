@@ -10,7 +10,9 @@ weasyprint
 
 # --- Barcode / QR (SVG output, no Pillow needed) ---
 python-barcode
-qrcode[svg]
+qrcode
 
 # --- Images: uncomment when autoStretch or self-contained HTML is needed ---
 # Pillow
+
+markdown

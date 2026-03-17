@@ -659,7 +659,28 @@ class AndRepRenderer:
                 img = f'<img src="{escape(src)}" style="max-width:100%;max-height:100%;object-fit:contain;display:block">'
             return self._graphic_cell_html(cell, img, css_extra, band_css)
 
-        # ---- text / markdown / embed ----------------------------------------
+        # ---- markdown -------------------------------------------------------
+        if cell_type == "markdown":
+            tokens = self._cell_tokens[id(cell)]
+            parts = []
+            for text, expr, fmts in tokens:
+                if text:
+                    parts.append(text)          # literal markdown — do NOT escape
+                if expr is not None:
+                    v = next(values_iter, None)
+                    if fmts:
+                        for fmt in fmts:
+                            v = _apply_formatter(v, fmt, r=self)
+                    parts.append(str(v) if v is not None else "")
+            raw_md = "".join(parts)
+            try:
+                import markdown as _md
+                html_content = _md.markdown(raw_md)
+            except ImportError:
+                html_content = escape(raw_md).replace("\n", "<br>")
+            return f'<div style="{self._cell_style(cell, css_extra, band_css)}">{html_content}</div>'
+
+        # ---- text / embed ---------------------------------------------------
         tokens = self._cell_tokens[id(cell)]
         parts = []
         for text, expr, fmts in tokens:
@@ -710,18 +731,31 @@ class AndRepRenderer:
             f'</svg>'
         )
 
+    _OBJ_POS = {"top": "center top", "middle": "center center", "bottom": "center bottom"}
+
     def _graphic_cell_html(self, cell: dict, content_html: str, css_extra: str, band_css: str) -> str:
         """Wrap a graphic element (SVG, img) in a correctly aligned cell div.
 
         For graphic cells we override text-align with align-items on the flex
         container so the SVG/img is positioned horizontally per the cell's
         alignment setting.
+
+        For contain/cover images the img fills height:100%, so flexbox
+        justify-content has no effect on vertical positioning — we inject
+        object-position instead.
         """
         s     = cell.get("style", {})
         align = s.get("alignment", "left")
+        va    = s.get("verticalAlignment", "top")
         extra = f"align-items:{self._ALIGN_ITEMS.get(align, 'flex-start')}"
         if css_extra:
             extra = f"{css_extra};{extra}"
+        # object-fit images fill height:100% — inject object-position for VA
+        if "object-fit" in content_html:
+            obj_pos = self._OBJ_POS.get(va, "center top")
+            content_html = content_html.replace(
+                "display:block", f"object-position:{obj_pos};display:block", 1
+            )
         return f'<div style="{self._cell_style(cell, extra, band_css)}">{content_html}</div>'
 
     def _row_html(self, row: dict, values_iter, css_extras_iter, band_css: str = "") -> str:
@@ -825,6 +859,8 @@ class AndRepRenderer:
             "<style>\n"
             "* { box-sizing: border-box; margin: 0; padding: 0; }\n"
             f"body {{ width: {width}px; padding: {mt}px {mr}px {mb}px {ml}px; }}\n"
+            "ul, ol { padding-left: 1.4em; }\n"
+            "li { margin-bottom: 0.15em; }\n"
             "</style>\n</head><body>\n"
             + "".join(body_parts)
             + "</body></html>\n"
