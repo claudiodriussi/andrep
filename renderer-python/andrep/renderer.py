@@ -1214,10 +1214,12 @@ class AndRepRenderer:
             else:
                 _flush()
                 multi_columns = 0
-                values_list = record.get("values",     [])
-                css_list    = record.get("css_extras", [])
-                val_idx     = 0
-                css_idx     = 0
+                values_list   = record.get("values",     [])
+                css_list      = record.get("css_extras", [])
+                keep_together = cfg.get("keepTogether", False)
+                val_idx = css_idx = 0
+                group_html = ""
+                group_h    = 0
                 for row in rows:
                     n_vals = self._count_row_values(row)
                     n_css  = len(row.get("cells", []))
@@ -1246,9 +1248,15 @@ class AndRepRenderer:
                             band_css, embed_map,
                         )
                         actual_h = self._row_height(row)
-                    items.append((html, actual_h, None))
+                    if keep_together:
+                        group_html += html
+                        group_h    += actual_h
+                    else:
+                        items.append((html, actual_h, None))
                     val_idx += n_vals
                     css_idx += n_css
+                if keep_together:
+                    items.append((group_html, group_h, None))
 
         _flush()
         return items
@@ -1325,7 +1333,8 @@ class AndRepRenderer:
                     row_plans.append((row, val_s, css_s, ph_idx))
                     val_idx += n_vals
                     css_idx += n_css
-                rec_plan.append(("single", band_css, embed_map, row_plans))
+                keep_together = cfg.get("keepTogether", False)
+                rec_plan.append(("single", band_css, embed_map, row_plans, keep_together))
 
         # ── Phase 2: one WeasyPrint render for all phantom rows ───────────────
         ph_heights = self._measure_html_heights_batch(ph_html_list, content_w)
@@ -1348,9 +1357,11 @@ class AndRepRenderer:
                 ))
 
             else:  # single
-                _, band_css, embed_map, row_plans = entry
+                _, band_css, embed_map, row_plans, keep_together = entry
                 _flush()
                 multi_columns = 0
+                group_html = ""
+                group_h    = 0
                 for row, val_s, css_s, ph_idx in row_plans:
                     if ph_idx is not None:
                         actual_h = ph_heights[ph_idx]
@@ -1362,7 +1373,13 @@ class AndRepRenderer:
                             row, iter(val_s), iter(css_s), band_css, embed_map,
                         )
                         actual_h = self._row_height(row)
-                    items.append((html, actual_h, None))
+                    if keep_together:
+                        group_html += html
+                        group_h    += actual_h
+                    else:
+                        items.append((html, actual_h, None))
+                if keep_together:
+                    items.append((group_html, group_h, None))
 
         _flush()
         return items
