@@ -248,6 +248,10 @@ class AndRepRenderer:
         # r.base_dir = Path(__file__).parent / "data"
         self.base_dir = None
 
+        # Batch all phantom-pass rows into a single WeasyPrint render (faster).
+        # Set to False to revert to one render per row (easier to debug).
+        self.phantom_batch: bool = True
+
         # Explicit workspace: r["key"] = value  →  [key.field] in template
         self._ctx: dict = {}
 
@@ -723,6 +727,37 @@ class AndRepRenderer:
         except (IndexError, AttributeError):
             return 24
 
+    def _measure_html_heights_batch(self, html_list: "list[str]", content_w: int) -> "list[int]":
+        """Render multiple HTML rows in a single WeasyPrint call and return their heights.
+
+        Each row is wrapped in a block <div> so body.children[i].height gives
+        the rendered height of row i.  One WeasyPrint render replaces N individual
+        renders — much faster for large documents.
+        """
+        from weasyprint import HTML  # type: ignore
+        if not html_list:
+            return []
+        wrapped = "".join(f"<div>{h}</div>" for h in html_list)
+        doc = (
+            "<!DOCTYPE html><html><head>"
+            '<meta charset="utf-8">'
+            "<style>"
+            "* { box-sizing: border-box; margin: 0; padding: 0; }"
+            f"@page {{ size: {content_w}px 99999px; margin: 0; }}"
+            f"body {{ width: {content_w}px; }}"
+            "ul, ol { padding-left: 1.4em; }"
+            "li { margin-bottom: 0.15em; }"
+            "</style></head><body>"
+            + wrapped
+            + "</body></html>"
+        )
+        document = HTML(string=doc).render()
+        try:
+            body = document.pages[0]._page_box.children[0].children[0]
+            return [max(1, round(child.height)) for child in body.children]
+        except (IndexError, AttributeError):
+            return [24] * len(html_list)
+
     # CSS flex alignment maps
     _ALIGN_ITEMS  = {"left": "flex-start", "center": "center", "right": "flex-end"}
     _JUSTIFY_CONT = {"top": "flex-start",  "middle": "center", "bottom": "flex-end"}
@@ -1146,6 +1181,9 @@ class AndRepRenderer:
                 items.append(("".join(h for h, _ in group), max(h for _, h in group), multi_gap))
             multi_buf.clear()
 
+        if self.phantom_batch:
+            return self._records_to_items_batch(records, content_w, bands_cfg)
+
         for record in records:
             band_name = record["band"]
 
@@ -1218,6 +1256,120 @@ class AndRepRenderer:
                     items.append((html, actual_h, None))
                     val_idx += n_vals
                     css_idx += n_css
+
+        _flush()
+        return items
+
+    def _records_to_items_batch(self, records, content_w, bands_cfg):
+        """Batch-phantom variant: one WeasyPrint render for all phantom rows."""
+        items: list[tuple[str, int, "int | None"]] = []
+        multi_buf: list[tuple[str, int]] = []
+        multi_columns = 0
+        multi_gap     = 0
+        multi_col_w   = 0
+
+        def _flush() -> None:
+            if not multi_buf:
+                return
+            for i in range(0, len(multi_buf), multi_columns):
+                group = multi_buf[i: i + multi_columns]
+                items.append(("".join(h for h, _ in group), max(h for _, h in group), multi_gap))
+            multi_buf.clear()
+
+        # ── Phase 1: pre-process records, generate phantom HTML for needy rows ─
+        # rec_plan entries:
+        #   ("break",)
+        #   ("multi",  col_w, gap, columns, inner_html, h)
+        #   ("single", band_css, embed_map, row_plans)
+        #     row_plan: (row, val_s, css_s, ph_idx)  ph_idx=None → no phantom
+        rec_plan: list = []
+        ph_html_list: list[str] = []
+
+        for record in records:
+            band_name = record["band"]
+
+            if band_name == "__page_break__":
+                rec_plan.append(("break",))
+                continue
+
+            rows = self.bands.get(band_name, [])
+            if not rows:
+                continue
+
+            cfg      = bands_cfg.get(band_name, {})
+            columns  = cfg.get("columns", 1)
+            gap      = cfg.get("columnGap", 0)
+            col_w    = int((content_w - (columns - 1) * gap) / columns) if columns > 1 else 0
+            band_css  = record.get("band_css", "")
+            embed_map = record.get("embeds", {})
+
+            if columns > 1:
+                values_iter     = iter(record.get("values",     []))
+                css_extras_iter = iter(record.get("css_extras", []))
+                inner = "".join(
+                    self._row_html(row, values_iter, css_extras_iter, band_css, embed_map)
+                    for row in rows
+                )
+                rec_plan.append(("multi", col_w, gap, columns, inner,
+                                  sum(self._row_height(r) for r in rows)))
+            else:
+                values_list = record.get("values",     [])
+                css_list    = record.get("css_extras", [])
+                val_idx = css_idx = 0
+                row_plans = []
+                for row in rows:
+                    n_vals = self._count_row_values(row)
+                    n_css  = len(row.get("cells", []))
+                    val_s  = values_list[val_idx: val_idx + n_vals]
+                    css_s  = css_list   [css_idx: css_idx  + n_css]
+                    ph_idx = None
+                    if self._needs_phantom(row):
+                        ph_html = self._row_html(
+                            row, iter(val_s), iter(css_s), band_css, embed_map,
+                        )
+                        ph_idx = len(ph_html_list)
+                        ph_html_list.append(ph_html)
+                    row_plans.append((row, val_s, css_s, ph_idx))
+                    val_idx += n_vals
+                    css_idx += n_css
+                rec_plan.append(("single", band_css, embed_map, row_plans))
+
+        # ── Phase 2: one WeasyPrint render for all phantom rows ───────────────
+        ph_heights = self._measure_html_heights_batch(ph_html_list, content_w)
+
+        # ── Phase 3: generate items using measured heights ────────────────────
+        for entry in rec_plan:
+            kind = entry[0]
+
+            if kind == "break":
+                _flush()
+                items.append(("__break__", 0, None))
+
+            elif kind == "multi":
+                _, col_w, gap, columns, inner, h = entry
+                if columns != multi_columns or gap != multi_gap:
+                    _flush()
+                    multi_columns, multi_gap, multi_col_w = columns, gap, col_w
+                multi_buf.append((
+                    f'<div style="width:{multi_col_w}px;overflow:hidden">{inner}</div>\n', h,
+                ))
+
+            else:  # single
+                _, band_css, embed_map, row_plans = entry
+                _flush()
+                multi_columns = 0
+                for row, val_s, css_s, ph_idx in row_plans:
+                    if ph_idx is not None:
+                        actual_h = ph_heights[ph_idx]
+                        html = self._row_html(
+                            row, iter(val_s), iter(css_s), band_css, embed_map, actual_h,
+                        )
+                    else:
+                        html     = self._row_html(
+                            row, iter(val_s), iter(css_s), band_css, embed_map,
+                        )
+                        actual_h = self._row_height(row)
+                    items.append((html, actual_h, None))
 
         _flush()
         return items
