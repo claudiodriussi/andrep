@@ -664,6 +664,47 @@ class AndRepRenderer:
             heights.append(h)
         return max(heights, default=24)
 
+    def _needs_phantom(self, row: dict) -> bool:
+        """Return True if the row requires phantom height measurement.
+
+        Rows with embed cells or autoStretch+wrap cells can grow beyond the
+        template height; WeasyPrint must render them to measure the actual height.
+        """
+        for cell in row.get("cells", []):
+            if cell.get("type") == "embed":
+                return True
+            if cell.get("autoStretch", False) and cell.get("wrap", False):
+                return True
+        return False
+
+    def _measure_html_height(self, html: str, content_w: int) -> int:
+        """Render one HTML row via WeasyPrint and return its actual pixel height.
+
+        Used by the phantom pass to get real heights for rows that can grow
+        beyond their template height (autoStretch+wrap or embed cells).
+        """
+        from weasyprint import HTML  # type: ignore
+        doc = (
+            "<!DOCTYPE html><html><head>"
+            '<meta charset="utf-8">'
+            "<style>"
+            "* { box-sizing: border-box; margin: 0; padding: 0; }"
+            f"@page {{ size: {content_w}px 99999px; margin: 0; }}"
+            f"body {{ width: {content_w}px; }}"
+            "ul, ol { padding-left: 1.4em; }"
+            "li { margin-bottom: 0.15em; }"
+            "</style></head><body>"
+            + html
+            + "</body></html>"
+        )
+        document = HTML(string=doc).render()
+        try:
+            # Walk page_box → <html> box → <body> box; read shrink-wrapped height.
+            body = document.pages[0]._page_box.children[0].children[0]
+            return max(1, round(body.height))
+        except (IndexError, AttributeError):
+            return 24
+
     # CSS flex alignment maps
     _ALIGN_ITEMS  = {"left": "flex-start", "center": "center", "right": "flex-end"}
     _JUSTIFY_CONT = {"top": "flex-start",  "middle": "center", "bottom": "flex-end"}
@@ -1121,11 +1162,10 @@ class AndRepRenderer:
                 _flush()
                 multi_columns = 0
                 for row in rows:
-                    items.append((
-                        self._row_html(row, values_iter, css_extras_iter, band_css, embed_map),
-                        self._row_height(row),
-                        None,
-                    ))
+                    html = self._row_html(row, values_iter, css_extras_iter, band_css, embed_map)
+                    h = (self._measure_html_height(html, content_w)
+                         if self._needs_phantom(row) else self._row_height(row))
+                    items.append((html, h, None))
 
         _flush()
         return items
