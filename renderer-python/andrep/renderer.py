@@ -699,14 +699,8 @@ class AndRepRenderer:
                     count += 1
         return count
 
-    def _measure_html_height(self, html: str, content_w: int) -> int:
-        """Render one HTML row via WeasyPrint and return its actual pixel height.
-
-        Used by the phantom pass to get real heights for rows that can grow
-        beyond their template height (autoStretch+wrap or embed cells).
-        """
-        from weasyprint import HTML  # type: ignore
-        doc = (
+    def _phantom_doc(self, body_html: str, content_w: int) -> str:
+        return (
             "<!DOCTYPE html><html><head>"
             '<meta charset="utf-8">'
             "<style>"
@@ -716,10 +710,20 @@ class AndRepRenderer:
             "ul, ol { padding-left: 1.4em; }"
             "li { margin-bottom: 0.15em; }"
             "</style></head><body>"
-            + html
+            + body_html
             + "</body></html>"
         )
-        document = HTML(string=doc).render()
+
+    def _measure_html_height(self, html: str, content_w: int) -> int:
+        """Render one HTML row via WeasyPrint and return its actual pixel height.
+
+        Used by the phantom pass to get real heights for rows that can grow
+        beyond their template height (autoStretch+wrap or embed cells).
+        """
+        from weasyprint import HTML  # type: ignore
+        fetcher = getattr(self, "_url_fetcher", None)
+        doc = self._phantom_doc(html, content_w)
+        document = HTML(string=doc, url_fetcher=fetcher).render()
         try:
             # Walk page_box → <html> box → <body> box; read shrink-wrapped height.
             body = document.pages[0]._page_box.children[0].children[0]
@@ -737,21 +741,10 @@ class AndRepRenderer:
         from weasyprint import HTML  # type: ignore
         if not html_list:
             return []
+        fetcher = getattr(self, "_url_fetcher", None)
         wrapped = "".join(f"<div>{h}</div>" for h in html_list)
-        doc = (
-            "<!DOCTYPE html><html><head>"
-            '<meta charset="utf-8">'
-            "<style>"
-            "* { box-sizing: border-box; margin: 0; padding: 0; }"
-            f"@page {{ size: {content_w}px 99999px; margin: 0; }}"
-            f"body {{ width: {content_w}px; }}"
-            "ul, ol { padding-left: 1.4em; }"
-            "li { margin-bottom: 0.15em; }"
-            "</style></head><body>"
-            + wrapped
-            + "</body></html>"
-        )
-        document = HTML(string=doc).render()
+        doc = self._phantom_doc(wrapped, content_w)
+        document = HTML(string=doc, url_fetcher=fetcher).render()
         try:
             body = document.pages[0]._page_box.children[0].children[0]
             return [max(1, round(child.height)) for child in body.children]
@@ -1571,6 +1564,27 @@ class AndRepRenderer:
             + "</body></html>\n"
         )
 
+    def _make_url_cache(self):
+        """Return a url_fetcher that caches responses, shared across phantom and PDF renders.
+
+        Avoids re-downloading the same HTTP image URLs during both the phantom
+        pass and the final PDF render.  file_obj responses are buffered to bytes
+        on first fetch so they can be replayed from the cache.
+        """
+        import weasyprint  # type: ignore
+        cache: dict = {}
+
+        def fetcher(url: str) -> dict:
+            if url in cache:
+                return cache[url]
+            result = dict(weasyprint.default_url_fetcher(url))
+            if "file_obj" in result:
+                result["string"] = result.pop("file_obj").read()
+            cache[url] = result
+            return result
+
+        return fetcher
+
     def to_pdf(self) -> bytes:
         """Render to PDF via WeasyPrint. Requires: pip install weasyprint"""
         try:
@@ -1578,11 +1592,14 @@ class AndRepRenderer:
         except ImportError as e:
             raise ImportError("weasyprint is not installed: pip install weasyprint") from e
         self._pdf_mode = True
+        fetcher = self._make_url_cache()
+        self._url_fetcher = fetcher
         try:
             html = self._to_pdf_html()
         finally:
             self._pdf_mode = False
-        return HTML(string=html).write_pdf()
+            self._url_fetcher = None
+        return HTML(string=html, url_fetcher=fetcher).write_pdf()
 
     # ------------------------------------------------------------------
     # Composed template export
