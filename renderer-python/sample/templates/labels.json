@@ -233,7 +233,7 @@
           "x": 4,
           "width": 228,
           "height": 18,
-          "wrap": true,
+          "wrap": false,
           "autoStretch": false,
           "style": {
             "fontFamily": "Arial",

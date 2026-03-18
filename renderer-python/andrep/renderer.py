@@ -1048,7 +1048,7 @@ class AndRepRenderer:
             col_w = int((content_width - (columns - 1) * gap) / columns)
             return (
                 f'<div style="display:flex;flex-wrap:wrap;'
-                f'gap:{gap}px;align-items:flex-start" '
+                f'column-gap:{gap}px;align-items:flex-start" '
                 f'data-col-width="{col_w}">\n'
             )
 
@@ -1234,7 +1234,7 @@ class AndRepRenderer:
                         parts.append("</div>\n")
                     parts.append(
                         f'<div style="display:flex;flex-wrap:wrap;'
-                        f'gap:{tag}px;align-items:flex-start">\n'
+                        f'column-gap:{tag}px;align-items:flex-start">\n'
                     )
                     in_flex_gap = tag
             else:
