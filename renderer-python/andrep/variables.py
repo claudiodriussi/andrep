@@ -124,7 +124,7 @@ def _fmt_load(value, params, r):
         return "" if silent else f"[#{ref}#]"
 
 
-def _fmt_img(value, params):
+def _fmt_img(value, params, r=None):
     """Built-in ``img`` formatter — renders an HTML ``<img>`` element.
 
     Syntax: ``img[,contain|cover|natural]``
@@ -138,20 +138,33 @@ def _fmt_img(value, params):
       ``natural`` — ``max-width/max-height:100%`` — no upscaling; image stays
                    at its natural size, clipped if larger than cell.
 
-    The returned ``<img ...>`` string is detected by the renderer and embedded
-    as raw HTML (same mechanism as inline SVG barcodes).  Works in both
-    ``image`` and ``text`` cell types.  Combine with ``load`` to resolve
-    ``@ref`` references first::
+    ``@ref`` paths and absolute file paths are resolved automatically:
+    local files become ``data:mime;base64,...`` URLs; internet URLs and
+    existing data URLs are used as-is.  No need to chain ``load,base64``
+    explicitly.  Use ``silent`` to suppress errors for missing files::
 
         [row.image | img,cover]
-        [row.image | load | img,contain]
-        ["@data/logo.png" | load,base64 | img,natural]
+        ["@data/logo.png" | img,natural,silent]
+        [row.image | img,contain,silent]
     """
     from html import escape as _esc
+    from pathlib import Path
 
     if not value:
         return ""
     src = str(value)
+
+    # Resolve local file references to base64 data URLs
+    _load_params = {"base64"}
+    if "silent" in params:
+        _load_params.add("silent")
+    if src.startswith("@"):
+        src = _fmt_load(src, _load_params, r)
+    elif not src.startswith(("http://", "https://", "data:")):
+        # Bare absolute path (e.g. /home/user/img/photo.png)
+        p = Path(src)
+        if p.is_absolute():
+            src = _fmt_load(f"@{src}", _load_params, r)
 
     mode = next((p for p in params if p in ("contain", "cover", "natural")), None)
 
@@ -270,7 +283,7 @@ def _apply_formatter(value, fmt, r=None):
     # ---- img formatter — returns <img ...> string; renderer embeds raw --
     if name == "img":
         params = [p.strip() for p in fmt.split(",")[1:]]
-        return _fmt_img(value, params)
+        return _fmt_img(value, params, r)
 
     # Barcode formatters — return an SVG string; renderer detects <svg and embeds raw.
     #

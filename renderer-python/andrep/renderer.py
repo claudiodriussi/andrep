@@ -561,7 +561,7 @@ class AndRepRenderer:
             return "none"
         return f"{w}px {st} {c}"
 
-    def _cell_style(self, cell: dict, css_extra: str = "", band_css: str = "") -> str:
+    def _cell_style(self, cell: dict, css_extra: str = "", band_css: str = "", actual_h: int = 0) -> str:
         s = cell.get("style", {})
         borders = s.get("borders", {})
         wrap = cell.get("wrap", True)
@@ -585,12 +585,14 @@ class AndRepRenderer:
             va_map = {"top": "flex-start", "middle": "center", "bottom": "flex-end"}
         va = va_map.get(s.get("verticalAlignment", "top"), va_map["top"])
 
-        # autoStretch + wrap: cell may grow beyond template height; row adapts.
-        # Rotated 90/270 cells also use min-height so align-items:stretch on the
-        # parent row can extend them to fill the row's actual (taller) height.
-        # Fixed cells keep their height; in mixed rows borders won't be aligned
-        # (acceptable for HTML — PDF will enforce uniform heights via phantom pass).
-        if wrap and auto_stretch:
+        # actual_h > 0: phantom pass measured the real height; fix all cells to it
+        # so vertical borders align across every cell in the row (Step 5b).
+        # Otherwise: autoStretch+wrap cells use min-height (can grow), fixed cells
+        # use an explicit height (borders may mis-align in HTML — acceptable).
+        if actual_h > 0:
+            size_css = f"height:{actual_h}px"
+            overflow = "overflow:hidden"
+        elif wrap and auto_stretch:
             size_css = f"min-height:{h}px"
             overflow = ""
         elif rotation in (90, 270):
@@ -677,6 +679,22 @@ class AndRepRenderer:
                 return True
         return False
 
+    def _count_row_values(self, row: dict) -> int:
+        """Return the number of values the values_iter will consume for one row.
+
+        Embed cells consume no main values (they have their own sub-record).
+        All other cells consume one value per expression token (expr is not None).
+        Used to slice the values list for double-call phantom rows.
+        """
+        count = 0
+        for cell in row.get("cells", []):
+            if cell.get("type") == "embed":
+                continue
+            for _, expr, _ in self._cell_tokens.get(id(cell), []):
+                if expr is not None:
+                    count += 1
+        return count
+
     def _measure_html_height(self, html: str, content_w: int) -> int:
         """Render one HTML row via WeasyPrint and return its actual pixel height.
 
@@ -710,7 +728,7 @@ class AndRepRenderer:
     _JUSTIFY_CONT = {"top": "flex-start",  "middle": "center", "bottom": "flex-end"}
 
     def _cell_html(self, cell: dict, values_iter, css_extra: str = "", band_css: str = "",
-                   embed_map: dict = None, row_height: int = 0) -> str:
+                   embed_map: dict = None, row_height: int = 0, actual_h: int = 0) -> str:
         """Render one cell to HTML, consuming its token values from values_iter."""
         cell_type = cell.get("type", "text")
 
@@ -735,7 +753,7 @@ class AndRepRenderer:
                     break  # barcode cells have exactly one expression token
             if svg is None:
                 svg = self._graphic_svg(cell, "")
-            return self._graphic_cell_html(cell, svg, css_extra, band_css)
+            return self._graphic_cell_html(cell, svg, css_extra, band_css, actual_h)
 
         if cell_type == "image":
             tokens = self._cell_tokens[id(cell)]
@@ -747,7 +765,7 @@ class AndRepRenderer:
                         v = _apply_formatter(v, fmt, r=self)
                 break
             if isinstance(v, str) and (v.startswith("<img") or v.startswith("<svg")):
-                return self._graphic_cell_html(cell, v, css_extra, band_css)
+                return self._graphic_cell_html(cell, v, css_extra, band_css, actual_h)
             # No formatter or formatter returned a plain URL — legacy behaviour
             src  = str(v) if v is not None else ""
             auto = cell.get("autoStretch", False)
@@ -755,7 +773,7 @@ class AndRepRenderer:
                 img = f'<img src="{escape(src)}" style="width:100%;height:auto;display:block">'
             else:
                 img = f'<img src="{escape(src)}" style="max-width:100%;max-height:100%;object-fit:contain;display:block">'
-            return self._graphic_cell_html(cell, img, css_extra, band_css)
+            return self._graphic_cell_html(cell, img, css_extra, band_css, actual_h)
 
         # ---- markdown -------------------------------------------------------
         if cell_type == "markdown":
@@ -776,7 +794,7 @@ class AndRepRenderer:
                 html_content = _md.markdown(raw_md)
             except ImportError:
                 html_content = escape(raw_md).replace("\n", "<br>")
-            return f'<div style="{self._cell_style(cell, css_extra, band_css)}">{html_content}</div>'
+            return f'<div style="{self._cell_style(cell, css_extra, band_css, actual_h)}">{html_content}</div>'
 
         # ---- text / embed ---------------------------------------------------
         tokens = self._cell_tokens[id(cell)]
@@ -805,24 +823,27 @@ class AndRepRenderer:
             for p in parts
         )
         if self._pdf_mode and cell.get("rotation", 0) in (90, 270):
-            return self._rotated_pdf_cell_html(cell, content, css_extra, band_css, row_height)
-        return f'<div style="{self._cell_style(cell, css_extra, band_css)}">{content}</div>'
+            return self._rotated_pdf_cell_html(cell, content, css_extra, band_css, row_height, actual_h)
+        return f'<div style="{self._cell_style(cell, css_extra, band_css, actual_h)}">{content}</div>'
 
     def _rotated_pdf_cell_html(self, cell: dict, content: str, css_extra: str, band_css: str,
-                               row_height: int = 0) -> str:
+                               row_height: int = 0, actual_h: int = 0) -> str:
         """Two-div structure for rotated text cells in PDF (WeasyPrint has no writing-mode).
 
         Outer div: min-height so flex align-items:stretch can grow it to match the row.
         Inner div: swapped dimensions (inner_h × cell_w), absolutely positioned and rotated
                    via transform:rotate so the text fills the outer box.
-        inner_h = row_height if provided (recursively estimated embed height), else cell.height.
+        inner_h priority: actual_h (phantom-measured) > row_height (estimated) > cell.height.
         """
         s = cell.get("style", {})
         borders = s.get("borders", {})
         rotation = cell.get("rotation", 0)
         cell_w = cell.get("width", 100)
         cell_h = cell.get("height", 24)
-        inner_h = row_height if row_height > cell_h else cell_h
+        if actual_h > 0:
+            inner_h = actual_h
+        else:
+            inner_h = row_height if row_height > cell_h else cell_h
 
         if rotation == 90:
             va_map = {"top": "flex-end", "middle": "center", "bottom": "flex-start"}
@@ -906,7 +927,7 @@ class AndRepRenderer:
 
     _OBJ_POS = {"top": "center top", "middle": "center center", "bottom": "center bottom"}
 
-    def _graphic_cell_html(self, cell: dict, content_html: str, css_extra: str, band_css: str) -> str:
+    def _graphic_cell_html(self, cell: dict, content_html: str, css_extra: str, band_css: str, actual_h: int = 0) -> str:
         """Wrap a graphic element (SVG, img) in a correctly aligned cell div.
 
         For graphic cells we override text-align with align-items on the flex
@@ -936,7 +957,7 @@ class AndRepRenderer:
             content_html = content_html.replace(
                 "<svg ", '<svg style="max-width:100%;max-height:100%;display:block" ', 1
             )
-        return f'<div style="{self._cell_style(cell, extra, band_css)}">{content_html}</div>'
+        return f'<div style="{self._cell_style(cell, extra, band_css, actual_h)}">{content_html}</div>'
 
     def _embed_cell_html(self, cell: dict, sub_record: dict, css_extra: str = "", band_css: str = "") -> str:
         """Render an embed cell by expanding its target band inside a container div.
@@ -984,7 +1005,7 @@ class AndRepRenderer:
         )
         return f'<div style="{style}">{inner}</div>'
 
-    def _row_html(self, row: dict, values_iter, css_extras_iter, band_css: str = "", embed_map: dict = None) -> str:
+    def _row_html(self, row: dict, values_iter, css_extras_iter, band_css: str = "", embed_map: dict = None, actual_h: int = 0) -> str:
         height = self._row_height(row)
         # Cells sorted by x — insert spacer divs for gaps between cells.
         # The editor guarantees no overlap, so gaps are always >= 0.
@@ -998,11 +1019,12 @@ class AndRepRenderer:
                 parts.append(f'<div style="width:{gap}px;flex-shrink:0"></div>')
             parts.append(
                 self._cell_html(cell, values_iter, next(css_extras_iter, ""), band_css, embed_map,
-                                row_height=height)
+                                row_height=height, actual_h=actual_h)
             )
             prev_end = x + cell.get("width", 100)
+        h_css = f"height:{actual_h}px" if actual_h > 0 else f"min-height:{height}px"
         return (
-            f'<div style="display:flex;min-height:{height}px;align-items:stretch">'
+            f'<div style="display:flex;{h_css};align-items:stretch">'
             + "".join(parts)
             + "</div>\n"
         )
@@ -1161,11 +1183,41 @@ class AndRepRenderer:
             else:
                 _flush()
                 multi_columns = 0
+                values_list = record.get("values",     [])
+                css_list    = record.get("css_extras", [])
+                val_idx     = 0
+                css_idx     = 0
                 for row in rows:
-                    html = self._row_html(row, values_iter, css_extras_iter, band_css, embed_map)
-                    h = (self._measure_html_height(html, content_w)
-                         if self._needs_phantom(row) else self._row_height(row))
-                    items.append((html, h, None))
+                    n_vals = self._count_row_values(row)
+                    n_css  = len(row.get("cells", []))
+                    if self._needs_phantom(row):
+                        # Phantom pass: render with template heights just to measure.
+                        ph_html  = self._row_html(
+                            row,
+                            iter(values_list[val_idx: val_idx + n_vals]),
+                            iter(css_list   [css_idx: css_idx  + n_css]),
+                            band_css, embed_map,
+                        )
+                        actual_h = self._measure_html_height(ph_html, content_w)
+                        # Final pass: all cells at actual_h so borders align.
+                        html = self._row_html(
+                            row,
+                            iter(values_list[val_idx: val_idx + n_vals]),
+                            iter(css_list   [css_idx: css_idx  + n_css]),
+                            band_css, embed_map,
+                            actual_h,
+                        )
+                    else:
+                        html     = self._row_html(
+                            row,
+                            iter(values_list[val_idx: val_idx + n_vals]),
+                            iter(css_list   [css_idx: css_idx  + n_css]),
+                            band_css, embed_map,
+                        )
+                        actual_h = self._row_height(row)
+                    items.append((html, actual_h, None))
+                    val_idx += n_vals
+                    css_idx += n_css
 
         _flush()
         return items
@@ -1195,8 +1247,12 @@ class AndRepRenderer:
             parts.append("</div>\n")
         return "".join(parts)
 
-    def _render_band_html(self, record: dict, content_w: int) -> str:
-        """Render a compiled band record to HTML rows (for page headers/footers)."""
+    def _render_band_html(self, record: dict, content_w: int, actual_h: int = 0) -> str:
+        """Render a compiled band record to HTML rows (for page headers/footers/filler).
+
+        actual_h > 0: override cell heights (used for page_filler so borders
+        extend the full fill height instead of just the template cell height).
+        """
         band_name = record["band"]
         rows = self.bands.get(band_name, [])
         if not rows:
@@ -1206,7 +1262,7 @@ class AndRepRenderer:
         band_css        = record.get("band_css", "")
         embed_map       = record.get("embeds", {})
         return "".join(
-            self._row_html(row, values_iter, css_extras_iter, band_css, embed_map)
+            self._row_html(row, values_iter, css_extras_iter, band_css, embed_map, actual_h)
             for row in rows
         )
 
@@ -1252,10 +1308,8 @@ class AndRepRenderer:
         def _hdr_h(is_first: bool) -> int:
             return first_hdr_h if (is_first and has_first_hdr) else (page_hdr_h if has_page_hdr else 0)
 
-        def _ftr_h(is_last: bool) -> int:
-            return last_ftr_h if (is_last and has_last_ftr) else (page_ftr_h if has_page_ftr else 0)
-
-        # Conservative available height: use the larger footer for estimate
+        # Reserve the larger footer height on every page so page_footer and
+        # last_footer always start at the same y-position.
         max_ftr_h = max(page_ftr_h if has_page_ftr else 0, last_ftr_h if has_last_ftr else 0)
 
         def _avail(is_first: bool) -> int:
@@ -1325,19 +1379,19 @@ class AndRepRenderer:
             # Content
             content_html = self._items_to_html(page_items)
 
-            # Page filler — spacer between content and footer
+            # Page filler — spacer between content and footer.
+            # Always reserve max_ftr_h at the bottom so page_footer and
+            # last_footer start at the same y-position on every page.
             filler_html = ""
             if has_filler:
                 used_h = sum(h for _, h, _ in page_items)
-                space  = content_h - _hdr_h(is_first_p) - _ftr_h(is_last_p) - used_h
+                space  = content_h - _hdr_h(is_first_p) - max_ftr_h - used_h
                 if space > 0:
-                    filler_inner = self._render_band_html(
-                        self._compile_band("page_filler", ns, "", {}), content_w
-                    )
-                    filler_html = (
-                        f'<div style="height:{space}px;overflow:hidden">'
-                        + filler_inner
-                        + "</div>\n"
+                    # Pass actual_h=space so filler cells extend the full height,
+                    # keeping vertical border lines continuous.
+                    filler_html = self._render_band_html(
+                        self._compile_band("page_filler", ns, "", {}), content_w,
+                        actual_h=space,
                     )
 
             pb = "" if is_last_p else "page-break-after:always;"
@@ -1380,7 +1434,7 @@ class AndRepRenderer:
 
     # ------------------------------------------------------------------
     # Composed template export
-    # ------------------------------------------------------------------
+    # ------------------------------------------------------------------renderer-python/sample/templates/test_img_md.json
 
     def save_composed(self, path: str | Path) -> None:
         """Save the resolved template to a JSON file (rows merged, no composition key)."""

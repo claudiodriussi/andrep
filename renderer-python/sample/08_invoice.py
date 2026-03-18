@@ -175,7 +175,7 @@ def main():
 
     loader = FilesystemLoader(base_dir=TEMPLATES)
     r = InvoiceRenderer("test_invoice", loader=loader)
-    r.base_dir = DATA_DIR
+    r.base_dir = SAMPLE_DIR
 
     # Invoice metadata
     r.company_name  = COMPANY_NAME

@@ -240,16 +240,19 @@ rows += [
     col_hdrs("page_header"),
 ]
 
-# ── page_footer (1 row, ≈ 18 px) ─────────────────────────────────────────────
+# ── page_footer (1 row, 24 px) ────────────────────────────────────────────────
+# bt=B_SEP closes the vertical rules from the filler above.
+# The renderer reserves max(page_ftr_h, last_ftr_h) at the bottom of every page
+# so the footer always starts at the same y-position; any extra space is empty.
 rows += [
     mk_row("page_footer", [
-        mk_cell("", 0, 455, 18),
-        mk_cell("*** CONTINUED ON NEXT PAGE ***", 455, 279, 18,
-                italic=True, size=8, color="#888888", align="right"),
+        mk_cell("", 0, 455, 24, bt=B_SEP),
+        mk_cell("*** CONTINUED ON NEXT PAGE ***", 455, 279, 24,
+                italic=True, size=8, color="#888888", align="right", bt=B_SEP),
     ]),
 ]
 
-# ── last_footer (3 rows, ≈ 72 px) ────────────────────────────────────────────
+# ── last_footer (3 rows, 72 px fixed) ────────────────────────────────────────
 rows += [
     mk_row("last_footer", [
         mk_cell("", 0, 395, 20, bt=B_SEP),
@@ -265,7 +268,7 @@ rows += [
     ]),
     mk_row("last_footer", [
         mk_cell("[_r.legal_text]", 0, 734, 28,
-                wrap=True, stretch=True,
+                wrap=True,
                 size=7, italic=True, color="#777777", bt=B_LIGHT),
     ]),
 ]
@@ -299,7 +302,7 @@ rows += [body_row("band_direct", "", "[row.desc]")]
 rows += [
     mk_row("band_article_img", [
         mk_cell("[row.code]",              *C_CODE,   40,                          bl=B_COL, br=B_COL),
-        mk_cell("[row.image|img,contain]", *C_THUMB,  40, ctype="image"),          # no right border
+        mk_cell("[row.image|img,contain]", *C_THUMB,  40, ctype="image"),              # no right border
         mk_cell("[row.desc]",              *C_DESC_I, 40, wrap=True, stretch=True, br=B_COL),
         mk_cell("[row.um]",                *C_UM,     40, align="center",          br=B_COL),
         mk_cell("[row.qty|.2]",            *C_QTY,    40, align="right",           br=B_COL),

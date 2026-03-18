@@ -327,7 +327,7 @@
           "height": 100,
           "wrap": false,
           "autoStretch": false,
-          "content": "[row.image | load,base64,silent | img,contain]",
+          "content": "[row.image | img,contain,silent]",
           "style": {
             "fontFamily": "Arial",
             "fontSize": 10,
@@ -475,7 +475,7 @@
           "height": 100,
           "wrap": false,
           "autoStretch": false,
-          "content": "[row.image | load,base64,silent | img,cover]",
+          "content": "[row.image | img,cover,silent]",
           "style": {
             "fontFamily": "Arial",
             "fontSize": 10,
@@ -623,7 +623,7 @@
           "height": 60,
           "wrap": true,
           "autoStretch": true,
-          "content": "[row.image | load,base64,silent | img]",
+          "content": "[row.image | img,silent]",
           "style": {
             "fontFamily": "Arial",
             "fontSize": 10,
