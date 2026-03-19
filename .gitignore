@@ -8,8 +8,9 @@ node_modules
 editor/.svelte-kit
 editor/build
 
-renderer-python/sample/output
-renderer-python/sample/sample.db
+renderer/sample/output
+renderer/sample/sample.db
+renderer/sample/data/*.db
 
 # OS
 .DS_Store
