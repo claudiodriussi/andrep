@@ -565,6 +565,9 @@ class AndRepRenderer:
             return "none"
         return f"{w}px {st} {c}"
 
+    def _border_parts(self, borders: dict) -> "list[str]":
+        return [f"border-{s}:{self._border_css(borders, s)}" for s in ("top", "bottom", "left", "right")]
+
     def _cell_style(self, cell: dict, css_extra: str = "", band_css: str = "", actual_h: int = 0) -> str:
         s = cell.get("style", {})
         borders = s.get("borders", {})
@@ -641,10 +644,7 @@ class AndRepRenderer:
                 f"{s.get('paddingBottom', 2)}px "
                 f"{s.get('paddingLeft', 4)}px"
             ),
-            f"border-top:{self._border_css(borders, 'top')}",
-            f"border-bottom:{self._border_css(borders, 'bottom')}",
-            f"border-left:{self._border_css(borders, 'left')}",
-            f"border-right:{self._border_css(borders, 'right')}",
+            *self._border_parts(borders),
             "box-sizing:border-box",
         ]
         parts.extend(rotation_parts)
@@ -732,15 +732,16 @@ class AndRepRenderer:
             return 24
 
     def _measure_html_heights_batch(self, html_list: "list[str]", content_w: int) -> "list[int]":
-        """Render multiple HTML rows in a single WeasyPrint call and return their heights.
+        """Render phantom rows and return their actual pixel heights.
 
-        Each row is wrapped in a block <div> so body.children[i].height gives
-        the rendered height of row i.  One WeasyPrint render replaces N individual
-        renders — much faster for large documents.
+        With phantom_batch=True (default): one WeasyPrint render for all rows.
+        With phantom_batch=False: one render per row (slower, easier to debug).
         """
-        from weasyprint import HTML  # type: ignore
         if not html_list:
             return []
+        if not self.phantom_batch:
+            return [self._measure_html_height(h, content_w) for h in html_list]
+        from weasyprint import HTML  # type: ignore
         fetcher = getattr(self, "_url_fetcher", None)
         wrapped = "".join(f"<div>{h}</div>" for h in html_list)
         doc = self._phantom_doc(wrapped, content_w)
@@ -891,10 +892,7 @@ class AndRepRenderer:
             "overflow:hidden",
             "position:relative",
             f"background-color:{s.get('backgroundColor', '#ffffff')}",
-            f"border-top:{self._border_css(borders, 'top')}",
-            f"border-bottom:{self._border_css(borders, 'bottom')}",
-            f"border-left:{self._border_css(borders, 'left')}",
-            f"border-right:{self._border_css(borders, 'right')}",
+            *self._border_parts(borders),
             "box-sizing:border-box",
         ])
 
@@ -1005,10 +1003,7 @@ class AndRepRenderer:
         parts = [
             f"width:{cell.get('width', 100)}px",
             "flex-shrink:0",
-            f"border-top:{self._border_css(borders, 'top')}",
-            f"border-bottom:{self._border_css(borders, 'bottom')}",
-            f"border-left:{self._border_css(borders, 'left')}",
-            f"border-right:{self._border_css(borders, 'right')}",
+            *self._border_parts(borders),
             f"background-color:{s.get('backgroundColor', 'transparent')}",
             "box-sizing:border-box",
             "overflow:hidden",
@@ -1159,6 +1154,11 @@ class AndRepRenderer:
         flex_gap = None  → normal row; no flex wrapper needed.
         flex_gap = int   → row is a horizontal group of multi-column items;
                            caller wraps consecutive same-gap items in a flex container.
+
+        3-phase approach:
+          Phase 1: collect phantom HTML for rows that need measurement.
+          Phase 2: measure all phantom rows in one call (batch or per-row per phantom_batch).
+          Phase 3: generate items using measured heights.
         """
         items: list[tuple[str, int, "int | None"]] = []
         multi_buf: list[tuple[str, int]] = []
@@ -1174,115 +1174,12 @@ class AndRepRenderer:
                 items.append(("".join(h for h, _ in group), max(h for _, h in group), multi_gap))
             multi_buf.clear()
 
-        if self.phantom_batch:
-            return self._records_to_items_batch(records, content_w, bands_cfg)
-
-        for record in records:
-            band_name = record["band"]
-
-            if band_name == "__page_break__":
-                _flush()
-                items.append(("__break__", 0, None))
-                continue
-
-            rows = self.bands.get(band_name, [])
-            if not rows:
-                continue
-
-            cfg     = bands_cfg.get(band_name, {})
-            columns = cfg.get("columns", 1)
-            gap     = cfg.get("columnGap", 0)
-            col_w   = int((content_w - (columns - 1) * gap) / columns) if columns > 1 else 0
-
-            values_iter     = iter(record.get("values",     []))
-            css_extras_iter = iter(record.get("css_extras", []))
-            band_css        = record.get("band_css", "")
-            embed_map       = record.get("embeds", {})
-
-            if columns > 1:
-                if columns != multi_columns or gap != multi_gap:
-                    _flush()
-                    multi_columns, multi_gap, multi_col_w = columns, gap, col_w
-                inner = "".join(
-                    self._row_html(row, values_iter, css_extras_iter, band_css, embed_map)
-                    for row in rows
-                )
-                multi_buf.append((
-                    f'<div style="width:{multi_col_w}px;overflow:hidden">{inner}</div>\n',
-                    sum(self._row_height(r) for r in rows),
-                ))
-            else:
-                _flush()
-                multi_columns = 0
-                values_list   = record.get("values",     [])
-                css_list      = record.get("css_extras", [])
-                keep_together = cfg.get("keepTogether", False)
-                val_idx = css_idx = 0
-                group_html = ""
-                group_h    = 0
-                for row in rows:
-                    n_vals = self._count_row_values(row)
-                    n_css  = len(row.get("cells", []))
-                    if self._needs_phantom(row):
-                        # Phantom pass: render with template heights just to measure.
-                        ph_html  = self._row_html(
-                            row,
-                            iter(values_list[val_idx: val_idx + n_vals]),
-                            iter(css_list   [css_idx: css_idx  + n_css]),
-                            band_css, embed_map,
-                        )
-                        actual_h = self._measure_html_height(ph_html, content_w)
-                        # Final pass: all cells at actual_h so borders align.
-                        html = self._row_html(
-                            row,
-                            iter(values_list[val_idx: val_idx + n_vals]),
-                            iter(css_list   [css_idx: css_idx  + n_css]),
-                            band_css, embed_map,
-                            actual_h,
-                        )
-                    else:
-                        html     = self._row_html(
-                            row,
-                            iter(values_list[val_idx: val_idx + n_vals]),
-                            iter(css_list   [css_idx: css_idx  + n_css]),
-                            band_css, embed_map,
-                        )
-                        actual_h = self._row_height(row)
-                    if keep_together:
-                        group_html += html
-                        group_h    += actual_h
-                    else:
-                        items.append((html, actual_h, None))
-                    val_idx += n_vals
-                    css_idx += n_css
-                if keep_together:
-                    items.append((group_html, group_h, None))
-
-        _flush()
-        return items
-
-    def _records_to_items_batch(self, records, content_w, bands_cfg):
-        """Batch-phantom variant: one WeasyPrint render for all phantom rows."""
-        items: list[tuple[str, int, "int | None"]] = []
-        multi_buf: list[tuple[str, int]] = []
-        multi_columns = 0
-        multi_gap     = 0
-        multi_col_w   = 0
-
-        def _flush() -> None:
-            if not multi_buf:
-                return
-            for i in range(0, len(multi_buf), multi_columns):
-                group = multi_buf[i: i + multi_columns]
-                items.append(("".join(h for h, _ in group), max(h for _, h in group), multi_gap))
-            multi_buf.clear()
-
-        # ── Phase 1: pre-process records, generate phantom HTML for needy rows ─
+        # ── Phase 1: pre-process records, collect phantom HTML ────────────────
         # rec_plan entries:
         #   ("break",)
         #   ("multi",  col_w, gap, columns, inner_html, h)
-        #   ("single", band_css, embed_map, row_plans)
-        #     row_plan: (row, val_s, css_s, ph_idx)  ph_idx=None → no phantom
+        #   ("single", band_css, embed_map, row_plans, keep_together)
+        #     row_plan: (row, val_s, css_s, ph_idx)  ph_idx=None → no phantom needed
         rec_plan: list = []
         ph_html_list: list[str] = []
 
@@ -1336,7 +1233,7 @@ class AndRepRenderer:
                 keep_together = cfg.get("keepTogether", False)
                 rec_plan.append(("single", band_css, embed_map, row_plans, keep_together))
 
-        # ── Phase 2: one WeasyPrint render for all phantom rows ───────────────
+        # ── Phase 2: measure all phantom rows (batch or per-row) ─────────────
         ph_heights = self._measure_html_heights_batch(ph_html_list, content_w)
 
         # ── Phase 3: generate items using measured heights ────────────────────
@@ -1409,6 +1306,26 @@ class AndRepRenderer:
             parts.append("</div>\n")
         return "".join(parts)
 
+    def _render_page_hdr(self, is_first: bool, ns: dict, content_w: int) -> str:
+        """Return the header HTML for one PDF page (first_header or page_header)."""
+        if is_first and "first_header" in self.bands:
+            name = "first_header"
+        elif "page_header" in self.bands:
+            name = "page_header"
+        else:
+            return ""
+        return self._render_band_html(self._compile_band(name, ns, "", {}), content_w)
+
+    def _render_page_ftr(self, is_last: bool, ns: dict, content_w: int) -> str:
+        """Return the footer HTML for one PDF page (last_footer or page_footer)."""
+        if is_last and "last_footer" in self.bands:
+            name = "last_footer"
+        elif "page_footer" in self.bands:
+            name = "page_footer"
+        else:
+            return ""
+        return self._render_band_html(self._compile_band(name, ns, "", {}), content_w)
+
     def _render_band_html(self, record: dict, content_w: int, actual_h: int = 0) -> str:
         """Render a compiled band record to HTML rows (for page headers/footers/filler).
 
@@ -1456,11 +1373,7 @@ class AndRepRenderer:
         def _band_h(name: str) -> int:
             return sum(self._row_height(r) for r in self.bands.get(name, []))
 
-        has_first_hdr = "first_header" in self.bands
-        has_page_hdr  = "page_header"  in self.bands
-        has_page_ftr  = "page_footer"  in self.bands
-        has_last_ftr  = "last_footer"  in self.bands
-        has_filler    = "page_filler"  in self.bands
+        has_filler = "page_filler" in self.bands
 
         first_hdr_h = _band_h("first_header")
         page_hdr_h  = _band_h("page_header")
@@ -1468,11 +1381,13 @@ class AndRepRenderer:
         last_ftr_h  = _band_h("last_footer")
 
         def _hdr_h(is_first: bool) -> int:
-            return first_hdr_h if (is_first and has_first_hdr) else (page_hdr_h if has_page_hdr else 0)
+            if is_first and "first_header" in self.bands:
+                return first_hdr_h
+            return page_hdr_h if "page_header" in self.bands else 0
 
         # Reserve the larger footer height on every page so page_footer and
         # last_footer always start at the same y-position.
-        max_ftr_h = max(page_ftr_h if has_page_ftr else 0, last_ftr_h if has_last_ftr else 0)
+        max_ftr_h = max(page_ftr_h, last_ftr_h)
 
         def _avail(is_first: bool) -> int:
             return content_h - _hdr_h(is_first) - max_ftr_h
@@ -1516,27 +1431,8 @@ class AndRepRenderer:
             ns = self._sys_eval_ns()
             self.cur_page = saved_page
 
-            # Header
-            hdr_html = ""
-            if is_first_p and has_first_hdr:
-                hdr_html = self._render_band_html(
-                    self._compile_band("first_header", ns, "", {}), content_w
-                )
-            elif has_page_hdr:
-                hdr_html = self._render_band_html(
-                    self._compile_band("page_header", ns, "", {}), content_w
-                )
-
-            # Footer
-            ftr_html = ""
-            if is_last_p and has_last_ftr:
-                ftr_html = self._render_band_html(
-                    self._compile_band("last_footer", ns, "", {}), content_w
-                )
-            elif has_page_ftr:
-                ftr_html = self._render_band_html(
-                    self._compile_band("page_footer", ns, "", {}), content_w
-                )
+            hdr_html = self._render_page_hdr(is_first_p, ns, content_w)
+            ftr_html = self._render_page_ftr(is_last_p,  ns, content_w)
 
             # Content
             content_html = self._items_to_html(page_items)
@@ -1585,20 +1481,18 @@ class AndRepRenderer:
         """Return a url_fetcher that caches responses, shared across phantom and PDF renders.
 
         Avoids re-downloading the same HTTP image URLs during both the phantom
-        pass and the final PDF render.  file_obj responses are buffered to bytes
-        on first fetch so they can be replayed from the cache.
+        pass and the final PDF render.  Compatible with WeasyPrint 68+ (URLFetcher API).
         """
-        import weasyprint  # type: ignore
-        cache: dict = {}
+        from weasyprint.urls import URLFetcher, URLFetcherResponse  # type: ignore
+        _fetcher = URLFetcher()
+        _cache: dict = {}  # url → (bytes, EmailMessage headers)
 
-        def fetcher(url: str) -> dict:
-            if url in cache:
-                return cache[url]
-            result = dict(weasyprint.default_url_fetcher(url))
-            if "file_obj" in result:
-                result["string"] = result.pop("file_obj").read()
-            cache[url] = result
-            return result
+        def fetcher(url: str) -> "URLFetcherResponse":
+            if url not in _cache:
+                resp = _fetcher.fetch(url)
+                _cache[url] = (resp.read(), resp.headers)
+            data, headers = _cache[url]
+            return URLFetcherResponse(url, body=data, headers=headers)
 
         return fetcher
 
