@@ -277,6 +277,7 @@ class AndRepRenderer:
         self.title: str = self.template.get("name", "")   # _r.title — overridable
         self.cur_page: int = 1   # increment manually to chain reports
         self._pdf_mode: bool = False   # True while generating PDF HTML (disables writing-mode)
+        self._phantom_ctx: bool = False  # True during phantom HTML generation (use min-height)
 
         # Group rows by band name
         self.bands: dict[str, list] = {}
@@ -599,7 +600,7 @@ class AndRepRenderer:
     def _border_parts(self, borders: dict) -> "list[str]":
         return [f"border-{s}:{self._border_css(borders, s)}" for s in ("top", "bottom", "left", "right")]
 
-    def _cell_style(self, cell: dict, css_extra: str = "", band_css: str = "", actual_h: int = 0) -> str:
+    def _cell_style(self, cell: dict, css_extra: str = "", band_css: str = "", actual_h: int = 0, use_block: bool = False) -> str:
         s = cell.get("style", {})
         borders = s.get("borders", {})
         wrap = cell.get("wrap", True)
@@ -652,15 +653,17 @@ class AndRepRenderer:
             flex_dir = "column"
             rotation_parts = []
 
+        # use_block: swap display:flex for display:block on text/markdown cells with
+        # verticalAlignment:top. WeasyPrint respects overflow:hidden on block containers
+        # but may not clip flex container overflow correctly.
         parts = [
             f"width:{cell.get('width', 100)}px",
             size_css,
             "flex-shrink:0",
             overflow,
             f"white-space:{'nowrap' if not wrap else 'normal'}",
-            "display:flex",
-            f"flex-direction:{flex_dir}",
-            f"justify-content:{va}",
+            "display:block" if use_block else "display:flex",
+            *([] if use_block else [f"flex-direction:{flex_dir}", f"justify-content:{va}"]),
             f"font-family:{s.get('fontFamily', 'Arial')},sans-serif",
             f"font-size:{s.get('fontSize', 11)}pt",
             f"font-weight:{s.get('fontWeight', 'normal')}",
@@ -854,7 +857,8 @@ class AndRepRenderer:
                 html_content = _md.markdown(raw_md)
             except ImportError:
                 html_content = escape(raw_md).replace("\n", "<br>")
-            return f'<div style="{self._cell_style(cell, css_extra, band_css, actual_h)}">{html_content}</div>'
+            _ub = cell.get("rotation", 0) == 0 and cell.get("style", {}).get("verticalAlignment", "top") == "top"
+            return f'<div style="{self._cell_style(cell, css_extra, band_css, actual_h, use_block=_ub)}">{html_content}</div>'
 
         # ---- text / embed ---------------------------------------------------
         tokens = self._cell_tokens[id(cell)]
@@ -884,7 +888,8 @@ class AndRepRenderer:
         )
         if self._pdf_mode and cell.get("rotation", 0) in (90, 270):
             return self._rotated_pdf_cell_html(cell, content, css_extra, band_css, row_height, actual_h)
-        return f'<div style="{self._cell_style(cell, css_extra, band_css, actual_h)}">{content}</div>'
+        _ub = cell.get("rotation", 0) == 0 and cell.get("style", {}).get("verticalAlignment", "top") == "top"
+        return f'<div style="{self._cell_style(cell, css_extra, band_css, actual_h, use_block=_ub)}">{content}</div>'
 
     def _rotated_pdf_cell_html(self, cell: dict, content: str, css_extra: str, band_css: str,
                                row_height: int = 0, actual_h: int = 0) -> str:
@@ -1053,10 +1058,17 @@ class AndRepRenderer:
         sub_band_css = sub_record.get("band_css", "")
         sub_embed_map = sub_record.get("embeds", {})
 
-        inner = "".join(
-            self._row_html(row, sub_values_iter, sub_css_iter, sub_band_css, sub_embed_map)
-            for row in rows
-        )
+        # Sub-rows inside embed cells must use min-height (not fixed height) so their
+        # content grows naturally. The parent row's height:actual_h;overflow:hidden
+        # (set by the phantom pass) handles the total height clipping.
+        saved, self._phantom_ctx = self._phantom_ctx, True
+        try:
+            inner = "".join(
+                self._row_html(row, sub_values_iter, sub_css_iter, sub_band_css, sub_embed_map)
+                for row in rows
+            )
+        finally:
+            self._phantom_ctx = saved
         return f'<div style="{style}">{inner}</div>'
 
     def _row_html(self, row: dict, values_iter, css_extras_iter, band_css: str = "", embed_map: dict = None, actual_h: int = 0) -> str:
@@ -1076,7 +1088,14 @@ class AndRepRenderer:
                                 row_height=height, actual_h=actual_h)
             )
             prev_end = x + cell.get("width", 100)
-        h_css = f"height:{actual_h}px" if actual_h > 0 else f"min-height:{height}px"
+        if actual_h > 0:
+            h_css = f"height:{actual_h}px;overflow:hidden"
+        elif self._pdf_mode and not self._phantom_ctx:
+            # In PDF mode (outside phantom measurement) use exact height so pagination
+            # estimates match actual rendered heights and bands cannot overflow.
+            h_css = f"height:{height}px;overflow:hidden"
+        else:
+            h_css = f"min-height:{height}px"
         return (
             f'<div style="display:flex;{h_css};align-items:stretch">'
             + "".join(parts)
@@ -1253,9 +1272,13 @@ class AndRepRenderer:
                     css_s  = css_list   [css_idx: css_idx  + n_css]
                     ph_idx = None
                     if self._needs_phantom(row):
-                        ph_html = self._row_html(
-                            row, iter(val_s), iter(css_s), band_css, embed_map,
-                        )
+                        self._phantom_ctx = True
+                        try:
+                            ph_html = self._row_html(
+                                row, iter(val_s), iter(css_s), band_css, embed_map,
+                            )
+                        finally:
+                            self._phantom_ctx = False
                         ph_idx = len(ph_html_list)
                         ph_html_list.append(ph_html)
                     row_plans.append((row, val_s, css_s, ph_idx))
