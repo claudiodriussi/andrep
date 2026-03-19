@@ -30,8 +30,11 @@ Accumulators on the renderer instance:
   art_count          — total articles processed
   mov_count          — total movements processed
 
-Run from the renderer-python/ directory:
-    python3 sample/03_detail.py
+Usage:
+    python3 samples/03_detail.py            # full detail
+    python3 samples/03_detail.py --summary  # summary only (movement rows omitted)
+
+Run from the renderer/ directory.
 """
 import sqlite3
 import sys
@@ -48,7 +51,6 @@ name = [
     "VAT: US000001",
 ]
 
-SUMMARY = "-s" in sys.argv or "summary" in sys.argv  # omit movement rows, keep totals
 
 SAMPLE_DIR = Path(__file__).parent
 TEMPLATES = SAMPLE_DIR / "templates"
@@ -106,10 +108,15 @@ class DetailReport(AndRepRenderer):
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
-def main():
+def main(summary: bool | None = None):
+    if summary is None:
+        summary = "--summary" in sys.argv or "-s" in sys.argv
+
+    stem = "03_detail_summary" if summary else "03_detail"
+
     loader = FilesystemLoader(base_dir=TEMPLATES)
     r = DetailReport("detail", loader=loader)
-    r.title = "Articles & Movements Detail"
+    r.title = "Articles & Movements Summary" if summary else "Articles & Movements Detail"
     r.name = name
 
     con = sqlite3.connect(DB)
@@ -148,7 +155,7 @@ def main():
             if movements:
                 r.emit("mov_header")
                 for mov in movements:
-                    r.emit("movement", silent=SUMMARY)
+                    r.emit("movement", silent=summary)
 
             r.emit("art_footer")
 
@@ -159,10 +166,10 @@ def main():
     con.close()
 
     OUTPUT.mkdir(exist_ok=True)
-    r.save_output(OUTPUT / "03_detail.json")
-    out_file = OUTPUT / "03_detail.html"
+    r.save_output(OUTPUT / f"{stem}.json")
+    out_file = OUTPUT / f"{stem}.html"
     out_file.write_text(r.to_html(), encoding="utf-8")
-    pdf_file = OUTPUT / "03_detail.pdf"
+    pdf_file = OUTPUT / f"{stem}.pdf"
     pdf_file.write_bytes(r.to_pdf())
     print(
         f"Written: {out_file}\n"

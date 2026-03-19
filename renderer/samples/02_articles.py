@@ -1,11 +1,11 @@
 """
-02_articles.py — Article list report with optional movement detail.
+02_articles.py — Article list report, portrait or landscape.
 
 Usage:
-    python3 sample/02_articles.py             # article list only
-    python3 sample/02_articles.py --detail    # + movement detail per article (TODO)
+    python3 samples/02_articles.py              # portrait
+    python3 samples/02_articles.py --landscape  # landscape (adds Category column)
 
-Run from the renderer-python/ directory.
+Run from the renderer/ directory.
 """
 import argparse
 import sqlite3
@@ -59,17 +59,20 @@ class ArticlesReport(AndRepRenderer):
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
-def main():
-    parser = argparse.ArgumentParser(description="AndRep — article list report")
-    parser.add_argument("--detail", action="store_true", help="include movement detail per article")
-    args = parser.parse_args()
+def main(landscape: bool | None = None):
+    if landscape is None:
+        parser = argparse.ArgumentParser(description="AndRep — article list report")
+        parser.add_argument("--landscape", action="store_true", help="landscape layout with Category column")
+        args = parser.parse_args()
+        landscape = args.landscape
 
-    if args.detail:
-        print("Note: --detail not yet implemented, running list only.")
+    template_name = "articles_landscape" if landscape else "articles"
+    stem = "02_articles_landscape" if landscape else "02_articles"
+    title = "Article List (Landscape)" if landscape else "Article List"
 
     loader = FilesystemLoader(base_dir=TEMPLATES)
-    r = ArticlesReport("articles", loader=loader)
-    r.title = "Article List"
+    r = ArticlesReport(template_name, loader=loader)
+    r.title = title
     r.name = name
 
     con = sqlite3.connect(DB)
@@ -90,10 +93,10 @@ def main():
     con.close()
 
     OUTPUT.mkdir(exist_ok=True)
-    r.save_output(OUTPUT / "02_articles.json")
-    out_file = OUTPUT / "02_articles.html"
+    r.save_output(OUTPUT / f"{stem}.json")
+    out_file = OUTPUT / f"{stem}.html"
     out_file.write_text(r.to_html(), encoding="utf-8")
-    pdf_file = OUTPUT / "02_articles.pdf"
+    pdf_file = OUTPUT / f"{stem}.pdf"
     pdf_file.write_bytes(r.to_pdf())
     print(f"Written: {out_file}  ({r.count} articles, total price {r.total:,.2f})")
     print(f"         {pdf_file}")

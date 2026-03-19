@@ -1,6 +1,6 @@
-sample/output/
-sample/*.db
-sample/data/*.db
+samples/output/
+samples/*.db
+samples/data/*.db
 __pycache__/
 *.pyc
 *.egg-info/

@@ -21,12 +21,14 @@ from andrep import AndRepRenderer, FilesystemLoader
 
 
 class ArticleEmbedReport(AndRepRenderer):
+    data_band = "band"
+
     def on_init(self):
         self.count = 0
         self.total = 0.0
 
     def on_after_band(self, band_name):
-        if band_name == "band":
+        if band_name == self.data_band:
             self.count += 1
             self.total += float(self.data.row.price or 0)
 
@@ -37,7 +39,10 @@ DB         = SAMPLE_DIR / "sample.db"
 OUTPUT     = SAMPLE_DIR / "output" / "07_embed.html"
 
 
-def main():
+def main(band: str = "band", output: "Path | None" = None):
+    if output is None:
+        output = OUTPUT
+
     con = sqlite3.connect(DB)
     con.row_factory = sqlite3.Row
     rows = con.execute("""
@@ -50,19 +55,20 @@ def main():
 
     loader = FilesystemLoader(base_dir=TEMPLATES)
     r = ArticleEmbedReport("test_embed", loader=loader)
+    r.data_band = band
     r.base_dir = SAMPLE_DIR   # resolves @data/... paths in load formatter
 
     for row in rows:
-        r.emit("band")
+        r.emit(band)
 
     r.emit("totals")
 
-    OUTPUT.parent.mkdir(exist_ok=True)
-    r.save_output(OUTPUT.with_suffix(".json"))
-    OUTPUT.write_text(r.to_html(), encoding="utf-8")
-    pdf_path = OUTPUT.with_suffix(".pdf")
+    output.parent.mkdir(exist_ok=True)
+    r.save_output(output.with_suffix(".json"))
+    output.write_text(r.to_html(), encoding="utf-8")
+    pdf_path = output.with_suffix(".pdf")
     pdf_path.write_bytes(r.to_pdf())
-    print(f"Written: {OUTPUT}  ({len(rows)} articles)")
+    print(f"Written: {output}  ({len(rows)} articles)")
     print(f"         {pdf_path}")
 
 
