@@ -40,6 +40,7 @@ def main():
         r.emit("band")
 
     OUTPUT.mkdir(exist_ok=True)
+    r.save_output(OUTPUT / "04_labels.json")
     out_file = OUTPUT / "04_labels.html"
     out_file.write_text(r.to_html(), encoding="utf-8")
     pdf_file = OUTPUT / "04_labels.pdf"

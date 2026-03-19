@@ -541,7 +541,11 @@ class AndRepRenderer:
     # ------------------------------------------------------------------
 
     def save_output(self, path: str | Path) -> None:
-        """Save the compiled output to a JSON file (raw values, no formatters)."""
+        """Save the compiled output to a JSON file (raw values, no formatters).
+
+        The file can be used as data export (e.g. imported into Excel) or as
+        input for render_from_compiled() to re-render without re-running the loop.
+        """
         self.compile()
         Path(path).write_text(
             json.dumps(self._compiled, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -551,6 +555,33 @@ class AndRepRenderer:
         """Return the compiled output as a JSON string."""
         self.compile()
         return json.dumps(self._compiled, ensure_ascii=False, indent=2)
+
+    # ------------------------------------------------------------------
+    # External loop engine support
+    # ------------------------------------------------------------------
+
+    @classmethod
+    def from_compiled(cls, template, records, template_dir=None, loader=None):
+        """Create a renderer from pre-compiled records produced by an external loop engine.
+
+        The records list has the same format as save_output() / to_json():
+        a list of {"band": name, "values": [...], "css_extras": [...],
+        "band_css": "...", "embeds": {...}} dicts.  Values are raw (pre-formatter);
+        formatters are applied at render time (to_html / to_pdf) using the token
+        info from the template — identical to the normal emit() path.
+
+        on_after() is NOT called (it belongs to the internal emit loop).
+
+        Usage::
+
+            records = json.loads(Path("records.json").read_text())
+            r = AndRepRenderer.from_compiled("template.json", records)
+            html = r.to_html()
+            pdf  = r.to_pdf()
+        """
+        r = cls(template, template_dir=template_dir, loader=loader)
+        r._compiled = list(records)
+        return r
 
     # ------------------------------------------------------------------
     # Cell CSS

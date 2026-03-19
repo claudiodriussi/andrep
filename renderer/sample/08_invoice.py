@@ -248,6 +248,7 @@ def main():
     r.total      = round(r.taxable + r.vat_amount, 2)
 
     OUTPUT.mkdir(exist_ok=True)
+    r.save_output(OUTPUT / "08_invoice.json")
 
     html_file = OUTPUT / "08_invoice.html"
     html_file.write_text(r.to_html(), encoding="utf-8")

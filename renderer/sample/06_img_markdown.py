@@ -63,6 +63,7 @@ def main():
         r.emit("band_auto")
 
     OUTPUT.parent.mkdir(exist_ok=True)
+    r.save_output(OUTPUT.with_suffix(".json"))
     OUTPUT.write_text(r.to_html(), encoding="utf-8")
     pdf_path = OUTPUT.with_suffix(".pdf")
     pdf_path.write_bytes(r.to_pdf())
