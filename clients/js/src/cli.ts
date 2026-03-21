@@ -1,13 +1,27 @@
 /**
- * cli.ts — Helpers to invoke the AndRep Python renderer via CLI.
+ * cli.ts — Helpers to invoke the AndRep Python renderer.
  *
  * Node.js only.
  *
- * Example:
+ * Two transports available:
+ *   - callAndrep()     — CLI subprocess (python -m andrep render)
+ *   - callAndrepRest() — REST endpoint (POST /render on a running server)
+ *
+ * Example (CLI):
  *
  *   const pdf = await callAndrep({
  *     template: "sells",
  *     templateDir: "/path/to/templates",
+ *     records: engine.getRecords(),
+ *     format: "pdf",
+ *   });
+ *   fs.writeFileSync("report.pdf", pdf);
+ *
+ * Example (REST):
+ *
+ *   const pdf = await callAndrepRest({
+ *     serverUrl: "http://localhost:5000",
+ *     template: "sells",
  *     records: engine.getRecords(),
  *     format: "pdf",
  *   });
@@ -36,6 +50,19 @@ export interface CallAndrepOptions {
   metadata?: Record<string, unknown>;
   /** Python executable. Default: "python3". */
   python?: string;
+}
+
+export interface CallAndrepRestOptions {
+  /** Base URL of the AndRep REST server (Flask or FastAPI). */
+  serverUrl: string;
+  /** Template name (must be available in the server's template-dir). */
+  template: string;
+  /** Compiled records produced by AndRepEngine.getRecords(). */
+  records: CompiledRecord[];
+  /** Output format. Default: "html". */
+  format?: "html" | "pdf";
+  /** Renderer metadata (title, name, ...) — same semantics as CLI --meta. */
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -94,4 +121,31 @@ export function callAndrep(opts: CallAndrepOptions): Promise<Buffer> {
       else child.stdin.end();
     });
   });
+}
+
+/**
+ * Call the AndRep REST server (POST /render) and return the output as a Buffer.
+ *
+ * Compatible with both server_flask.py and server_fastapi.py.
+ * The server must have the requested template available in its template-dir.
+ */
+export async function callAndrepRest(opts: CallAndrepRestOptions): Promise<Buffer> {
+  const { serverUrl, template, records, format = "html", metadata } = opts;
+
+  const url = serverUrl.replace(/\/$/, "") + "/render";
+  const body = JSON.stringify({ template, records, format, metadata });
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body,
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "(no body)");
+    throw new Error(`AndRep REST server returned ${res.status}: ${text}`);
+  }
+
+  const arrayBuf = await res.arrayBuffer();
+  return Buffer.from(arrayBuf);
 }

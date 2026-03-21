@@ -6,5 +6,5 @@ export { AndRepEngine } from "./engine.js";
 export type { Ctx } from "./engine.js";
 export { FilesystemLoader } from "./loader.js";
 export type { TemplateLoader } from "./loader.js";
-export { callAndrep } from "./cli.js";
-export type { CallAndrepOptions } from "./cli.js";
+export { callAndrep, callAndrepRest } from "./cli.js";
+export type { CallAndrepOptions, CallAndrepRestOptions } from "./cli.js";
