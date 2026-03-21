@@ -364,7 +364,7 @@ class AndRepRenderer:
                 if cell.get("type") == "embed":
                     target = cell.get("embedTarget", "")
                     if target and target in self.bands:
-                        embeds[id(cell)] = self._compile_band(target, ns, "", {})
+                        embeds[cell.get("id", str(id(cell)))] = self._compile_band(target, ns, "", {})
                     # embed cells carry no token values; cssExtra still applies
                 else:
                     for _, expr, _ in self._cell_tokens[id(cell)]:
@@ -562,7 +562,7 @@ class AndRepRenderer:
     # ------------------------------------------------------------------
 
     @classmethod
-    def from_compiled(cls, template, records, template_dir=None, loader=None):
+    def from_compiled(cls, template, records, template_dir=None, loader=None, metadata=None):
         """Create a renderer from pre-compiled records produced by an external loop engine.
 
         The records list has the same format as save_output() / to_json():
@@ -571,17 +571,29 @@ class AndRepRenderer:
         formatters are applied at render time (to_html / to_pdf) using the token
         info from the template — identical to the normal emit() path.
 
-        on_after() is NOT called (it belongs to the internal emit loop).
+        page_role bands (page_header, page_footer, …) must NOT be in records;
+        they are inserted automatically by compile() / _to_pdf_html().
+
+        metadata: optional dict of renderer attributes to set before rendering,
+        e.g. {"title": "My Report", "name": ["Acme Corp", "Rome"]}.
 
         Usage::
 
             records = json.loads(Path("records.json").read_text())
-            r = AndRepRenderer.from_compiled("template.json", records)
+            r = AndRepRenderer.from_compiled("template.json", records,
+                    metadata={"title": "Products", "name": ["Acme", "Rome"]})
             html = r.to_html()
             pdf  = r.to_pdf()
         """
         r = cls(template, template_dir=template_dir, loader=loader)
-        r._compiled = list(records)
+        # Store in _emissions so that:
+        #   - compile() runs normally and prepends/appends page_role bands (_compiled)
+        #   - _to_pdf_html() reads _emissions for the body (page_role handled per-page)
+        r._emissions = list(records)
+        r.started = True   # suppress on_before() if compile() is ever called
+        if metadata:
+            for key, value in metadata.items():
+                setattr(r, key, value)
         return r
 
     # ------------------------------------------------------------------
@@ -796,7 +808,7 @@ class AndRepRenderer:
         cell_type = cell.get("type", "text")
 
         if cell_type == "embed":
-            sub_record = (embed_map or {}).get(id(cell), {})
+            sub_record = (embed_map or {}).get(cell.get("id", str(id(cell))), {})
             return self._embed_cell_html(cell, sub_record, css_extra, band_css)
 
         if cell_type in ("barcode", "qrcode"):

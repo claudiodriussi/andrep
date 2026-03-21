@@ -40,7 +40,8 @@ def cmd_render(args):
         template = args.template
         template_dir = None
 
-    r = AndRepRenderer.from_compiled(template, records, template_dir=template_dir, loader=loader)
+    metadata = json.loads(args.meta) if args.meta else None
+    r = AndRepRenderer.from_compiled(template, records, template_dir=template_dir, loader=loader, metadata=metadata)
 
     fmt = args.format.lower()
     if fmt == "pdf":
@@ -75,6 +76,8 @@ def main():
                    help="Output file path, or - to write to stdout (default: -)")
     p.add_argument("--template-dir", default=None,
                    help="Base directory for template file resolution")
+    p.add_argument("--meta", default=None,
+                   help="JSON object of renderer attributes (e.g. '{\"title\":\"Report\",\"name\":[\"Acme\"]}')")
 
     args = parser.parse_args()
 
