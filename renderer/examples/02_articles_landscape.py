@@ -4,7 +4,7 @@
 Adds a Category column; uses the articles_landscape template with stdlds header.
 
 Run from the renderer/ directory:
-    python3 samples/02_articles_landscape.py
+    python3 examples/02_articles_landscape.py
 """
 import importlib
 import sys

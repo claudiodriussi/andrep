@@ -31,8 +31,8 @@ Accumulators on the renderer instance:
   mov_count          — total movements processed
 
 Usage:
-    python3 samples/03_detail.py            # full detail
-    python3 samples/03_detail.py --summary  # summary only (movement rows omitted)
+    python3 examples/03_detail.py            # full detail
+    python3 examples/03_detail.py --summary  # summary only (movement rows omitted)
 
 Run from the renderer/ directory.
 """

@@ -5,7 +5,7 @@ Emits the same bands as 03_detail but skips movement rows (silent=True),
 producing a compact summary with article and category subtotals only.
 
 Run from the renderer/ directory:
-    python3 samples/03_detail_summary.py
+    python3 examples/03_detail_summary.py
 """
 import importlib
 import sys

@@ -2,8 +2,8 @@
 02_articles.py — Article list report, portrait or landscape.
 
 Usage:
-    python3 samples/02_articles.py              # portrait
-    python3 samples/02_articles.py --landscape  # landscape (adds Category column)
+    python3 examples/02_articles.py              # portrait
+    python3 examples/02_articles.py --landscape  # landscape (adds Category column)
 
 Run from the renderer/ directory.
 """

@@ -9,7 +9,7 @@ both horizontally (text-align:center) and vertically (justify-content:center).
 The right embed (art_right) is unchanged.
 
 Run from the renderer/ directory:
-    python3 samples/07_embed_orientation.py
+    python3 examples/07_embed_orientation.py
 """
 import importlib
 import sys
