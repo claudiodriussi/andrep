@@ -31,7 +31,7 @@ from core import make_loader, render, list_templates
 # ---------------------------------------------------------------------------
 parser = argparse.ArgumentParser()
 parser.add_argument("--template-dir", default=os.environ.get("ANDREP_TEMPLATE_DIR", "."))
-parser.add_argument("--port",         default=int(os.environ.get("ANDREP_PORT", 8000)), type=int)
+parser.add_argument("--port",         default=int(os.environ.get("ANDREP_PORT", 5000)), type=int)
 parser.add_argument("--host",         default=os.environ.get("ANDREP_HOST", "127.0.0.1"))
 args = parser.parse_args()
 
