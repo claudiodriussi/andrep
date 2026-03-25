@@ -55,7 +55,7 @@ flowchart LR
 ## Key features
 
 - **Language-agnostic** — write your report loop in Python, JavaScript, or any language; the renderer is a separate, stateless step
-- **HTML-first** — output is standard HTML; PDF adds only automatic page breaks and band resizing via [WeasyPrint](https://weasyprint.org/)
+- **HTML-first** — output is standard HTML+CSS; PDF adds only automatic page breaks and band resizing via [WeasyPrint](https://weasyprint.org/). Unlike traditional reporting engines that position cells at absolute pixel coordinates (GDI-style), AndRep cells flow with CSS — auto-stretch, word wrap, and image scaling come for free from the layout model, not as special-cased features
 - **WYSIWYG editor** — resize and style cells visually; configure bands, page format, margins, and composition rules
 - **Template composability** — include and merge multiple templates to share headers, footers, and common sections across reports
 - **Auto pagination** — special `page_role` bands (header, footer, filler) are placed automatically at every page break
@@ -161,11 +161,25 @@ The renderer imposes no structure and has no notion of groups or sorting — tha
 
 ---
 
+## Background
+
+AndRep is a new project, but it is not a new idea. It is a complete redesign of a proprietary Windows reporting engine that has been in production for over 20 years, used to build hundreds of templates and generate millions of reports across real business applications. The core design — band-based layout, caller-controlled loop, separation between template and data — has been validated over decades of use.
+
+This rewrite brings the same proven approach to an open, cross-platform stack: HTML/CSS rendering, JSON templates, and a language-agnostic architecture that works anywhere Python runs.
+
+---
+
 ## Documentation
 
 - [Tutorial](docs/tutorial.md) — getting started, first report in 15 minutes
 - [User Manual](docs/manual.md) — complete reference
 
+---
+
 ## License
 
 MIT — see [LICENSE](LICENSE)
+
+## Credits
+
+Developed with the assistance of [Claude Code](https://claude.ai/code) by Anthropic.

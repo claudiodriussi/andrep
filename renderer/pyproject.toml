@@ -34,8 +34,8 @@ markdown = ["markdown"]
 all      = ["weasyprint", "python-barcode", "qrcode", "markdown"]
 
 [project.urls]
-Homepage   = "https://github.com/USER/andrep"
-Repository = "https://github.com/USER/andrep"
+Homepage   = "https://github.com/claudiodriussi/andrep"
+Repository = "https://github.com/claudiodriussi/andrep"
 
 [project.scripts]
 andrep = "andrep.__main__:main"

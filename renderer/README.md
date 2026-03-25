@@ -7,13 +7,13 @@ Renders AndRep JSON templates to HTML and PDF (via [WeasyPrint](https://weasypri
 Clone the repository and install from the `renderer/` directory:
 
 ```bash
-git clone https://github.com/USER/andrep.git
+git clone https://github.com/claudiodriussi/andrep.git
 cd andrep/renderer
 
 pip install .            # core only (HTML output, no PDF)
 pip install ".[pdf]"     # + WeasyPrint for PDF
 pip install ".[barcode]" # + python-barcode and qrcode
-pip install ".[markdown]"# + markdown for Markdown cells
+pip install ".[markdown]" # + markdown for Markdown cells
 pip install ".[all]"     # everything
 ```
 
@@ -114,3 +114,14 @@ python 08_invoice.py     # output in examples/output/
 - `markdown` — Markdown cells
 
 All optional; install only what you need.
+
+## PDF output — known limitations
+
+PDF output is produced by [WeasyPrint](https://weasyprint.org/), which renders HTML/CSS to PDF via the CSS Paged Media standard. It works well for band-based reports but has some limitations compared to dedicated PDF engines:
+
+- **CSS support** — not all CSS properties are supported; flexbox and grid are partially or not supported. AndRep uses only table-based layout, which WeasyPrint handles correctly.
+- **Fonts** — system fonts must be installed; web fonts require explicit configuration. Stick to common fonts or embed them explicitly.
+- **Complex backgrounds and shadows** — may not render exactly as in a browser.
+- **Performance** — large documents (hundreds of pages) may be slow to generate.
+
+For the vast majority of business reports (lists, invoices, labels, forms) WeasyPrint produces excellent results.
