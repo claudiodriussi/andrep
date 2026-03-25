@@ -138,15 +138,15 @@ The renderer imposes no structure and has no notion of groups or sorting — tha
 
 ## Comparison
 
-|                               | AndRep | Crystal Reports | JasperReports |  FastReport  |
-| ----------------------------- | :----: | :-------------: | :-----------: | :----------: |
-| Open source                   |   ✓   |       ✗       |      ✓      |      ✗      |
-| Cross-platform                |   ✓   |  Windows only  |      ✓      | Windows only |
-| Use your own language         |   ✓   |       ✗       |      ✗      |      ✗      |
-| HTML-native output            |   ✓   |       ✗       |      ✗      |      ✗      |
-| No proprietary expression DSL |   ✓   |       ✗       |      ✗      |      ✗      |
-| Template composability        |   ✓   |     limited     |    limited    |   limited   |
-| JSON intermediate output      |   ✓   |       ✗       |      ✗      |      ✗      |
+|                               | AndRep | Crystal Reports | JasperReports | BIRT | SSRS |
+| ----------------------------- | :----: | :-------------: | :-----------: | :--: | :--: |
+| Open source                   |   ✓   |       ✗        |      ✓       |  ✓  |  ✗  |
+| Cross-platform                |   ✓   |  Windows only   |      ✓       |  ✓  | Windows + SQL Server only |
+| Use your own language         |   ✓   |       ✗        |      ✗       |  ✗  |  ✗  |
+| HTML-native output            |   ✓   |       ✗        |      ✗       |  ✗  |  ✗  |
+| No proprietary expression DSL |   ✓   |       ✗        |      ✗       |  ✗  |  ✗  |
+| Template composability        |   ✓   |    limited      |   limited     | limited | limited |
+| JSON intermediate output      |   ✓   |       ✗        |      ✗       |  ✗  |  ✗  |
 
 ---
 
@@ -160,6 +160,11 @@ The renderer imposes no structure and has no notion of groups or sorting — tha
 | `clients/python/`         | Python REST client                    | Usable |
 
 ---
+
+## Documentation
+
+- [Tutorial](docs/tutorial.md) — getting started, first report in 15 minutes
+- [User Manual](docs/manual.md) — complete reference
 
 ## License
 
