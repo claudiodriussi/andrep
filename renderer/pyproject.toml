@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "andrep"
+version = "0.1.0"
+description = "Band-based report renderer — HTML and PDF output from AndRep JSON templates"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "Claudio" }]
+keywords = ["report", "pdf", "html", "band", "template", "weasyprint"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Printing",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Text Processing :: Markup :: HTML",
+]
+
+# Core has no required dependencies (HTML output only, stdlib only)
+dependencies = []
+
+[project.optional-dependencies]
+pdf      = ["weasyprint"]
+barcode  = ["python-barcode", "qrcode"]
+markdown = ["markdown"]
+all      = ["weasyprint", "python-barcode", "qrcode", "markdown"]
+
+[project.urls]
+Homepage   = "https://github.com/USER/andrep"
+Repository = "https://github.com/USER/andrep"
+
+[project.scripts]
+andrep = "andrep.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["andrep*"]
