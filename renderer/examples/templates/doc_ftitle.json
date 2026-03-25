@@ -1,0 +1,72 @@
+{
+  "_type": "andrep-template",
+  "name": "doc_ftitle",
+  "version": "1.0",
+  "page": {
+    "preset": "A4",
+    "width": 794,
+    "height": 1123,
+    "orientation": "portrait",
+    "marginTop": 30,
+    "marginBottom": 35,
+    "marginLeft": 30,
+    "marginRight": 30,
+    "locale": "",
+    "currency": ""
+  },
+  "rows": [
+    {
+      "id": "r22",
+      "name": "last_footer",
+      "cells": [
+        {
+          "id": "c049",
+          "content": "[_r.legal_text]",
+          "type": "text",
+          "x": 0,
+          "width": 734,
+          "height": 28,
+          "wrap": true,
+          "autoStretch": false,
+          "style": {
+            "fontFamily": "Arial",
+            "fontSize": 7,
+            "fontWeight": "normal",
+            "fontStyle": "italic",
+            "textDecoration": "none",
+            "color": "#777777",
+            "backgroundColor": "#ffffff",
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "paddingTop": 2,
+            "paddingBottom": 2,
+            "paddingLeft": 4,
+            "paddingRight": 4,
+            "borders": {
+              "top": {
+                "width": 0,
+                "style": "none",
+                "color": "#aaaaaa"
+              },
+              "bottom": {
+                "width": 0,
+                "style": "none",
+                "color": "#000000"
+              },
+              "left": {
+                "width": 0,
+                "style": "none",
+                "color": "#000000"
+              },
+              "right": {
+                "width": 0,
+                "style": "none",
+                "color": "#000000"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

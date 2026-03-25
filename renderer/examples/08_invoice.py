@@ -32,26 +32,27 @@ OUTPUT     = SAMPLE_DIR / "output"
 
 # ── Invoice metadata ──────────────────────────────────────────────────────────
 
-COMPANY_NAME = "ACME Electronics & Components S.p.A."
-COMPANY_ADDR = "Via dell'Industria 42, 20100 Milano MI — orders@acme-electronics.it"
-COMPANY_VAT  = "P.IVA IT01234567890  —  C.F. 01234567890"
-CUSTOMER_NAME = "ROSSI SRL"
-CUSTOMER_ADDR = "Via Roma 32, 33170 Pordenone (PN)"
+COMPANY_NAME = "ACME Electronics & Components"
+COMPANY_ADDR = "12 Industrial Park, London EC1A 1BB — orders@acme-electronics.com"
+COMPANY_VAT  = "VAT GB123456789"
+CUSTOMER_NAME = "ROSS SYSTEMS LTD"
+CUSTOMER_ADDR = "45 Commerce Street, Manchester M1 2BX"
 PAYMENT      = "Bank transfer 60 days end of month"
 LEGAL_TEXT   = (
     "Your data is processed under EU Regulation 2016/679 (GDPR); for further "
-    "information please visit our company website. This document has no fiscal "
-    "validity pursuant to Art. 21 DPR 633/72. The original is available at the "
-    "electronic address you provided or in your reserved area at the Tax Authority."
+    "information please visit our company website. This document is issued for "
+    "accounting purposes only. The original is available at the electronic "
+    "address you provided or in your reserved area on our customer portal."
 )
 
-# ── DDT groups — static invoice structure ────────────────────────────────────
-# Each group: (ddt_num, ddt_date, order_num, order_date, [(code, qty, disc)], [ref_ddts])
+# ── Shipment groups — static invoice structure ────────────────────────────────
+# Each group: (ship_num, ship_date, order_num, order_date, [(code, qty, disc)], [ref_ships])
 # Articles without image → band_article; with image → band_article_img
+# All quantities are capped so that qty * price * (1 - disc/100) < 1500
 
-DDT_GROUPS = [
+SHIPMENT_GROUPS = [
     ("3342", "01/09/25", "51297", "04/07/25",
-     [("ART001", 1620, 0.0), ("ART002", 216, 0.0)],
+     [("ART001", 1620, 0.0), ("ART002",  216, 0.0)],
      ["32738-05.08.2025", "32369-04.08.2025"]),
 
     ("3381", "03/09/25", "51297", "04/07/25",
@@ -59,19 +60,19 @@ DDT_GROUPS = [
      ["32738-05.08.2025", "32807-06.08.2025"]),
 
     ("3465", "09/09/25", "51275", "01/07/25",
-     [("ART005", 6480, 0.0), ("ART031", 5864, 0.0)],
+     [("ART005", 4800, 0.0), ("ART031",   75, 0.0)],
      ["32136-01.08.2025", "32938-07.08.2025"]),
 
     ("3520", "11/09/25", "51275", "01/07/25",
-     [("ART032", 216, 0.0)],
+     [("ART032",  40, 0.0)],
      ["32938-07.08.2025"]),
 
     ("3547", "12/09/25", "51275", "01/07/25",
-     [("ART004", 4320, 0.0), ("ART006", 1080, 5.0)],
+     [("ART004", 3000, 0.0), ("ART006", 1080, 5.0)],
      ["32938-07.08.2025", "33012-13.09.2025"]),
 
     ("3612", "15/09/25", "51276", "02/07/25",
-     [("ART007", 2160, 0.0), ("ART033", 3240, 3.0)],
+     [("ART007", 1800, 0.0), ("ART033",  250, 3.0)],
      ["33215-15.09.2025"]),
 
     ("3684", "19/09/25", "51298", "04/07/25",
@@ -79,7 +80,7 @@ DDT_GROUPS = [
      ["36625-09.09.2025"]),
 
     ("3738", "23/09/25", "51298", "04/07/25",
-     [("ART009", 864, 0.0), ("ART010", 2160, 0.0)],
+     [("ART009",  864, 0.0), ("ART010", 1600, 0.0)],
      ["36625-09.09.2025", "37130-11.09.2025"]),
 
     ("3797", "25/09/25", "51298", "04/07/25",
@@ -87,39 +88,31 @@ DDT_GROUPS = [
      ["36625-09.09.2025", "37130-11.09.2025", "37344-12.09.2025"]),
 
     ("3845", "27/09/25", "51299", "05/07/25",
-     [("ART001", 3240, 0.0), ("ART031", 1080, 2.0)],
+     [("ART001", 3240, 0.0), ("ART031",   80, 2.0)],
      ["37344-12.09.2025", "37520-13.09.2025"]),
 
     ("3880", "30/09/25", "51299", "05/07/25",
-     [("ART003", 5400, 0.0), ("ART005", 2700, 5.0), ("ART032", 540, 0.0)],
+     [("ART003", 3000, 0.0), ("ART005", 2700, 5.0), ("ART032",  40, 0.0)],
      ["37520-13.09.2025", "37891-16.09.2025"]),
 
     ("3921", "01/10/25", "51300", "07/07/25",
-     [("ART007", 1620, 0.0), ("ART008", 810, 2.5)],
+     [("ART007", 1620, 0.0), ("ART008",  810, 2.5)],
      ["37891-16.09.2025"]),
 
     ("3975", "03/10/25", "51300", "07/07/25",
-     [("ART009", 2160, 0.0), ("ART033", 1620, 3.0), ("ART010", 540, 0.0)],
+     [("ART009", 1200, 0.0), ("ART033",  250, 3.0), ("ART010",  540, 0.0)],
      ["37891-16.09.2025", "38102-18.09.2025"]),
 
     ("4023", "06/10/25", "51301", "08/07/25",
-     [("ART011", 4320, 0.0), ("ART012", 2160, 0.0), ("ART031", 1080, 2.0)],
+     [("ART011", 4320, 0.0), ("ART012", 2160, 0.0), ("ART031",  80, 2.0)],
      ["38102-18.09.2025", "38330-20.09.2025"]),
 
     ("4087", "09/10/25", "51301", "08/07/25",
      [("ART001", 2700, 0.0), ("ART003", 1350, 5.0)],
      ["38330-20.09.2025"]),
-
-    ("4142", "13/10/25", "51302", "10/07/25",
-     [("ART005", 5400, 3.0), ("ART032", 810, 0.0), ("ART007", 1620, 0.0)],
-     ["38330-20.09.2025", "38751-22.09.2025"]),
-
-    ("4198", "16/10/25", "51302", "10/07/25",
-     [("ART009", 540, 0.0), ("ART010", 1080, 0.0), ("ART033", 540, 2.5)],
-     ["38751-22.09.2025", "38994-25.09.2025"]),
 ]
 
-# Direct service lines inserted between DDT groups (index → line)
+# Direct service lines inserted between shipment groups (index → line)
 DIRECT_LINES = {
     3: {
         "desc": (
@@ -134,13 +127,6 @@ DIRECT_LINES = {
             "September 2025 ref. AT-2025-042 internal laboratory"
         ),
         "um": "HRS", "qty": 4, "price": 85.00, "disc": 0.0, "vat": "22",
-    },
-    16: {
-        "desc": (
-            "Pallet hire — 12 EUR pallets delivered with DDT 3975 dated 03/10/25 "
-            "ref. 2025-LOG-005"
-        ),
-        "um": "NR", "qty": 12, "price": 4.50, "disc": 0.0, "vat": "22",
     },
 }
 
@@ -174,7 +160,7 @@ def main():
     con.close()
 
     loader = FilesystemLoader(base_dir=TEMPLATES)
-    r = InvoiceRenderer("test_invoice", loader=loader)
+    r = InvoiceRenderer("doc_invoice", loader=loader)
     r.base_dir = SAMPLE_DIR
 
     # Invoice metadata
@@ -213,8 +199,8 @@ def main():
             row = types.SimpleNamespace(**data)  # noqa: F841
             r.emit("band_article")
 
-    # Emit DDT groups + direct lines
-    for i, (ddt_num, ddt_date, order_num, order_date, articles, ref_ddts) in enumerate(DDT_GROUPS):
+    # Emit shipment groups + direct lines
+    for i, (ship_num, ship_date, order_num, order_date, articles, ref_ships) in enumerate(SHIPMENT_GROUPS):
 
         # Insert direct service line before this group (if any)
         if i in DIRECT_LINES:
@@ -227,9 +213,9 @@ def main():
             )
             r.emit("band_direct")
 
-        # DDT header note
+        # Shipment header note
         row = types.SimpleNamespace(  # noqa: F841
-            text=f"DDT no. {ddt_num} dated {ddt_date}  —  ORDER no. {order_num} dated {order_date}",
+            text=f"Shipment no. {ship_num} dated {ship_date}  —  ORDER no. {order_num} dated {order_date}",
         )
         r.emit("band_desc")
 
@@ -237,9 +223,9 @@ def main():
         for code, qty, disc in articles:
             emit_article(code, qty, disc)
 
-        # Reference DDTs
-        if ref_ddts:
-            refs = "  /  ".join(f"Ref. DDT no. {d}" for d in ref_ddts)
+        # Reference shipments
+        if ref_ships:
+            refs = "  /  ".join(f"Ref. Shipment no. {s}" for s in ref_ships)
             row = types.SimpleNamespace(text=refs)  # noqa: F841
             r.emit("band_desc")
 
