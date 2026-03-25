@@ -62,6 +62,7 @@ flowchart LR
 - **Auto stretch** — cells and rows grow to fit their actual content (word wrap, images, Markdown)
 - **Barcode / QR** — built-in SVG barcode and QR code cells, no raster images
 - **JSON intermediate** — save compiled records as JSON and post-process them independently: generate Excel files, feed audit logs, diff two runs, or render the same data multiple times without re-running the loop
+- **Hook-based extensibility** — subclass the loop engine to add accumulators, running totals, dynamic styling, or any per-band logic; no configuration files, no callbacks to register
 - **Zero framework dependency** — the Python renderer is a plain library; no web server required
 
 ---
