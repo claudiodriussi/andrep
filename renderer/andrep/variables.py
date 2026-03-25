@@ -146,6 +146,9 @@ def _fmt_img(value, params, r=None):
         [row.image | img,cover]
         ["@data/logo.png" | img,natural,silent]
         [row.image | img,contain,silent]
+
+    PDF note: WeasyPrint does not support gradient fills on SVG text elements.
+    Use solid colours in SVG files intended for PDF output.
     """
     from html import escape as _esc
     from pathlib import Path

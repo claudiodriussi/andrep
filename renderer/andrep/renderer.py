@@ -92,12 +92,19 @@ def load_template(template, template_dir=None, loader: TemplateLoader = None):
             for row in ref_rows:
                 ref_bands.setdefault(row["name"], []).append(row)
 
+            # Find the index of the LAST occurrence of each ref band name so
+            # ref rows are inserted after the whole group, not after the first row.
+            last_occ: dict[str, int] = {}
+            for i, row in enumerate(main_rows):
+                if row["name"] in ref_bands:
+                    last_occ[row["name"]] = i
+
             new_rows = []
-            inserted = set()
-            for row in main_rows:
+            inserted: set[str] = set()
+            for i, row in enumerate(main_rows):
                 new_rows.append(row)
                 name = row["name"]
-                if name in ref_bands and name not in inserted:
+                if name in ref_bands and i == last_occ[name]:
                     new_rows.extend(ref_bands[name])
                     inserted.add(name)
 
@@ -638,12 +645,16 @@ class AndRepRenderer:
 
         # actual_h > 0: phantom pass measured the real height; fix all cells to it
         # so vertical borders align across every cell in the row (Step 5b).
-        # Otherwise: autoStretch+wrap cells use min-height (can grow), fixed cells
-        # use an explicit height (borders may mis-align in HTML — acceptable).
+        # Otherwise: autoStretch+wrap cells and autoStretch image cells use
+        # min-height (can grow); fixed cells use an explicit height.
+        cell_type = cell.get("type", "text")
         if actual_h > 0:
             size_css = f"height:{actual_h}px"
             overflow = "overflow:hidden"
         elif wrap and auto_stretch:
+            size_css = f"min-height:{h}px"
+            overflow = ""
+        elif auto_stretch and cell_type == "image":
             size_css = f"min-height:{h}px"
             overflow = ""
         elif rotation in (90, 270):
@@ -719,13 +730,16 @@ class AndRepRenderer:
     def _needs_phantom(self, row: dict) -> bool:
         """Return True if the row requires phantom height measurement.
 
-        Rows with embed cells or autoStretch+wrap cells can grow beyond the
-        template height; WeasyPrint must render them to measure the actual height.
+        Rows with embed cells, autoStretch+wrap cells, or autoStretch image
+        cells can grow beyond the template height; WeasyPrint must render them
+        to measure the actual height.
         """
         for cell in row.get("cells", []):
             if cell.get("type") == "embed":
                 return True
             if cell.get("autoStretch", False) and cell.get("wrap", False):
+                return True
+            if cell.get("autoStretch", False) and cell.get("type") == "image":
                 return True
         return False
 

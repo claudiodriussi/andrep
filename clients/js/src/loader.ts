@@ -112,15 +112,19 @@ export class FilesystemLoader implements TemplateLoader {
 
       } else if (rule === "insafter" || rule === "insertafter") {
         const refBands = _groupByName(refRows);
+        const lastOcc = new Map<string, number>();
+        mainRows.forEach((row, i) => {
+          if (refBands.has(row.name)) lastOcc.set(row.name, i);
+        });
         const newRows: typeof mainRows = [];
         const inserted = new Set<string>();
-        for (const row of mainRows) {
+        mainRows.forEach((row, i) => {
           newRows.push(row);
-          if (refBands.has(row.name) && !inserted.has(row.name)) {
+          if (refBands.has(row.name) && lastOcc.get(row.name) === i) {
             newRows.push(...refBands.get(row.name)!);
             inserted.add(row.name);
           }
-        }
+        });
         for (const [name, rows] of refBands) {
           if (!inserted.has(name)) newRows.push(...rows);
         }
