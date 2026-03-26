@@ -158,7 +158,7 @@ The renderer imposes no structure and has no notion of groups or sorting — tha
 | [`editor/`](editor/)         | Svelte 5 WYSIWYG designer             | Usable |
 | [`renderer/`](renderer/)     | Python renderer → HTML + PDF         | Usable |
 | [`clients/js/`](clients/js/) | JS/TS loop engine (browser + Node.js) | Usable |
-| `clients/python/`         | Python REST client                    | Usable |
+| [`clients/python/`](clients/js/) | Python REST client               | Usable |
 
 ---
 
