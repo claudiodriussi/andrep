@@ -81,35 +81,10 @@ Sample output: [detail report (PDF)](docs/data/03_detail.pdf) · [invoice (PDF)]
 
 ## Quick start
 
-### Editor
+**[Try the editor online →](https://claudiodriussi.github.io/andrep/)** — no installation needed.
 
-```bash
-cd editor
-pnpm install
-pnpm dev          # http://localhost:5173
-```
-
-### Python renderer
-
-```bash
-pip install andrep[pdf]      # includes WeasyPrint for PDF output
-```
-
-```python
-from andrep import AndRepRenderer, FilesystemLoader
-from pathlib import Path
-
-loader = FilesystemLoader(Path("templates/"))
-r = AndRepRenderer("invoice", loader=loader)
-
-for row in data:
-    r.emit("band")       # local variables are captured automatically
-
-html = r.to_html()
-pdf  = r.to_pdf()
-```
-
-See [`renderer/examples/`](renderer/examples/) for full working examples: articles list, order detail, labels, barcodes, images/Markdown, and invoice.
+For a full walkthrough — prerequisites, renderer setup, running the examples, and building
+your first report from scratch — see the **[Tutorial](docs/tutorial.md)**.
 
 ## Loop engine examples
 
@@ -141,26 +116,26 @@ The renderer imposes no structure and has no notion of groups or sorting — tha
 
 ## Comparison
 
-|                               | AndRep | Crystal Reports | JasperReports | BIRT | SSRS |
-| ----------------------------- | :----: | :-------------: | :-----------: | :--: | :--: |
-| Open source                   |   ✓   |       ✗        |      ✓       |  ✓  |  ✗  |
-| Cross-platform                |   ✓   |  Windows only   |      ✓       |  ✓  | Windows + SQL Server only |
-| Use your own language         |   ✓   |       ✗        |      ✗       |  ✗  |  ✗  |
-| HTML-native output            |   ✓   |       ✗        |      ✗       |  ✗  |  ✗  |
-| No proprietary expression DSL |   ✓   |       ✗        |      ✗       |  ✗  |  ✗  |
-| Template composability        |   ✓   |    limited      |   limited     | limited | limited |
-| JSON intermediate output      |   ✓   |       ✗        |      ✗       |  ✗  |  ✗  |
+|                               | AndRep | Crystal Reports | JasperReports |  BIRT  |           SSRS           |
+| ----------------------------- | :----: | :-------------: | :-----------: | :-----: | :-----------------------: |
+| Open source                   |   ✓   |       ✗       |      ✓      |   ✓   |            ✗            |
+| Cross-platform                |   ✓   |  Windows only  |      ✓      |   ✓   | Windows + SQL Server only |
+| Use your own language         |   ✓   |       ✗       |      ✗      |   ✗   |            ✗            |
+| HTML-native output            |   ✓   |       ✗       |      ✗      |   ✗   |            ✗            |
+| No proprietary expression DSL |   ✓   |       ✗       |      ✗      |   ✗   |            ✗            |
+| Template composability        |   ✓   |     limited     |    limited    | limited |          limited          |
+| JSON intermediate output      |   ✓   |       ✗       |      ✗      |   ✗   |            ✗            |
 
 ---
 
 ## Components
 
-| Component                   | Description                           | Status |
-| --------------------------- | ------------------------------------- | :----: |
-| [`editor/`](editor/)         | Svelte 5 WYSIWYG designer             | Usable |
-| [`renderer/`](renderer/)     | Python renderer → HTML + PDF         | Usable |
-| [`clients/js/`](clients/js/) | JS/TS loop engine (browser + Node.js) | Usable |
-| [`clients/python/`](clients/js/) | Python REST client               | Usable |
+| Component                       | Description                           | Status |
+| ------------------------------- | ------------------------------------- | :----: |
+| [`editor/`](editor/)             | Svelte 5 WYSIWYG designer             | Usable |
+| [`renderer/`](renderer/)         | Python renderer → HTML + PDF         | Usable |
+| [`clients/js/`](clients/js/)     | JS/TS loop engine (browser + Node.js) | Usable |
+| [`clients/python/`](clients/js/) | Python REST client                    | Usable |
 
 ---
 
@@ -174,7 +149,7 @@ This rewrite brings the same proven approach to an open, cross-platform stack: H
 
 ## Documentation
 
-- [Tutorial](docs/tutorial.md) — getting started, first report in 15 minutes
+- [Tutorial](docs/tutorial.md) — getting started, from zero to your first report
 - [User Manual](docs/manual.md) — complete reference
 
 ---
