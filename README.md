@@ -2,7 +2,9 @@
 
 **Band-based report designer — WYSIWYG editor + language-agnostic HTML/PDF renderer.**
 
-![AndRep editor](docs/data/editor-bands.png)
+[![AndRep editor](docs/data/editor-bands.png)](https://claudiodriussi.github.io/andrep/)
+
+**[Try the editor online →](https://claudiodriussi.github.io/andrep/)**
 
 ---
 
