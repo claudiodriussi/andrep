@@ -5,8 +5,8 @@
  * REST server (Flask or FastAPI) instead of spawning a CLI subprocess.
  *
  * Start the Python server first:
- *   ./clients/server/run.sh flask   --template-dir clients/js/examples/templates
- *   ./clients/server/run.sh fastapi --template-dir clients/js/examples/templates
+ *   ./clients/server/run.sh flask   --template-dir clients/templates
+ *   ./clients/server/run.sh fastapi --template-dir clients/templates
  *
  * Then start this server (from clients/js/):
  *   npx tsx examples/server-rest.ts
@@ -32,11 +32,11 @@ const PORT         = parseInt(process.env["PORT"]         ?? "3000", 10);
 const RENDERER_URL = process.env["RENDERER_URL"] ?? "http://localhost:5000";
 
 const __dir    = dirname(fileURLToPath(import.meta.url));
-const TEMPLATES = join(__dir, "templates");
+const TEMPLATES = join(__dir, "../../templates");
 const PUBLIC    = join(__dir, "public");
 
 // Load template once at startup (templates don't change at runtime)
-const loader   = new FilesystemLoader(TEMPLATES);
+const loader   = new FilesystemLoader(TEMPLATES, { lang: "js" });
 const template = loader.load("products");
 
 const server = http.createServer(async (req, res) => {

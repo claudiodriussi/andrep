@@ -22,7 +22,10 @@ from andrep import AndRepRenderer, FilesystemLoader  # noqa: E402
 
 from data import PRODUCTS, COMPANY_INFO  # noqa: E402
 
-TEMPLATES = Path(__file__).parent / "templates"
+# Canonical templates live in clients/templates (shared across all clients).
+# Python templates dir is kept as custom_dir for future language-specific overrides.
+TEMPLATES    = Path(__file__).resolve().parents[2] / "templates"
+PY_TEMPLATES = Path(__file__).parent / "templates"
 
 
 class ProductsReport(AndRepRenderer):
@@ -57,7 +60,7 @@ class ProductsReport(AndRepRenderer):
 
 def build_report() -> ProductsReport:
     """Build and run the products loop. Call r._emissions for compiled records."""
-    loader = FilesystemLoader(base_dir=TEMPLATES)
+    loader = FilesystemLoader(base_dir=TEMPLATES, custom_dir=PY_TEMPLATES, lang="python")
     r = ProductsReport("products", loader=loader)
 
     r.title = "Products Catalog"

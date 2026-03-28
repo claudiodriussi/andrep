@@ -10,6 +10,7 @@
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type { Template } from "./types.js";
+import { parseTokens } from "./expression.js";
 
 // ---------------------------------------------------------------------------
 // Protocol
@@ -37,18 +38,27 @@ export interface TemplateLoader {
  * @param baseDir   - Base directory for standard templates.
  * @param customDir - Optional override directory (default: baseDir/custom).
  */
+export interface FilesystemLoaderOptions {
+  customDir?: string;
+  lang?: string;
+}
+
 export class FilesystemLoader implements TemplateLoader {
   private readonly baseDir: string;
   private readonly customDir: string;
+  private readonly lang?: string;
 
-  constructor(baseDir: string, customDir?: string) {
+  constructor(baseDir: string, options: FilesystemLoaderOptions = {}) {
     this.baseDir = resolve(baseDir);
-    this.customDir = customDir ? resolve(customDir) : join(this.baseDir, "custom");
+    this.customDir = options.customDir ? resolve(options.customDir) : join(this.baseDir, "custom");
+    this.lang = options.lang;
   }
 
   load(name: string): Template {
-    const tmpl = this._loadRaw(name);
-    return this._applyComposition(tmpl);
+    let tmpl = this._loadRaw(name);
+    tmpl = this._applyComposition(tmpl);
+    if (this.lang) tmpl = this._applyTranslations(tmpl, this.lang);
+    return tmpl;
   }
 
   // -------------------------------------------------------------------------
@@ -157,6 +167,38 @@ export class FilesystemLoader implements TemplateLoader {
     const { composition: _removed, ...clean } = result as Template & { composition?: unknown };
     void _removed;
     return clean as Template;
+  }
+
+  private _applyTranslations(tmpl: Template, lang: string): Template {
+    const translations = tmpl.expressions?.[lang];
+    if (!translations || Object.keys(translations).length === 0) return tmpl;
+    return {
+      ...tmpl,
+      rows: tmpl.rows.map((row) => ({
+        ...row,
+        cells: row.cells.map((cell) => {
+          const content = cell.content ?? "";
+          if (!content || !content.includes("[")) return cell;
+          return { ...cell, content: this._translateContent(content, translations) };
+        }),
+      })),
+    };
+  }
+
+  private _translateContent(content: string, translations: Record<string, string>): string {
+    const parts: string[] = [];
+    for (const token of parseTokens(content)) {
+      parts.push(token.text);
+      if (token.expr !== null) {
+        const translated = translations[token.expr] ?? token.expr;
+        parts.push(
+          token.fmts.length > 0
+            ? `[${translated} | ${token.fmts.join(" | ")}]`
+            : `[${translated}]`,
+        );
+      }
+    }
+    return parts.join("");
   }
 }
 

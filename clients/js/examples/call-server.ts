@@ -5,8 +5,8 @@
  * via REST (Flask or FastAPI), and writes HTML + PDF to examples/output/.
  *
  * The Python server must be running first:
- *   ./clients/server/run.sh flask   --template-dir clients/js/examples/templates
- *   ./clients/server/run.sh fastapi --template-dir clients/js/examples/templates
+ *   ./clients/server/run.sh flask   --template-dir clients/templates
+ *   ./clients/server/run.sh fastapi --template-dir clients/templates
  *
  * Usage (from clients/js/):
  *   npx tsx examples/call-server.ts
@@ -22,7 +22,7 @@ import { callAndrepRest } from "../src/cli.js";
 import { buildEngine, engineMetadata } from "./loop.js";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
-const TEMPLATES = join(__dir, "templates");
+const TEMPLATES = join(__dir, "../../templates");
 const OUTPUT = join(__dir, "output");
 
 const HTML_ONLY  = process.argv.includes("--html-only");
@@ -31,7 +31,7 @@ const SERVER_URL = serverArg !== -1 ? process.argv[serverArg + 1] : "http://loca
 
 mkdirSync(OUTPUT, { recursive: true });
 
-const loader = new FilesystemLoader(TEMPLATES);
+const loader = new FilesystemLoader(TEMPLATES, { lang: "js" });
 const template = loader.load("products");
 const engine = buildEngine(template);
 const records = engine.getRecords();

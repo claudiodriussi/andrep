@@ -27,11 +27,11 @@ import { buildEngine, engineMetadata } from "./loop.js";
 
 const PORT = parseInt(process.env["PORT"] ?? "3000", 10);
 const __dir = dirname(fileURLToPath(import.meta.url));
-const TEMPLATES = join(__dir, "templates");
+const TEMPLATES = join(__dir, "../../templates");
 const PUBLIC = join(__dir, "public");
 
 // Load template once at startup (templates don't change at runtime)
-const loader = new FilesystemLoader(TEMPLATES);
+const loader = new FilesystemLoader(TEMPLATES, { lang: "js" });
 const template = loader.load("products");
 
 const server = http.createServer(async (req, res) => {

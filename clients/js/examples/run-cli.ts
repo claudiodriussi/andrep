@@ -17,13 +17,13 @@ import { callAndrep } from "../src/cli.js";
 import { buildEngine, engineMetadata } from "./loop.js";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
-const TEMPLATES = join(__dir, "templates");
+const TEMPLATES = join(__dir, "../../templates");
 const OUTPUT = join(__dir, "output");
 const HTML_ONLY = process.argv.includes("--html-only");
 
 mkdirSync(OUTPUT, { recursive: true });
 
-const loader = new FilesystemLoader(TEMPLATES);
+const loader = new FilesystemLoader(TEMPLATES, { lang: "js" });
 const template = loader.load("products");
 const engine = buildEngine(template);
 const records = engine.getRecords();

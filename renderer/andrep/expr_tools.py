@@ -68,6 +68,39 @@ def extract_expressions(template: dict, lang: str) -> dict:
     return {expr: existing.get(expr, "") for expr in _collect_expressions(template)}
 
 
+def _translate_content(content: str, translations: dict) -> str:
+    """Replace expressions in *content* according to *translations* dict."""
+    parts = []
+    for text, expr, formatters in _parse_tokens(content):
+        parts.append(text)
+        if expr is not None:
+            translated = translations.get(expr, expr)
+            if formatters:
+                parts.append(f"[{translated} | {'|'.join(formatters)}]")
+            else:
+                parts.append(f"[{translated}]")
+    return "".join(parts)
+
+
+def apply_translations(template: dict, lang: str) -> dict:
+    """Return template with all expressions translated for *lang* in-place.
+
+    Walks all cells and substitutes expressions found in expressions[lang].
+    Expressions not in the table are left unchanged.
+    No-op if expressions[lang] is absent or empty.
+    """
+    translations = template.get("expressions", {}).get(lang, {})
+    if not translations:
+        return template
+    t = copy.deepcopy(template)
+    for row in t.get("rows", []):
+        for cell in row.get("cells", []):
+            content = cell.get("content", "")
+            if content and "[" in content:
+                cell["content"] = _translate_content(content, translations)
+    return t
+
+
 def merge_expressions(template: dict, translations: dict, lang: str) -> dict:
     """Return updated template with translations merged into expressions[lang].
 

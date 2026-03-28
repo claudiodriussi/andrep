@@ -75,6 +75,7 @@ export interface Template {
   rows: Row[];
   bands?: Record<string, BandOptions>;
   composition?: CompositionRule[];
+  expressions?: Record<string, Record<string, string>>;
 }
 
 // ---------------------------------------------------------------------------
