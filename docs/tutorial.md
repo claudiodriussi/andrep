@@ -102,7 +102,7 @@ andrep/
 You do not need to build or install all of them to get started. The sections below
 walk through each one separately.
 
-> **Paths** — all shell commands assume you are in the `andMaking any language compatible with AndReprep/` repository root unless
+> **Paths** — all shell commands assume you are in the `andrep/` repository root unless
 > stated otherwise. Adjust paths if your working directory differs.
 
 ---
@@ -329,6 +329,25 @@ To drive AndRep from a new language you only need to implement three things:
 The compiled records format is a simple JSON array — no binary encoding, no schema
 registration. If your language can read JSON and spawn a subprocess (or make an HTTP
 call), it can produce reports with AndRep.
+
+### Expression translations
+
+Template expressions are written in the syntax of the loop engine's language. When
+reusing a template originally designed for a different language, the `andrep-expr` tool
+lets you store per-language translations inside the template JSON — no need to modify the
+template structure or the loop code.
+
+```bash
+# Extract expressions and produce a translation file
+python3 -m andrep.expr_cli extract renderer/examples/templates/detail.json \
+    --lang js -o /tmp/detail_js.json
+
+# Fill in the translations, then merge them back
+python3 -m andrep.expr_cli merge renderer/examples/templates/detail.json \
+    /tmp/detail_js.json --lang js
+```
+
+See the [User Manual](manual.md) for the complete workflow.
 
 For the CLI variant and further details, see the [User Manual](manual.md).
 

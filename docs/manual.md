@@ -5,16 +5,19 @@
 1. [Concepts](#1-concepts) — bands, rows, cells, page roles, emit loop
 2. [Editor](#2-editor) — WYSIWYG designer guide
 3. [Template format](#3-template-format) — JSON schema, PageConfig, all cell properties
-4. [Variables &amp; formatters](#4-variables--formatters) — token syntax, all formatters, system variables
-5. [Python renderer](#5-python-renderer) — emit loop, workspace, namespace, hooks, accumulators
-6. [Cell types](#6-cell-types) — image, markdown, barcode, QR, embed
-7. [Pagination](#7-pagination) — page roles, keepTogether, page_filler, manual breaks
+4. [Cell types](#4-cell-types) — text, markdown, image, barcode, QR, embed
+5. [Variables &amp; formatters](#5-variables--formatters) — token syntax, all formatters, system variables
+6. [Python renderer](#6-python-renderer) — emit loop, workspace, hooks, examples
+7. [Pagination](#7-pagination) — page roles, keepTogether, autoStretch, manual breaks
 8. [Template composition](#8-template-composition) — IfNot, Replace, InsBefore, InsAfter
-9. [CLI &amp; multi-language](#9-cli--multi-language) — subprocess, JS client, REST server
+9. [CLI &amp; multi-language](#9-cli--multi-language) — subprocess, JS client, REST server, expression translations
+10. [Compiled records as a universal format](#10-the-compiled-records-as-a-universal-intermediate-format) — alternative renderers, spreadsheet, CSV, testing
 
 ---
 
 ## 1. Concepts
+
+*This chapter is a conceptual overview — each topic is treated in depth in the chapters that follow.*
 
 ### Three-tier architecture
 
@@ -83,23 +86,14 @@ how rows behave with variable-length content:
 
 ### Cell
 
-A **cell** is the leaf unit of a layout. Every cell belongs to a row and has:
-
-| Property        | Description                                                              |
-| --------------- | ------------------------------------------------------------------------ |
-| `width`       | Cell width (pixels)                                                      |
-| `height`      | Cell height (pixels)                                                     |
-| `content`     | Text string with interpolated variable tokens `[expr\|fmt]`             |
-| `type`        | `text`, `markdown`, `image`, `barcode`, `qrcode`, or `embed` |
-| `wrap`        | Enables text wrapping within the cell width                              |
-| `autoStretch` | Enables vertical auto-sizing                                             |
-| `rotation`    | `0` / `90` / `180` / `270` degrees                               |
+A **cell** is the leaf unit of a layout. Every cell belongs to a row and has a `width`,
+`height`, a `content` string with `[expr|fmt]` tokens, a `type` (see below), flags for
+`wrap` and `autoStretch`, optional `rotation`, and an independent visual style (font,
+colors, alignment, padding, borders).
 
 Cells in a row are placed side by side with no gap between them.
 
-Each cell also carries an independent **style**: font family, size, weight, color,
-background color, horizontal and vertical alignment, padding (top/bottom/left/right), and
-four independent border sides (each with its own width, style, and color).
+See [Chapter 3](#3-template-format) for the complete cell schema.
 
 ---
 
@@ -122,88 +116,36 @@ tokens is rendered literally.
 ```
 
 `expr` can be a variable name (`total`, `row.price`), an expression (`qty * price`), or an
-array access (`items[0]`). The full formatter reference is in [Chapter 5](#5-formatters).
+array access (`items[0]`). The full formatter reference is in [Chapter 5](#5-variables--formatters).
 
 ---
 
 ### Cell types
 
-The cell `type` tells the renderer how to interpret the content and which HTML wrapper to
-produce. Six types are available:
+The cell `type` tells the renderer how to interpret the content. Six types are available:
+`text` (default), `markdown`, `image`, `barcode`, `qrcode`, and `embed`.
 
-| Type         | Rendering behavior                                                           |
-| ------------ | ---------------------------------------------------------------------------- |
-| `text`     | Default. Free text with `[expr\|fmt]` tokens.                               |
-| `markdown` | Content is parsed as Markdown and converted to HTML.                         |
-| `image`    | Content is a URL, file path, or base64 data URI. Rendered as `<img>`.      |
-| `barcode`  | Value encoded as a 1-D barcode (EAN-13, Code128, …). Rendered as SVG.       |
-| `qrcode`   | Value encoded as a QR code. Rendered as SVG.                                 |
-| `embed`    | Name of another band rendered side-by-side inside the cell (one level deep). |
-
-**Relationship between types and formatters.** Barcode and QR formatters (`ean13`,
-`code128`, `qr`, …) can be used in **any** cell type, including `text`. When a formatter
-produces an SVG string the renderer embeds it inline regardless of the cell type. The
-`barcode` and `qrcode` types become relevant when no formatter is specified: in that case
-the renderer generates the graphic directly from the cell value, using additional
-cell-level properties (`barcodeType`, `showText`, `fontSize`). Similarly, the `image` type
-controls the fallback behavior when the content is a plain URL with no `img` formatter.
-
-See [Chapter 5](#5-formatters), [Chapter 7](#7-barcode-and-qr), and
-[Chapter 8](#8-images-and-markdown) for detailed usage.
+See [Chapter 4](#4-cell-types) for the rendering behavior of each type and its interaction
+with formatters.
 
 ---
 
 ### Page-role bands
 
-When producing PDF output, the renderer recognises five band names with reserved roles.
-These bands are **never emitted by the caller** — the renderer inserts them automatically
-at page breaks.
+Five band names are reserved by the renderer and inserted automatically at page breaks —
+**never emitted by the caller**: `first_header`, `page_header`, `page_footer`,
+`last_footer`, `page_filler`.
 
-| Band name        | When rendered                                     |
-| ---------------- | ------------------------------------------------- |
-| `first_header` | Top of the**first page** only               |
-| `page_header`  | Top of**every page** after the first        |
-| `page_footer`  | Bottom of**every page** except the last     |
-| `last_footer`  | Bottom of the**last page** only             |
-| `page_filler`  | Fills the gap between the last row and the footer |
-
-`page_filler` is useful for reports with a bordered grid: it replicates the column
-structure of a data row with empty cells, "closing" the grid all the way down to the footer
-regardless of how many data rows are on the page.
-
-```
-┌─────────────────────┐
-│    page_header      │
-├─────────────────────┤
-│    data row 1       │
-│    data row 2       │
-│    page_filler      │  ← fills gap to footer
-├─────────────────────┤
-│    page_footer      │
-└─────────────────────┘
-```
-
-A band with `keepTogether: true` is never split by a page break: if it does not fit on the
-current page it moves entirely to the next one.
-
----
+See [Chapter 7](#7-pagination) for the full pagination reference.
 
 ---
 
 ### System variables
 
-These variables are injected automatically by the renderer into every cell:
+A set of variables is injected automatically into every cell: `[_DATE]`, `[_TIME]`,
+`[_USER]`, `[_PAGE]`, and `[_r]` (the renderer instance, for accessing accumulators).
 
-| Variable    | Content                                        |
-| ----------- | ---------------------------------------------- |
-| `[_DATE]` | Print date (`dd/mm/yyyy`)                    |
-| `[_TIME]` | Print time (`HH:MM:SS`)                      |
-| `[_USER]` | User running the report (environment `USER`) |
-| `[_PAGE]` | Current page number (PDF only)                 |
-
-> **Note:** `[_PAGES]` (total page count) is not available in the base model. The renderer
-> streams bands without a full pre-layout pass. For "Page X of Y" headers you need a
-> two-pass strategy implemented in the caller.
+See [Chapter 5](#5-variables--formatters) for the complete reference.
 
 ---
 
@@ -389,7 +331,7 @@ properties in one place.
 
 **Content & type**
 
-- **Type** — `text`, `markdown`, `image`, `barcode`, `qrcode`, `embed`. See [Chapter 6](#6-cell-types).
+- **Type** — `text`, `markdown`, `image`, `barcode`, `qrcode`, `embed`. See [Chapter 4](#4-cell-types).
 - **Content** — the text with `[variable|formatter]` placeholders.
 - A variable reference panel lists the `[token]` expressions found in the content field,
   with links to the formatter documentation. Formatters must be typed manually.
@@ -547,16 +489,16 @@ can also edit it by hand or generate it programmatically.
 }
 ```
 
-| Field           | Type                          | Description                                                  |
-| --------------- | ----------------------------- | ------------------------------------------------------------ |
-| `_type`       | `"andrep-template"`         | File signature — validated on load                          |
-| `name`        | string                        | Template name (shown in the editor title)                    |
-| `version`     | string                        | Free-form version string                                     |
-| `page`        | PageConfig                    | Page dimensions, margins, locale, currency                   |
-| `rows`        | Row[]                         | All rows of all bands, in order                              |
-| `bands`       | Record\<string, BandOptions\> | Optional per-band settings, keyed by band name               |
-| `composition` | CompositionRule[]             | Optional merge rules — see [Chapter 8](#8-template-composition) |
-| `expressions` | Record\<string, Record\<string, string\>\> | Optional per-language expression translations — see [Chapter 9](#9-cli--multi-language) |
+| Field           | Type                                       | Description                                                                          |
+| --------------- | ------------------------------------------ | ------------------------------------------------------------------------------------ |
+| `_type`       | `"andrep-template"`                      | File signature — validated on load                                                  |
+| `name`        | string                                     | Template name (shown in the editor title)                                            |
+| `version`     | string                                     | Free-form version string                                                             |
+| `page`        | PageConfig                                 | Page dimensions, margins, locale, currency                                           |
+| `rows`        | Row[]                                      | All rows of all bands, in order                                                      |
+| `bands`       | Record\<string, BandOptions\>              | Optional per-band settings, keyed by band name                                       |
+| `composition` | CompositionRule[]                          | Optional merge rules — see[Chapter 8](#8-template-composition)                         |
+| `expressions` | Record\<string, Record\<string, string\>\> | Optional per-language expression translations — see[Chapter 9](#9-cli--multi-language) |
 
 ---
 
@@ -756,7 +698,189 @@ JSON is useful mainly for scripted generation or bulk changes across many files.
 
 ---
 
-## 4. Variables & formatters
+## 4. Cell types
+
+The `type` field tells the renderer how to interpret a cell's `content` and which HTML
+wrapper to produce. The default is `text`; the other five types enable specialised
+rendering without requiring extra template logic.
+
+---
+
+### text
+
+The default type. `content` is a free-form string with any number of `[expr|fmt]` tokens
+interspersed with literal text.
+
+```json
+{ "type": "text", "content": "Item [row.code] — [row.desc | trim | upper]" }
+```
+
+Barcode, QR, and image formatters work in `text` cells too. When a formatter returns an
+SVG or `<img>` tag the renderer embeds it inline, so a single `text` cell can mix text and
+graphics:
+
+```json
+{ "type": "text", "content": "[row.ean | ean13]  [row.desc]" }
+```
+
+---
+
+### markdown
+
+`content` is Markdown source (with optional `[expr|fmt]` tokens). The renderer converts it
+to HTML using the `markdown` library. If `markdown` is not installed it falls back to
+plain-text with `<br>` line breaks.
+
+```json
+{ "type": "markdown", "content": "[row.notes]", "autoStretch": true }
+```
+
+- Content is **not HTML-escaped** before Markdown parsing, so raw HTML in the content is
+  passed through.
+- `autoStretch: true` is almost always the right choice for Markdown cells since the
+  rendered height depends on the content length.
+- In PDF output, `autoStretch` triggers a phantom render pass to measure the actual height
+  before laying out the page.
+- To load content from an external file, use the `load` formatter:
+  `["@data/notes.md" | load]`. The `@` prefix resolves the path relative to `r.base_dir`
+  (see [Attributes](#attributes)); if `base_dir` is not set, `Path.cwd()` is used.
+
+---
+
+### image
+
+`content` is a URL, absolute file path, or base64 data URI. It can be a literal string or
+a `[expr|fmt]` token that resolves to one of those forms.
+
+The recommended approach is to use the `img` formatter, which resolves local paths to
+base64 data URIs automatically and gives you control over the scaling mode:
+
+```json
+{ "type": "image", "content": "[row.photo | img,contain]" }
+{ "type": "image", "content": "[row.photo | img,cover]" }
+{ "type": "image", "content": "[@data/logo.png | img,natural]" }
+```
+
+The `@` prefix resolves the path relative to `r.base_dir` (the same convention used by
+the `load` formatter — see [Attributes](#attributes)).
+
+If no `img` formatter is used, the renderer treats the value as a plain URL and generates
+a basic `<img>` tag with `autoStretch`-aware sizing. Local file paths are not resolved to
+base64 in this fallback mode, so images may not appear in PDF output.
+
+---
+
+### barcode
+
+Renders a 1-D barcode as SVG. Two approaches are available:
+
+**Formatter approach (recommended)** — use a barcode formatter in any cell type:
+
+```json
+{ "type": "text", "content": "[row.ean | ean13,200,52]" }
+```
+
+The formatter accepts explicit dimensions and options; see [Chapter 5](#5-variables--formatters).
+
+**Cell-type approach** — set `type` to `barcode` and let the renderer use the cell
+dimensions and optional cell-level properties:
+
+```json
+{
+  "type": "barcode",
+  "content": "[row.ean]",
+  "barcodeType": "ean13",
+  "showText": true,
+  "fontSize": 4
+}
+```
+
+| Property        | Default     | Description                                                        |
+| --------------- | ----------- | ------------------------------------------------------------------ |
+| `barcodeType` | `"ean13"` | Any supported barcode name (see[Chapter 5](#5-variables--formatters)) |
+| `showText`    | `true`    | Show the human-readable text below the bars                        |
+| `fontSize`    | `4`       | Font size (pt) for the text below the bars                         |
+
+These properties are not editable in the editor — set them by hand in the JSON if needed.
+The cell width and height are used as the SVG dimensions.
+
+---
+
+### qrcode
+
+Renders a QR code as SVG. Same two approaches as `barcode`:
+
+**Formatter approach:**
+
+```json
+{ "type": "text", "content": "[row.url | qr,150]" }
+```
+
+**Cell-type approach** — the renderer uses the cell's `width` and `height` as the SVG
+dimensions:
+
+```json
+{ "type": "qrcode", "content": "[row.url]" }
+```
+
+No additional cell-level properties beyond `width` and `height`.
+
+---
+
+### embed
+
+Renders another band inline, side-by-side with the other cells of the row. The target
+band name is stored in `embedTarget`; the `content` field is unused.
+
+```json
+{
+  "type": "embed",
+  "embedTarget": "address_block",
+  "width": 300,
+  "height": 80
+}
+```
+
+- Only **one level of nesting** is supported — an embedded band cannot itself contain
+  `embed` cells.
+- The embedded band is rendered with the **same eval namespace** as the parent emission,
+  so it has access to the same variables.
+- If the embedded band has cells with `autoStretch`, the outer cell height expands to fit.
+  This requires a phantom pass in PDF output.
+- The cell's `width` and `height` set the outer container dimensions; the inner band lays
+  out its cells within that width.
+
+A typical use case is a two-column row where the left cell embeds an image band and the
+right cell embeds a details band:
+
+```json
+"cells": [
+  { "type": "embed", "embedTarget": "product_image",   "width": 120, "height": 100 },
+  { "type": "embed", "embedTarget": "product_details",  "width": 400, "height": 100 }
+]
+```
+
+---
+
+### Rotation
+
+All six types support the `rotation` property: `0` (default), `90`, `180`, `270` degrees.
+Rotation is applied with CSS `writing-mode` for 90° and 270°, and `transform: rotate` for
+180°.
+
+| Value   | Effect                  |
+| ------- | ----------------------- |
+| `0`   | Normal                  |
+| `90`  | Text runs bottom to top |
+| `180` | Text is upside-down     |
+| `270` | Text runs top to bottom |
+
+Rotation affects the visual rendering only — the cell's `width` and `height` in the JSON
+still refer to the unrotated dimensions as laid out in the row.
+
+---
+
+## 5. Variables & formatters
 
 ### Token syntax
 
@@ -809,7 +933,7 @@ use:
 | Logical OR for fallback            | `row.nickname \|\| row.name`             |
 
 The namespace is built from the caller's local variables, the explicit workspace, and
-registered globals. See [Chapter 5](#5-python-renderer) for the full namespace priority.
+registered globals. See [Chapter 6](#6-python-renderer) for the full namespace priority.
 
 > **Expression evaluation is loop-engine-specific.** The syntax above describes the
 > **Python loop engine**, where `expr` is evaluated with Python's `eval()` inside a
@@ -1003,7 +1127,7 @@ producing compiled records. See [Chapter 9](#9-cli--multi-language).
 
 ---
 
-## 5. Python renderer
+## 6. Python renderer
 
 ### Installation
 
@@ -1012,14 +1136,14 @@ platform-specific notes — see the [Tutorial](tutorial.md).
 
 Quick reference for the Python package extras:
 
-| Extra | Installs |
-|-------|----------|
-| *(none)* | Core renderer, HTML output only |
-| `pdf` | WeasyPrint — required for PDF output |
-| `barcode` | `python-barcode` — 1-D barcode SVG generation |
-| `qr` | `qrcode` — QR code SVG generation |
-| `markdown` | `Markdown` — Markdown cell rendering |
-| `all` | All of the above |
+| Extra        | Installs                                         |
+| ------------ | ------------------------------------------------ |
+| *(none)*   | Core renderer, HTML output only                  |
+| `pdf`      | WeasyPrint — required for PDF output            |
+| `barcode`  | `python-barcode` — 1-D barcode SVG generation |
+| `qr`       | `qrcode` — QR code SVG generation             |
+| `markdown` | `Markdown` — Markdown cell rendering          |
+| `all`      | All of the above                                 |
 
 ```bash
 pip install -e "renderer/[all]"
@@ -1062,11 +1186,11 @@ and so on — no explicit passing required.
 AndRepRenderer(template, loader=None, trusted=False)
 ```
 
-| Parameter | Description |
-|-----------|-------------|
-| `template` | Template name (without `.json`) or path string |
-| `loader` | `TemplateLoader` instance — resolves template names and composition targets |
-| `trusted` | If `True`, expose `f_globals` of the caller in the eval namespace (see below) |
+| Parameter    | Description                                                                       |
+| ------------ | --------------------------------------------------------------------------------- |
+| `template` | Template name (without `.json`) or path string                                  |
+| `loader`   | `TemplateLoader` instance — resolves template names and composition targets    |
+| `trusted`  | If `True`, expose `f_globals` of the caller in the eval namespace (see below) |
 
 `FilesystemLoader(base_dir)` resolves template names relative to `base_dir` and handles
 composition (loading referenced templates from the same directory).
@@ -1078,13 +1202,13 @@ composition (loading referenced templates from the same directory).
 When a band is emitted, the renderer builds a namespace for evaluating `[expr]` tokens.
 Entries are merged in order — later entries override earlier ones:
 
-| Priority | Source | Notes |
-|----------|--------|-------|
-| 1 (lowest) | `f_globals` of caller | Only when `trusted=True` |
-| 2 | `f_locals` of caller | Loop variables (`row`, counters, …) |
-| 3 | Explicit workspace `r["key"] = value` | Overrides locals with same name |
-| 4 | `r.globals` | Registered callables and objects |
-| 5 (highest) | System variables | `_r`, `_name`, `_date`, `_time`, `_user`, `_page` |
+| Priority    | Source                                  | Notes                                                         |
+| ----------- | --------------------------------------- | ------------------------------------------------------------- |
+| 1 (lowest)  | `f_globals` of caller                 | Only when `trusted=True`                                    |
+| 2           | `f_locals` of caller                  | Loop variables (`row`, counters, …)                        |
+| 3           | Explicit workspace `r["key"] = value` | Overrides locals with same name                               |
+| 4           | `r.globals`                           | Registered callables and objects                              |
+| 5 (highest) | System variables                        | `_r`, `_name`, `_date`, `_time`, `_user`, `_page` |
 
 Dict and dict-like objects (including `sqlite3.Row`) are converted to `SimpleNamespace`
 automatically, so `row["price"]` in the data becomes `row.price` in the template.
@@ -1119,12 +1243,12 @@ r.globals["config"]  = app_config
 
 ### Output methods
 
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `to_html()` | `str` | Full HTML document |
-| `to_pdf()` | `bytes` | PDF bytes (requires WeasyPrint) |
-| `to_json()` | `str` | Compiled records as JSON string |
-| `save_output(path)` | — | Write compiled records to a `.json` file |
+| Method                | Returns   | Description                                |
+| --------------------- | --------- | ------------------------------------------ |
+| `to_html()`         | `str`   | Full HTML document                         |
+| `to_pdf()`          | `bytes` | PDF bytes (requires WeasyPrint)            |
+| `to_json()`         | `str`   | Compiled records as JSON string            |
+| `save_output(path)` | —        | Write compiled records to a `.json` file |
 
 `to_html()` and `to_pdf()` trigger the final render pass (including `on_after()`).
 `save_output()` / `to_json()` write the intermediate compiled records — useful for
@@ -1209,20 +1333,20 @@ r.emit("next_section_header")
 
 ### Useful attributes
 
-| Attribute | Type | Description |
-|-----------|------|-------------|
-| `title` | str | Report title (default: template name) |
-| `report_date` | str | Print date `dd/mm/yyyy` — set before first emit to override |
-| `report_time` | str | Print time `HH:MM:SS` |
-| `report_user` | str | OS user (`USER` / `USERNAME` env var) |
-| `cur_page` | int | Current page number — increment manually when concatenating reports |
-| `cur_band` | str | Band currently being emitted |
-| `last_band` | str | Band emitted at the previous emit() call |
-| `started` | bool | `True` after the first emit() |
-| `data` | SimpleNamespace | `f_locals` captured at the last emit() — available in hooks |
-| `globals` | dict | Registered callables / objects |
-| `formatters` | dict | Custom formatters — checked before built-ins |
-| `base_dir` | Path | Root for `@relative/path` references in the `load` / `img` formatters |
+| Attribute       | Type            | Description                                                                 |
+| --------------- | --------------- | --------------------------------------------------------------------------- |
+| `title`       | str             | Report title (default: template name)                                       |
+| `report_date` | str             | Print date `dd/mm/yyyy` — set before first emit to override              |
+| `report_time` | str             | Print time `HH:MM:SS`                                                     |
+| `report_user` | str             | OS user (`USER` / `USERNAME` env var)                                   |
+| `cur_page`    | int             | Current page number — increment manually when concatenating reports        |
+| `cur_band`    | str             | Band currently being emitted                                                |
+| `last_band`   | str             | Band emitted at the previous emit() call                                    |
+| `started`     | bool            | `True` after the first emit()                                             |
+| `data`        | SimpleNamespace | `f_locals` captured at the last emit() — available in hooks              |
+| `globals`     | dict            | Registered callables / objects                                              |
+| `formatters`  | dict            | Custom formatters — checked before built-ins                               |
+| `base_dir`    | Path            | Root for `@relative/path` references in the `load` / `img` formatters |
 
 ---
 
@@ -1272,209 +1396,26 @@ for optional bands that may or may not be present in a composed template.
 
 ---
 
-
 ### Examples
 
 The `renderer/examples/` directory contains working scripts. The [Tutorial](tutorial.md)
 walks through running them; here the focus is on which API patterns each one exercises.
 
-| Example | API patterns |
-|---------|--------------|
-| `01_test_compose.py` | Loads a template and shows how composition merges rows from multiple templates into a single band structure |
-| `02_articles.py` | Zebra striping with `patch_band()`, conditional field styling with `patch()`, accumulators in `on_after_band` |
-| `03_detail.py` | Multi-level grouping with cascading accumulators (row / category / grand total), `page_break()` between sections, conditional `silent` emission for a summary mode |
-| `04_labels.py` | Multi-column grid layout using template-level column definitions, no hooks |
-| `05_barcode_test.py` | Direct use of `barcode_svg()` and `qr_svg()` utilities; EAN-13, Code128, Code39, ITF, EAN-8, QR with various sizes |
-| `06_img_markdown.py` | Image scaling modes (`img,contain` / `img,cover` / proportional) combined with `autoStretch` Markdown cells |
-| `07_embed.py` | `embed` cell type for side-by-side layout; `autoStretch` height propagation from inner to outer band |
-| `08_invoice.py` | Full pagination (`first_header`, `page_header`, `page_footer`, `last_footer`, `page_filler`), conditional band selection based on data, phantom pass for `autoStretch` descriptions |
+| Example                | API patterns                                                                                                                                                                                    |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `01_test_compose.py` | Loads a template and shows how composition merges rows from multiple templates into a single band structure                                                                                     |
+| `02_articles.py`     | Zebra striping with `patch_band()`, conditional field styling with `patch()`, accumulators in `on_after_band`                                                                             |
+| `03_detail.py`       | Multi-level grouping with cascading accumulators (row / category / grand total),`page_break()` between sections, conditional `silent` emission for a summary mode                           |
+| `04_labels.py`       | Multi-column grid layout using template-level column definitions, no hooks                                                                                                                      |
+| `05_barcode_test.py` | Direct use of `barcode_svg()` and `qr_svg()` utilities; EAN-13, Code128, Code39, ITF, EAN-8, QR with various sizes                                                                          |
+| `06_img_markdown.py` | Image scaling modes (`img,contain` / `img,cover` / proportional) combined with `autoStretch` Markdown cells                                                                               |
+| `07_embed.py`        | `embed` cell type for side-by-side layout; `autoStretch` height propagation from inner to outer band                                                                                        |
+| `08_invoice.py`      | Full pagination (`first_header`, `page_header`, `page_footer`, `last_footer`, `page_filler`), conditional band selection based on data, phantom pass for `autoStretch` descriptions |
 
 The examples cover the most common use cases. Some API features are not exercised in them
 — for instance, `r.formatters` for custom formatters, `last_band` in hooks for detecting
 the first or last row of a group, or `r.globals` for shared helper functions. These are
 fully supported; the examples simply focus on the patterns most applications need.
-
----
-
-## 6. Cell types
-
-The `type` field tells the renderer how to interpret a cell's `content` and which HTML
-wrapper to produce. The default is `text`; the other five types enable specialised
-rendering without requiring extra template logic.
-
----
-
-### text
-
-The default type. `content` is a free-form string with any number of `[expr|fmt]` tokens
-interspersed with literal text.
-
-```json
-{ "type": "text", "content": "Item [row.code] — [row.desc | trim | upper]" }
-```
-
-Barcode, QR, and image formatters work in `text` cells too. When a formatter returns an
-SVG or `<img>` tag the renderer embeds it inline, so a single `text` cell can mix text and
-graphics:
-
-```json
-{ "type": "text", "content": "[row.ean | ean13]  [row.desc]" }
-```
-
----
-
-### markdown
-
-`content` is Markdown source (with optional `[expr|fmt]` tokens). The renderer converts it
-to HTML using the `markdown` library. If `markdown` is not installed it falls back to
-plain-text with `<br>` line breaks.
-
-```json
-{ "type": "markdown", "content": "[row.notes]", "autoStretch": true }
-```
-
-- Content is **not HTML-escaped** before Markdown parsing, so raw HTML in the content is
-  passed through.
-- `autoStretch: true` is almost always the right choice for Markdown cells since the
-  rendered height depends on the content length.
-- In PDF output, `autoStretch` triggers a phantom render pass to measure the actual height
-  before laying out the page.
-- To load content from an external file, use the `load` formatter:
-  `["@data/notes.md" | load]`. The `@` prefix resolves the path relative to `r.base_dir`
-  (see [Attributes](#attributes)); if `base_dir` is not set, `Path.cwd()` is used.
-
----
-
-### image
-
-`content` is a URL, absolute file path, or base64 data URI. It can be a literal string or
-a `[expr|fmt]` token that resolves to one of those forms.
-
-The recommended approach is to use the `img` formatter, which resolves local paths to
-base64 data URIs automatically and gives you control over the scaling mode:
-
-```json
-{ "type": "image", "content": "[row.photo | img,contain]" }
-{ "type": "image", "content": "[row.photo | img,cover]" }
-{ "type": "image", "content": "[@data/logo.png | img,natural]" }
-```
-
-The `@` prefix resolves the path relative to `r.base_dir` (the same convention used by
-the `load` formatter — see [Attributes](#attributes)).
-
-If no `img` formatter is used, the renderer treats the value as a plain URL and generates
-a basic `<img>` tag with `autoStretch`-aware sizing. Local file paths are not resolved to
-base64 in this fallback mode, so images may not appear in PDF output.
-
----
-
-### barcode
-
-Renders a 1-D barcode as SVG. Two approaches are available:
-
-**Formatter approach (recommended)** — use a barcode formatter in any cell type:
-
-```json
-{ "type": "text", "content": "[row.ean | ean13,200,52]" }
-```
-
-The formatter accepts explicit dimensions and options; see [Chapter 4](#4-variables--formatters).
-
-**Cell-type approach** — set `type` to `barcode` and let the renderer use the cell
-dimensions and optional cell-level properties:
-
-```json
-{
-  "type": "barcode",
-  "content": "[row.ean]",
-  "barcodeType": "ean13",
-  "showText": true,
-  "fontSize": 4
-}
-```
-
-| Property | Default | Description |
-|----------|---------|-------------|
-| `barcodeType` | `"ean13"` | Any supported barcode name (see [Chapter 4](#4-variables--formatters)) |
-| `showText` | `true` | Show the human-readable text below the bars |
-| `fontSize` | `4` | Font size (pt) for the text below the bars |
-
-These properties are not editable in the editor — set them by hand in the JSON if needed.
-The cell width and height are used as the SVG dimensions.
-
----
-
-### qrcode
-
-Renders a QR code as SVG. Same two approaches as `barcode`:
-
-**Formatter approach:**
-
-```json
-{ "type": "text", "content": "[row.url | qr,150]" }
-```
-
-**Cell-type approach** — the renderer uses the cell's `width` and `height` as the SVG
-dimensions:
-
-```json
-{ "type": "qrcode", "content": "[row.url]" }
-```
-
-No additional cell-level properties beyond `width` and `height`.
-
----
-
-### embed
-
-Renders another band inline, side-by-side with the other cells of the row. The target
-band name is stored in `embedTarget`; the `content` field is unused.
-
-```json
-{
-  "type": "embed",
-  "embedTarget": "address_block",
-  "width": 300,
-  "height": 80
-}
-```
-
-- Only **one level of nesting** is supported — an embedded band cannot itself contain
-  `embed` cells.
-- The embedded band is rendered with the **same eval namespace** as the parent emission,
-  so it has access to the same variables.
-- If the embedded band has cells with `autoStretch`, the outer cell height expands to fit.
-  This requires a phantom pass in PDF output.
-- The cell's `width` and `height` set the outer container dimensions; the inner band lays
-  out its cells within that width.
-
-A typical use case is a two-column row where the left cell embeds an image band and the
-right cell embeds a details band:
-
-```json
-"cells": [
-  { "type": "embed", "embedTarget": "product_image",   "width": 120, "height": 100 },
-  { "type": "embed", "embedTarget": "product_details",  "width": 400, "height": 100 }
-]
-```
-
----
-
-### Rotation
-
-All six types support the `rotation` property: `0` (default), `90`, `180`, `270` degrees.
-Rotation is applied with CSS `writing-mode` for 90° and 270°, and `transform: rotate` for
-180°.
-
-| Value | Effect |
-|-------|--------|
-| `0` | Normal |
-| `90` | Text runs bottom to top |
-| `180` | Text is upside-down |
-| `270` | Text runs top to bottom |
-
-Rotation affects the visual rendering only — the cell's `width` and `height` in the JSON
-still refer to the unrotated dimensions as laid out in the row.
 
 ---
 
@@ -1492,13 +1433,13 @@ Six band names carry a reserved meaning. They are declared in the template like 
 band but are **never emitted by the caller** — the renderer inserts them automatically at
 the right point in each page.
 
-| Band name | When rendered |
-|-----------|---------------|
-| `first_header` | Top of the first page — **replaces** `page_header` on that page |
-| `page_header` | Top of every page that does not have a `first_header` |
-| `page_footer` | Bottom of every page that does not have a `last_footer` |
-| `last_footer` | Bottom of the last page — **replaces** `page_footer` on that page |
-| `page_filler` | Fills the blank space between the last data band and the footer |
+| Band name        | When rendered                                                             |
+| ---------------- | ------------------------------------------------------------------------- |
+| `first_header` | Top of the first page —**replaces** `page_header` on that page   |
+| `page_header`  | Top of every page that does not have a `first_header`                   |
+| `page_footer`  | Bottom of every page that does not have a `last_footer`                 |
+| `last_footer`  | Bottom of the last page —**replaces** `page_footer` on that page |
+| `page_filler`  | Fills the blank space between the last data band and the footer           |
 
 A template does not need to define all of them — only the ones that are present in the
 template JSON are used. A typical report defines `page_header` and `page_footer`; a formal
@@ -1542,17 +1483,19 @@ remaining vertical space, then `last_footer` (if defined), then `page_footer`.
 
 ### autoStretch and the phantom pass
 
-`autoStretch: true` on a cell allows the cell — and therefore the entire row — to grow
-vertically to fit its rendered content. Because all cells in a row share the same height
-(solidary sizing), the row height becomes that of the tallest `autoStretch` cell.
-
-**HTML output** — autoStretch is handled by CSS (`height: auto`). The browser resolves
-row heights naturally. No extra work is needed.
+`autoStretch: true` on a cell allows it to grow vertically to fit its rendered content.
 
 **PDF output** — WeasyPrint requires a fixed page layout before rendering. The renderer
 runs a *phantom pass*: it renders the band in a single-page throwaway document, measures
-the actual pixel height, and uses that value when assembling the real pages. This makes
-PDF autoStretch accurate but slightly slower for reports with many variable-height rows.
+the actual pixel height, and uses that value when assembling the real pages. The entire
+row grows to the new height — all cells remain solidary, exactly as in the editor. This
+makes PDF autoStretch accurate but slightly slower for reports with many variable-height rows.
+
+**HTML output** — autoStretch is handled by CSS (`height: auto`). No phantom pass is
+performed. Each `autoStretch` cell expands independently to fit its own content, so
+cells in the same row may end up with different heights — solidary sizing is not
+guaranteed in HTML. This is usually acceptable for screen display but means HTML and
+PDF output may look slightly different when `autoStretch` cells are present.
 
 By default, all phantom renders for a given report are batched into a single WeasyPrint
 call (`phantom_batch = True`). Set `r.phantom_batch = False` to render each band
@@ -1629,13 +1572,13 @@ concept.
 
 ### HTML vs PDF differences
 
-| Behaviour | HTML | PDF |
-|-----------|------|-----|
-| Page boundaries | None — single continuous flow | Fixed pages via WeasyPrint |
-| `page_header` / `page_footer` | Rendered once at top/bottom | Repeated on every page |
-| `page_filler` | Rendered inline | Fills remaining space on last page |
-| `autoStretch` | CSS `height: auto` | Phantom pass required |
-| `page_break()` | No effect | Forces a new page |
+| Behaviour                         | HTML                           | PDF                                |
+| --------------------------------- | ------------------------------ | ---------------------------------- |
+| Page boundaries                   | None — single continuous flow | Fixed pages via WeasyPrint         |
+| `page_header` / `page_footer` | Rendered once at top/bottom    | Repeated on every page             |
+| `page_filler`                   | Rendered inline                | Fills remaining space on last page |
+| `autoStretch`                   | CSS `height: auto`           | Phantom pass required              |
+| `page_break()`                  | No effect                      | Forces a new page                  |
 
 ---
 
@@ -1658,10 +1601,10 @@ Composition rules are declared in the `composition` array of the main template:
 
 Each rule has two fields:
 
-| Field | Description |
-|-------|-------------|
-| `rule` | One of `IfNot`, `Replace`, `InsBefore`, `InsAfter` (case-insensitive) |
-| `target` | Name of the template to load — **without extension**, resolved by the loader |
+| Field      | Description                                                                        |
+| ---------- | ---------------------------------------------------------------------------------- |
+| `rule`   | One of `IfNot`, `Replace`, `InsBefore`, `InsAfter` (case-insensitive)      |
+| `target` | Name of the template to load —**without extension**, resolved by the loader |
 
 The `target` value is a logical name, not a file path. How it is resolved depends on the
 loader in use — see [The loader](#the-loader) below.
@@ -1800,13 +1743,14 @@ loader = FilesystemLoader(
 r = AndRepRenderer("my_report", loader=loader)
 ```
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `base_dir` | *(required)* | Directory containing standard template JSON files |
-| `custom_dir` | `base_dir / "custom"` | Directory for local overrides |
-| `lang` | `None` | If set, applies expression translations for this language key on load |
+| Parameter      | Default                 | Description                                                           |
+| -------------- | ----------------------- | --------------------------------------------------------------------- |
+| `base_dir`   | *(required)*          | Directory containing standard template JSON files                     |
+| `custom_dir` | `base_dir / "custom"` | Directory for local overrides                                         |
+| `lang`       | `None`                | If set, applies expression translations for this language key on load |
 
 **Search order** — for a given name, `FilesystemLoader` looks for:
+
 1. `custom_dir/<name>.json`
 2. `base_dir/<name>.json`
 
@@ -1912,15 +1856,16 @@ to one `emit()` call in the loop engine.
 ]
 ```
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `band` | string | yes | Band name. Use `"__page_break__"` to force a page break. |
-| `values` | any[] | no | Evaluated expression values, one per `[expr]` token across all cells of the band, in document order. Omit if the band has no tokens. |
-| `css_extras` | string[] | no | Per-cell CSS overrides, one entry per cell (including embed cells). Empty string means no override. |
-| `band_css` | string | no | CSS applied to the entire band container. |
-| `embeds` | object | no | Map of `cell_id → compiled_record` for `embed`-type cells. |
+| Field          | Type     | Required | Description                                                                                                                            |
+| -------------- | -------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `band`       | string   | yes      | Band name. Use `"__page_break__"` to force a page break.                                                                             |
+| `values`     | any[]    | no       | Evaluated expression values, one per `[expr]` token across all cells of the band, in document order. Omit if the band has no tokens. |
+| `css_extras` | string[] | no       | Per-cell CSS overrides, one entry per cell (including embed cells). Empty string means no override.                                    |
+| `band_css`   | string   | no       | CSS applied to the entire band container.                                                                                              |
+| `embeds`     | object   | no       | Map of `cell_id → compiled_record` for `embed`-type cells.                                                                        |
 
 **Rules:**
+
 - Page-role bands (`first_header`, `page_header`, `page_footer`, `last_footer`,
   `page_filler`) must **not** appear in the records — the renderer inserts them
   automatically.
@@ -1944,14 +1889,14 @@ python -m andrep render \
     --output    report.html
 ```
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `--template` | *(required)* | Template JSON file path, or a bare name resolved by `--template-dir` |
-| `--records` | *(required)* | Compiled records JSON file, or `-` to read from stdin |
-| `--format` | `html` | Output format: `html` or `pdf` |
-| `--output` | `-` (stdout) | Output file path, or `-` to write to stdout |
+| Option             | Default                  | Description                                                                                 |
+| ------------------ | ------------------------ | ------------------------------------------------------------------------------------------- |
+| `--template`     | *(required)*           | Template JSON file path, or a bare name resolved by `--template-dir`                      |
+| `--records`      | *(required)*           | Compiled records JSON file, or `-` to read from stdin                                     |
+| `--format`       | `html`                 | Output format:`html` or `pdf`                                                           |
+| `--output`       | `-` (stdout)           | Output file path, or `-` to write to stdout                                               |
 | `--template-dir` | *(parent of template)* | Base directory for template resolution (required when `--template` is a name, not a path) |
-| `--meta` | *(none)* | JSON object of renderer attributes, e.g. `'{"title":"Report"}'` |
+| `--meta`         | *(none)*               | JSON object of renderer attributes, e.g.`'{"title":"Report"}'`                            |
 
 **Stdin / stdout pipeline** — records can be piped in and output piped out, making the
 renderer easy to embed in shell scripts or any language that can spawn a subprocess:
@@ -2048,12 +1993,12 @@ on the calling machine — useful for containerised deployments.
 
 The `clients/js/examples/` folder contains four runnable examples:
 
-| File | Transport | Description |
-|------|-----------|-------------|
-| `run-cli.ts` | CLI subprocess | Runs the loop, calls `callAndrep()`, writes HTML + PDF to `examples/output/` |
-| `server.ts` | CLI subprocess | Node.js HTTP server; renders on each request via `callAndrep()` |
-| `call-server.ts` | REST | Runs the loop, calls `callAndrepRest()`, writes output files |
-| `server-rest.ts` | REST | Same as `server.ts` but delegates rendering to an external Python server |
+| File               | Transport      | Description                                                                      |
+| ------------------ | -------------- | -------------------------------------------------------------------------------- |
+| `run-cli.ts`     | CLI subprocess | Runs the loop, calls `callAndrep()`, writes HTML + PDF to `examples/output/` |
+| `server.ts`      | CLI subprocess | Node.js HTTP server; renders on each request via `callAndrep()`                |
+| `call-server.ts` | REST           | Runs the loop, calls `callAndrepRest()`, writes output files                   |
+| `server-rest.ts` | REST           | Same as `server.ts` but delegates rendering to an external Python server       |
 
 Run them from `clients/js/`:
 
@@ -2085,19 +2030,19 @@ pip install fastapi uvicorn
 python clients/server/server_fastapi.py --template-dir /path/to/templates
 ```
 
-| Option | Env variable | Default | Description |
-|--------|-------------|---------|-------------|
-| `--template-dir` | `ANDREP_TEMPLATE_DIR` | `.` | Template directory |
-| `--port` | `ANDREP_PORT` | `5000` | TCP port |
-| `--host` | `ANDREP_HOST` | `127.0.0.1` | Bind address |
+| Option             | Env variable            | Default       | Description        |
+| ------------------ | ----------------------- | ------------- | ------------------ |
+| `--template-dir` | `ANDREP_TEMPLATE_DIR` | `.`         | Template directory |
+| `--port`         | `ANDREP_PORT`         | `5000`      | TCP port           |
+| `--host`         | `ANDREP_HOST`         | `127.0.0.1` | Bind address       |
 
 **Routes:**
 
-| Method | Route | Description |
-|--------|-------|-------------|
-| `POST` | `/render` | Render compiled records → HTML or PDF |
-| `GET` | `/health` | `{ status, template_dir }` |
-| `GET` | `/templates` | List available template names |
+| Method   | Route          | Description                            |
+| -------- | -------------- | -------------------------------------- |
+| `POST` | `/render`    | Render compiled records → HTML or PDF |
+| `GET`  | `/health`    | `{ status, template_dir }`           |
+| `GET`  | `/templates` | List available template names          |
 
 **`POST /render` body:**
 
@@ -2123,13 +2068,12 @@ as a guide when porting to another language.
 1. **Load the template** — parse `rows` (band/cell structure), `page`, `bands`, and
    `composition`. Apply composition rules by loading referenced templates. Exclude
    page-role band rows from the emit loop.
-
 2. **Run the loop** — iterate your data in business order. For each emission:
+
    - Evaluate every `[expr|fmt]` token in the band's cells using your language's
      expression evaluator (usually `eval` or a field accessor).
    - Collect evaluated values in document order (row by row, cell by cell, token by token).
    - For embed cells, recursively compile the target band with the same namespace.
-
 3. **Call the renderer** — pass the compiled records JSON to `python -m andrep render`
    via subprocess stdin/stdout, or POST to the REST server.
 
@@ -2138,12 +2082,12 @@ as a guide when porting to another language.
 Not all formatters need to be implemented in the loop engine. Only the simple,
 language-neutral ones make sense to evaluate locally:
 
-| Implement in loop engine | Delegate to renderer (pass raw value) |
-|--------------------------|---------------------------------------|
-| `upper`, `lower`, `trim` | `img`, `load`, `base64` |
-| `space`, `zeros` | `ean13`, `code128`, `qr` |
-| `2`, `.2`, `N.D`, `+.2` | `currency` |
-| `date`, `dd/mm/yyyy` | `markdown` (only for type=markdown cells) |
+| Implement in loop engine        | Delegate to renderer (pass raw value)       |
+| ------------------------------- | ------------------------------------------- |
+| `upper`, `lower`, `trim`  | `img`, `load`, `base64`               |
+| `space`, `zeros`            | `ean13`, `code128`, `qr`              |
+| `2`, `.2`, `N.D`, `+.2` | `currency`                                |
+| `date`, `dd/mm/yyyy`        | `markdown` (only for type=markdown cells) |
 
 For delegated formatters, the loop engine passes the raw value; the formatter name
 remains in the template cell content and the renderer applies it during HTML generation.
@@ -2152,14 +2096,14 @@ remains in the template cell content and the renderer applies it during HTML gen
 
 The loop engine must expose the following names in the expression namespace:
 
-| Name | Value |
-|------|-------|
-| `_r` | Engine state object (`_r.title`, `_r.curBand`, `_r.date`, …) |
-| `_name` | Report title (same as `_r.title`) |
-| `_date` | Current date `dd/mm/yyyy` |
-| `_time` | Current time `HH:MM:SS` |
-| `_user` | Current OS user |
-| `_page` | Always `1` — actual page number is assigned by the renderer |
+| Name      | Value                                                               |
+| --------- | ------------------------------------------------------------------- |
+| `_r`    | Engine state object (`_r.title`, `_r.curBand`, `_r.date`, …) |
+| `_name` | Report title (same as `_r.title`)                                 |
+| `_date` | Current date `dd/mm/yyyy`                                         |
+| `_time` | Current time `HH:MM:SS`                                           |
+| `_user` | Current OS user                                                     |
+| `_page` | Always `1` — actual page number is assigned by the renderer      |
 
 #### Python as a client — a didactic example
 
@@ -2265,6 +2209,12 @@ number of renderers, each producing a different output format.
 The Python renderer (`python -m andrep render`) is the reference implementation, but
 nothing prevents writing additional renderers that read the same JSON and produce
 something entirely different.
+
+> **Note:** The output targets described in this chapter (spreadsheet, word processor,
+> database log, etc.) are **architectural possibilities**, not built-in features of AndRep.
+> The compiled records format and the pattern code shown here give you everything you need
+> to build your own renderer in any language. The examples are meant as a starting point
+> and a demonstration of what the format makes possible.
 
 ---
 
