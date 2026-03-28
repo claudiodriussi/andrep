@@ -102,7 +102,7 @@ andrep/
 You do not need to build or install all of them to get started. The sections below
 walk through each one separately.
 
-> **Paths** — all shell commands assume you are in the `andrep/` repository root unless
+> **Paths** — all shell commands assume you are in the `andMaking any language compatible with AndReprep/` repository root unless
 > stated otherwise. Adjust paths if your working directory differs.
 
 ---
