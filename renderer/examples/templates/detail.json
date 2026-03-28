@@ -15,6 +15,12 @@
     "currency": ""
   },
   "_columns": "x=0/72 date|code  x=72/186 notes|desc  x=258/40 uom  x=298/80 qty|price  x=378/80 unit_price  x=458/130 purchased  x=588/130 sold",
+  "expressions": {
+    "js": {
+      "mov.qty * mov.unit_price if mov.type == 'C' else None": "mov.type === 'C' ? mov.qty * mov.unit_price : null",
+      "mov.qty * mov.unit_price if mov.type == 'S' else None": "mov.type === 'S' ? mov.qty * mov.unit_price : null"
+    }
+  },
   "rows": [
     {
       "id": "r1",

@@ -38,7 +38,8 @@ Homepage   = "https://github.com/claudiodriussi/andrep"
 Repository = "https://github.com/claudiodriussi/andrep"
 
 [project.scripts]
-andrep = "andrep.__main__:main"
+andrep      = "andrep.__main__:main"
+andrep-expr = "andrep.expr_cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
