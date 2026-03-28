@@ -26,22 +26,20 @@ def cmd_render(args):
     else:
         records = json.loads(Path(args.records).read_text(encoding="utf-8"))
 
-    loader = None
-    if args.template_dir:
-        loader = FilesystemLoader(base_dir=Path(args.template_dir))
-
-    # If --template is a path to an existing file, load it directly as a dict.
-    # Otherwise treat it as a name to be resolved by the loader.
     template_path = Path(args.template)
     if template_path.exists():
-        template = json.loads(template_path.read_text(encoding="utf-8"))
-        template_dir = str(template_path.parent) if not loader else None
+        base_dir = Path(args.template_dir) if args.template_dir else template_path.parent
+        loader = FilesystemLoader(base_dir=base_dir)
+        template = template_path.stem
     else:
+        if not args.template_dir:
+            print(f"Error: --template-dir required when template is a name, not a path", file=sys.stderr)
+            sys.exit(1)
+        loader = FilesystemLoader(base_dir=Path(args.template_dir))
         template = args.template
-        template_dir = None
 
     metadata = json.loads(args.meta) if args.meta else None
-    r = AndRepRenderer.from_compiled(template, records, template_dir=template_dir, loader=loader, metadata=metadata)
+    r = AndRepRenderer.from_compiled(template, records, loader=loader, metadata=metadata)
 
     fmt = args.format.lower()
     if fmt == "pdf":

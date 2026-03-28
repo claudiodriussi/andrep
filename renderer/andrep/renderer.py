@@ -22,26 +22,22 @@ def _load_json(path):
         return json.load(f)
 
 
-def load_template(template, template_dir=None, loader: TemplateLoader = None):
-    """Load a template (name, path or dict) and apply composition rules.
+def load_template(template, loader: TemplateLoader = None):
+    """Load a template (name or dict) and apply composition rules.
 
-    When a loader is provided it is used for all file lookups (main template
-    and every composition target).  When no loader is given the function falls
-    back to direct filesystem access using template_dir.
+    If *loader* is None, defaults to FilesystemLoader('.') — looks for
+    templates in the current working directory.
 
     Returns the final template dict with rows already merged.
     """
-    if loader is not None:
-        tmpl = loader.load(template) if isinstance(template, str) else dict(template)
-    elif isinstance(template, str):
-        path = template
-        if template_dir is None:
-            template_dir = os.path.dirname(os.path.abspath(path))
-        tmpl = _load_json(path)
+    if loader is None:
+        from .loader import FilesystemLoader
+        loader = FilesystemLoader(".")
+
+    if isinstance(template, str):
+        tmpl = loader.load(template)
     else:
         tmpl = dict(template)
-        if template_dir is None:
-            template_dir = "."
 
     composition = tmpl.get("composition", [])
     if not composition:
@@ -53,16 +49,10 @@ def load_template(template, template_dir=None, loader: TemplateLoader = None):
         if not target:
             continue
 
-        if loader is not None:
-            try:
-                ref_tmpl = loader.load(target)
-            except FileNotFoundError:
-                continue
-        else:
-            ref_path = os.path.join(template_dir, f"{target}.json")
-            if not os.path.exists(ref_path):
-                continue
-            ref_tmpl = _load_json(ref_path)
+        try:
+            ref_tmpl = loader.load(target)
+        except FileNotFoundError:
+            continue
 
         ref_rows = ref_tmpl.get("rows", [])
         main_rows = tmpl.get("rows", [])
@@ -229,11 +219,10 @@ class AndRepRenderer:
     def __init__(
         self,
         template,
-        template_dir=None,
         loader: TemplateLoader = None,
         trusted: bool = False,
     ):
-        self.template = load_template(template, template_dir, loader=loader)
+        self.template = load_template(template, loader=loader)
         self.page = self.template.get("page", {})
         self._emissions: list[tuple[str, dict]] = []
         self._compiled: list[dict] | None = None   # set by compile()
@@ -569,7 +558,7 @@ class AndRepRenderer:
     # ------------------------------------------------------------------
 
     @classmethod
-    def from_compiled(cls, template, records, template_dir=None, loader=None, metadata=None):
+    def from_compiled(cls, template, records, loader=None, metadata=None):
         """Create a renderer from pre-compiled records produced by an external loop engine.
 
         The records list has the same format as save_output() / to_json():
@@ -592,7 +581,7 @@ class AndRepRenderer:
             html = r.to_html()
             pdf  = r.to_pdf()
         """
-        r = cls(template, template_dir=template_dir, loader=loader)
+        r = cls(template, loader=loader)
         # Store in _emissions so that:
         #   - compile() runs normally and prepends/appends page_role bands (_compiled)
         #   - _to_pdf_html() reads _emissions for the body (page_role handled per-page)

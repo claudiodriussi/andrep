@@ -25,7 +25,7 @@ def render(
     loader: FilesystemLoader | None = None,
 ) -> bytes | str:
     """Render compiled records to HTML (str) or PDF (bytes)."""
-    r = AndRepRenderer.from_compiled(template, records, loader=loader, metadata=metadata)
+    r = AndRepRenderer.from_compiled(template, records, loader=loader or make_loader("."), metadata=metadata)
     if fmt == "pdf":
         return r.to_pdf()
     return r.to_html()
