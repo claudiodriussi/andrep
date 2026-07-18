@@ -6,6 +6,15 @@
 #   pip install -r requirements.txt
 
 # --- PDF output ---
+# to_pdf() defaults to the Playwright backend (better CSS/SVG support, much
+# faster once warm — see _docs/RENDERER.md). Needs a browser download after
+# pip install:
+#   pip install playwright && playwright install chromium
+playwright
+
+# WeasyPrint: explicit fallback (to_pdf(backend="weasyprint") or
+# ANDREP_PDF_BACKEND=weasyprint) — no extra setup beyond this pip install,
+# useful on memory/CPU-constrained hosts where installing Chromium isn't practical.
 weasyprint
 
 # --- Barcode / QR (SVG output, no Pillow needed) ---

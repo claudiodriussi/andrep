@@ -37,9 +37,12 @@ sudo apt install git python3 python3-pip python3-venv nodejs npm
 > Node, use [nvm](https://github.com/nvm-sh/nvm) or the NodeSource repository.
 
 
-#### WeasyPrint dependencies (for PDF output)
+#### PDF output — no extra system packages needed here
 
-WeasyPrint requires a few system libraries to render fonts and graphics:
+PDF rendering uses a pluggable backend — **Playwright/Chromium by default**, with
+**WeasyPrint** available as a lighter, zero-system-deps fallback. Installing either is
+covered in [step 6](#6-install-the-python-renderer) via `pip`; nothing to add to this list
+for Playwright. If you plan to use the WeasyPrint fallback, it needs a few system libraries:
 
 ```bash
 sudo apt install libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b \
@@ -55,7 +58,7 @@ Install [Homebrew](https://brew.sh/) if you don't have it, then:
 
 ```bash
 brew install git python node
-brew install pango libffi jpeg openjpeg  # WeasyPrint dependencies
+brew install pango libffi jpeg openjpeg  # only needed for the WeasyPrint fallback backend
 ```
 
 Everything else in this tutorial works identically on macOS.
@@ -70,7 +73,9 @@ Everything else in this tutorial works identically on macOS.
 - **Git** — download from [git-scm.com](https://git-scm.com/download/win)
 - **Python** — download from [python.org](https://www.python.org/downloads/); tick "Add Python to PATH" during setup
 - **Node.js** — download from [nodejs.org](https://nodejs.org/)
-- **WeasyPrint on Windows** — follow the official guide at
+- **PDF output** — Playwright (the default backend) works out of the box on Windows, just
+  `playwright install chromium` (see [step 6](#6-install-the-python-renderer)). If you want the
+  WeasyPrint fallback instead, follow the official guide at
   [doc.courtbouillon.org/weasyprint](https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#windows);
   it requires GTK3 which is installed via a separate installer
 
@@ -195,15 +200,22 @@ cd andrep                                      # repository root
 python3 -m venv .venv
 source .venv/bin/activate                      # Windows: .venv\Scripts\activate
 
-pip install -e "renderer/[all]"                # renderer + WeasyPrint + barcode + QR + Markdown
+pip install -e "renderer/[all]"                # renderer + Playwright + WeasyPrint + barcode + QR + Markdown
+playwright install chromium                    # downloads the browser used by the default PDF backend
 pip install -r clients/python/requirements.txt # Python REST client (requests)
 ```
 
 > **uv / conda / pipenv users** — any virtual environment tool works. Just create and
 > activate your environment as usual, then run the same `pip install` commands above.
 
-> **HTML only** — if you don't need PDF output and want to skip the WeasyPrint system
-> libraries, replace `renderer/[all]` with `renderer/`.
+> **HTML only** — if you don't need PDF output at all, replace `renderer/[all]` with
+> `renderer/` and skip `playwright install chromium`.
+
+> **WeasyPrint only** — if you'd rather skip the ~150-300MB Chromium download and use the
+> lighter WeasyPrint fallback as your only PDF backend, install `renderer/[pdf]` instead of
+> `renderer/[all]` (see [PDF backends](../renderer/README.md#pdf-backends-playwright-vs-weasyprint)
+> in the renderer README for how to select it via `ANDREP_PDF_BACKEND=weasyprint` or
+> `to_pdf(backend="weasyprint")`).
 
 > **REST server** — if you plan to run the built-in server, also install one of:
 > `pip install -r clients/server/requirements_flask.txt` or

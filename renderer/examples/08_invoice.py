@@ -147,7 +147,10 @@ class InvoiceRenderer(AndRepRenderer):
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
-def main():
+def build_invoice() -> InvoiceRenderer:
+    """Build the invoice renderer (all emit() calls done, ready for
+    to_html()/to_pdf()) without writing any output — reused by
+    09_backend_parity.py to compare PDF backends on the same document."""
     # Load articles from DB
     con = sqlite3.connect(DB)
     con.row_factory = sqlite3.Row
@@ -232,6 +235,11 @@ def main():
     # Totals (evaluated lazily at to_html/to_pdf compile time via [_r.xxx])
     r.vat_amount = round(r.taxable * 0.22, 2)
     r.total      = round(r.taxable + r.vat_amount, 2)
+    return r
+
+
+def main():
+    r = build_invoice()
 
     OUTPUT.mkdir(exist_ok=True)
     r.save_output(OUTPUT / "08_invoice.json")

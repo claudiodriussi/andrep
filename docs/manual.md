@@ -1136,18 +1136,22 @@ platform-specific notes — see the [Tutorial](tutorial.md).
 
 Quick reference for the Python package extras:
 
-| Extra        | Installs                                         |
-| ------------ | ------------------------------------------------ |
-| *(none)*   | Core renderer, HTML output only                  |
-| `pdf`      | WeasyPrint — required for PDF output            |
-| `barcode`  | `python-barcode` — 1-D barcode SVG generation |
-| `qr`       | `qrcode` — QR code SVG generation             |
-| `markdown` | `Markdown` — Markdown cell rendering          |
-| `all`      | All of the above                                 |
+| Extra          | Installs                                              |
+| -------------- | ------------------------------------------------------ |
+| *(none)*      | Core renderer, HTML output only                       |
+| `playwright` | Playwright — **default** PDF backend (needs `playwright install chromium` after) |
+| `pdf`        | WeasyPrint — fallback PDF backend, no extra step needed |
+| `barcode`    | `python-barcode` + `qrcode` — barcode/QR SVG generation |
+| `markdown`   | `Markdown` — Markdown cell rendering                  |
+| `all`        | All of the above (both PDF backends included)          |
 
 ```bash
 pip install -e "renderer/[all]"
+playwright install chromium   # required once — downloads the browser (~150-300MB)
 ```
+
+See [PDF backends](../renderer/README.md#pdf-backends-playwright-vs-weasyprint) in the
+renderer README for how `to_pdf()` picks between the two, and how to select one explicitly.
 
 ---
 
@@ -1169,7 +1173,7 @@ r["grand_total"] = sum(row.price for row in db_rows)
 r.emit("totals")
 
 html = r.to_html()
-pdf  = r.to_pdf()           # requires WeasyPrint
+pdf  = r.to_pdf()           # default backend: Playwright (fallback: WeasyPrint)
 Path("output/report.html").write_text(html, encoding="utf-8")
 Path("output/report.pdf").write_bytes(pdf)
 ```
@@ -1183,14 +1187,15 @@ and so on — no explicit passing required.
 ### Constructor
 
 ```python
-AndRepRenderer(template, loader=None, trusted=False)
+AndRepRenderer(template, loader=None, trusted=False, pdf_backend=None)
 ```
 
-| Parameter    | Description                                                                       |
-| ------------ | --------------------------------------------------------------------------------- |
-| `template` | Template name (without `.json`) or path string                                  |
-| `loader`   | `TemplateLoader` instance — resolves template names and composition targets    |
-| `trusted`  | If `True`, expose `f_globals` of the caller in the eval namespace (see below) |
+| Parameter       | Description                                                                       |
+| --------------- | --------------------------------------------------------------------------------- |
+| `template`    | Template name (without `.json`) or path string                                  |
+| `loader`      | `TemplateLoader` instance — resolves template names and composition targets    |
+| `trusted`     | If `True`, expose `f_globals` of the caller in the eval namespace (see below) |
+| `pdf_backend` | PDF backend to use for `to_pdf()` — `"playwright"`, `"weasyprint"`, or a `PdfBackend` instance. `None` (default) resolves via `ANDREP_PDF_BACKEND` env var, then `"playwright"`. See [PDF backends](../renderer/README.md#pdf-backends-playwright-vs-weasyprint). |
 
 `FilesystemLoader(base_dir)` resolves template names relative to `base_dir` and handles
 composition (loading referenced templates from the same directory).
@@ -1246,7 +1251,7 @@ r.globals["config"]  = app_config
 | Method                | Returns   | Description                                |
 | --------------------- | --------- | ------------------------------------------ |
 | `to_html()`         | `str`   | Full HTML document                         |
-| `to_pdf()`          | `bytes` | PDF bytes (requires WeasyPrint)            |
+| `to_pdf(backend=None)` | `bytes` | PDF bytes (default backend: Playwright; fallback: WeasyPrint) |
 | `to_json()`         | `str`   | Compiled records as JSON string            |
 | `save_output(path)` | —        | Write compiled records to a `.json` file |
 
@@ -1485,11 +1490,12 @@ remaining vertical space, then `last_footer` (if defined), then `page_footer`.
 
 `autoStretch: true` on a cell allows it to grow vertically to fit its rendered content.
 
-**PDF output** — WeasyPrint requires a fixed page layout before rendering. The renderer
-runs a *phantom pass*: it renders the band in a single-page throwaway document, measures
-the actual pixel height, and uses that value when assembling the real pages. The entire
-row grows to the new height — all cells remain solidary, exactly as in the editor. This
-makes PDF autoStretch accurate but slightly slower for reports with many variable-height rows.
+**PDF output** — a fixed page layout is required before rendering. The renderer runs a
+*phantom pass*: it renders the band in a single-page throwaway document via the active PDF
+backend (Playwright or WeasyPrint — see [PDF backends](../renderer/README.md#pdf-backends-playwright-vs-weasyprint)),
+measures the actual pixel height, and uses that value when assembling the real pages. The
+entire row grows to the new height — all cells remain solidary, exactly as in the editor.
+This makes PDF autoStretch accurate but slightly slower for reports with many variable-height rows.
 
 **HTML output** — autoStretch is handled by CSS (`height: auto`). No phantom pass is
 performed. Each `autoStretch` cell expands independently to fit its own content, so
@@ -1497,7 +1503,7 @@ cells in the same row may end up with different heights — solidary sizing is n
 guaranteed in HTML. This is usually acceptable for screen display but means HTML and
 PDF output may look slightly different when `autoStretch` cells are present.
 
-By default, all phantom renders for a given report are batched into a single WeasyPrint
+By default, all phantom renders for a given report are batched into a single backend
 call (`phantom_batch = True`). Set `r.phantom_batch = False` to render each band
 separately — useful when debugging unexpected heights.
 
@@ -1574,7 +1580,7 @@ concept.
 
 | Behaviour                         | HTML                           | PDF                                |
 | --------------------------------- | ------------------------------ | ---------------------------------- |
-| Page boundaries                   | None — single continuous flow | Fixed pages via WeasyPrint         |
+| Page boundaries                   | None — single continuous flow | Fixed pages via the active PDF backend |
 | `page_header` / `page_footer` | Rendered once at top/bottom    | Repeated on every page             |
 | `page_filler`                   | Rendered inline                | Fills remaining space on last page |
 | `autoStretch`                   | CSS `height: auto`           | Phantom pass required              |

@@ -10,7 +10,7 @@ readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
 authors = [{ name = "Claudio" }]
-keywords = ["report", "pdf", "html", "band", "template", "weasyprint"]
+keywords = ["report", "pdf", "html", "band", "template", "playwright", "weasyprint"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -28,10 +28,11 @@ classifiers = [
 dependencies = []
 
 [project.optional-dependencies]
-pdf      = ["weasyprint"]
-barcode  = ["python-barcode", "qrcode"]
-markdown = ["markdown"]
-all      = ["weasyprint", "python-barcode", "qrcode", "markdown"]
+pdf        = ["weasyprint"]
+playwright = ["playwright"]
+barcode    = ["python-barcode", "qrcode"]
+markdown   = ["markdown"]
+all        = ["weasyprint", "playwright", "python-barcode", "qrcode", "markdown"]
 
 [project.urls]
 Homepage   = "https://github.com/claudiodriussi/andrep"

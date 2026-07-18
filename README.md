@@ -28,7 +28,7 @@ flowchart LR
     D["Your code + data\n(any language)"]
     L["Loop engine\nevaluates cells\nemits records"]
     R[/"Compiled records\n(JSON)"/]
-    P["Python Renderer\n(WeasyPrint)"]
+    P["Python Renderer\n(Playwright/WeasyPrint)"]
     H["HTML"]
     PDF["PDF"]
     J["Post process (Excel, other...)"]
@@ -57,7 +57,7 @@ flowchart LR
 ## Key features
 
 - **Language-agnostic** — write your report loop in Python, JavaScript, or any language; the renderer is a separate, stateless step
-- **HTML-first** — output is standard HTML+CSS; PDF adds only automatic page breaks and band resizing via [WeasyPrint](https://weasyprint.org/). Unlike traditional reporting engines that position cells at absolute pixel coordinates (GDI-style), AndRep cells flow with CSS — auto-stretch, word wrap, and image scaling come for free from the layout model, not as special-cased features
+- **HTML-first** — output is standard HTML+CSS; PDF adds only automatic page breaks and band resizing, via a pluggable backend ([Playwright](https://playwright.dev/python/)/Chromium by default, [WeasyPrint](https://weasyprint.org/) as a zero-setup fallback). Unlike traditional reporting engines that position cells at absolute pixel coordinates (GDI-style), AndRep cells flow with CSS — auto-stretch, word wrap, and image scaling come for free from the layout model, not as special-cased features
 - **WYSIWYG editor** — resize and style cells visually; configure bands, page format, margins, and composition rules
 - **Template composability** — include and merge multiple templates to share headers, footers, and common sections across reports
 - **Auto pagination** — special `page_role` bands (header, footer, filler) are placed automatically at every page break

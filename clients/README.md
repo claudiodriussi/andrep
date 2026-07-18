@@ -171,7 +171,7 @@ const html = await callAndrep({
 ### B — REST server (`callAndrepRest`)
 
 Posts compiled records to a running Python REST server.
-No local Python or WeasyPrint required on the Node.js machine.
+No local Python or PDF backend (Playwright/WeasyPrint) required on the Node.js machine.
 
 ```typescript
 import { callAndrepRest } from "./src/cli.js";
@@ -300,7 +300,8 @@ npx tsx examples/server-rest.ts
 Uses `AndRepRenderer` from the `andrep` package as the loop engine — no separate
 engine implementation needed. The interesting use case is offloading rendering to
 a remote REST server: `andrep` handles template loading, expression evaluation and
-the emit loop; WeasyPrint only needs to be installed on the rendering server.
+the emit loop; the PDF backend (Playwright or WeasyPrint) only needs to be installed
+on the rendering server.
 
 ### Install
 
@@ -350,7 +351,7 @@ for row in my_data:
 totals = {"total": r.total}
 r.emit("totals")            # 'totals' captured → [totals.total | .2]
 
-# 3 — Send compiled records to the REST server (no WeasyPrint needed locally)
+# 3 — Send compiled records to the REST server (no PDF backend needed locally)
 records  = r._emissions
 metadata = {"title": r.title, "name": r.name}
 

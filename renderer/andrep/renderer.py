@@ -221,6 +221,7 @@ class AndRepRenderer:
         template,
         loader: TemplateLoader = None,
         trusted: bool = False,
+        pdf_backend=None,
     ):
         self.template = load_template(template, loader=loader)
         self.page = self.template.get("page", {})
@@ -274,6 +275,12 @@ class AndRepRenderer:
         self.cur_page: int = 1   # increment manually to chain reports
         self._pdf_mode: bool = False   # True while generating PDF HTML (disables writing-mode)
         self._phantom_ctx: bool = False  # True during phantom HTML generation (use min-height)
+
+        # PDF backend selection — see _resolve_pdf_backend(). None means
+        # "fall back to ANDREP_PDF_BACKEND env var, then default (playwright)".
+        # r.pdf_backend = "weasyprint" / "playwright" / a PdfBackend instance
+        self.pdf_backend = pdf_backend
+        self._active_pdf_backend = None  # set for the duration of to_pdf()
 
         # Group rows by band name
         self.bands: dict[str, list] = {}
@@ -763,43 +770,28 @@ class AndRepRenderer:
             + "</body></html>"
         )
 
-    def _measure_html_height(self, html: str, content_w: int) -> int:
-        """Render one HTML row via WeasyPrint and return its actual pixel height.
+    def _measure_phantom_heights(self, html_list: "list[str]", content_w: int) -> "list[int]":
+        """Measure phantom rows via the active PDF backend and return their
+        actual pixel heights.
 
         Used by the phantom pass to get real heights for rows that can grow
         beyond their template height (autoStretch+wrap or embed cells).
-        """
-        from weasyprint import HTML  # type: ignore
-        fetcher = getattr(self, "_url_fetcher", None)
-        doc = self._phantom_doc(html, content_w)
-        document = HTML(string=doc, url_fetcher=fetcher).render()
-        try:
-            # Walk page_box → <html> box → <body> box; read shrink-wrapped height.
-            body = document.pages[0]._page_box.children[0].children[0]
-            return max(1, round(body.height))
-        except (IndexError, AttributeError):
-            return 24
 
-    def _measure_html_heights_batch(self, html_list: "list[str]", content_w: int) -> "list[int]":
-        """Render phantom rows and return their actual pixel heights.
-
-        With phantom_batch=True (default): one WeasyPrint render for all rows.
-        With phantom_batch=False: one render per row (slower, easier to debug).
+        With phantom_batch=True (default): one backend call for all rows.
+        With phantom_batch=False: one call per row (slower, easier to debug).
         """
         if not html_list:
             return []
+        backend = self._active_pdf_backend
         if not self.phantom_batch:
-            return [self._measure_html_height(h, content_w) for h in html_list]
-        from weasyprint import HTML  # type: ignore
-        fetcher = getattr(self, "_url_fetcher", None)
-        wrapped = "".join(f"<div>{h}</div>" for h in html_list)
+            heights: list[int] = []
+            for h in html_list:
+                doc = self._phantom_doc(f'<div class="phantom-row">{h}</div>', content_w)
+                heights.extend(backend.measure_heights(doc, 1))
+            return heights
+        wrapped = "".join(f'<div class="phantom-row">{h}</div>' for h in html_list)
         doc = self._phantom_doc(wrapped, content_w)
-        document = HTML(string=doc, url_fetcher=fetcher).render()
-        try:
-            body = document.pages[0]._page_box.children[0].children[0]
-            return [max(1, round(child.height)) for child in body.children]
-        except (IndexError, AttributeError):
-            return [24] * len(html_list)
+        return backend.measure_heights(doc, len(html_list))
 
     # CSS flex alignment maps
     _ALIGN_ITEMS  = {"left": "flex-start", "center": "center", "right": "flex-end"}
@@ -1303,7 +1295,7 @@ class AndRepRenderer:
                 rec_plan.append(("single", band_css, embed_map, row_plans, keep_together))
 
         # ── Phase 2: measure all phantom rows (batch or per-row) ─────────────
-        ph_heights = self._measure_html_heights_batch(ph_html_list, content_w)
+        ph_heights = self._measure_phantom_heights(ph_html_list, content_w)
 
         # ── Phase 3: generate items using measured heights ────────────────────
         for entry in rec_plan:
@@ -1546,40 +1538,48 @@ class AndRepRenderer:
             + "</body></html>\n"
         )
 
-    def _make_url_cache(self):
-        """Return a url_fetcher that caches responses, shared across phantom and PDF renders.
+    def _resolve_pdf_backend(self, explicit=None):
+        """Resolve which PdfBackend instance to use for to_pdf().
 
-        Avoids re-downloading the same HTTP image URLs during both the phantom
-        pass and the final PDF render.  Compatible with WeasyPrint 68+ (URLFetcher API).
+        Resolution order: `explicit` (per-call to_pdf(backend=...)) >
+        self.pdf_backend (constructor) > ANDREP_PDF_BACKEND env var >
+        default ("playwright"). Strings/classes are instantiated here (and
+        the instance is then owned by this call — closed when done); an
+        already-built instance (e.g. a warm PlaywrightBackend shared across
+        renders) is used as-is and its lifecycle stays the caller's
+        responsibility.
+
+        Returns (backend, owns_lifecycle: bool).
         """
-        from weasyprint.urls import URLFetcher, URLFetcherResponse  # type: ignore
-        _fetcher = URLFetcher()
-        _cache: dict = {}  # url → (bytes, EmailMessage headers)
+        from .backends import get_backend
 
-        def fetcher(url: str) -> "URLFetcherResponse":
-            if url not in _cache:
-                resp = _fetcher.fetch(url)
-                _cache[url] = (resp.read(), resp.headers)
-            data, headers = _cache[url]
-            return URLFetcherResponse(url, body=data, headers=headers)
+        choice = explicit if explicit is not None else self.pdf_backend
+        if choice is None:
+            choice = os.environ.get("ANDREP_PDF_BACKEND", "playwright")
+        if isinstance(choice, str):
+            return get_backend(choice)(), True
+        if isinstance(choice, type):
+            return choice(), True
+        return choice, False  # already a PdfBackend instance, caller-owned
 
-        return fetcher
-
-    def to_pdf(self) -> bytes:
-        """Render to PDF via WeasyPrint. Requires: pip install weasyprint"""
-        try:
-            from weasyprint import HTML  # type: ignore
-        except ImportError as e:
-            raise ImportError("weasyprint is not installed: pip install weasyprint") from e
+    def to_pdf(self, backend=None) -> bytes:
+        """Render to PDF via the active PdfBackend (default: Playwright,
+        fallback: WeasyPrint). See _resolve_pdf_backend() for how `backend`
+        is resolved, and ANDREP_PDF_BACKEND / andrep.backends for the
+        available engines.
+        """
         self._pdf_mode = True
-        fetcher = self._make_url_cache()
-        self._url_fetcher = fetcher
+        self._active_pdf_backend, owns_backend = self._resolve_pdf_backend(backend)
         try:
             html = self._to_pdf_html()
+            return self._active_pdf_backend.render(html)
         finally:
+            if owns_backend:
+                close = getattr(self._active_pdf_backend, "close", None)
+                if close is not None:
+                    close()
             self._pdf_mode = False
-            self._url_fetcher = None
-        return HTML(string=html, url_fetcher=fetcher).write_pdf()
+            self._active_pdf_backend = None
 
     # ------------------------------------------------------------------
     # Composed template export
