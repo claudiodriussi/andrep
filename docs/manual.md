@@ -1618,6 +1618,13 @@ loader in use — see [The loader](#the-loader) below.
 Rules are applied in order. Each rule reads the `rows` array from the target template and
 merges them into the main template's `rows` according to its own logic.
 
+**Missing targets are skipped.** If the loader does not find a `target`, the rule is
+ignored silently. This is intentional: a rule can be an *optional override* — for example
+`{ "rule": "Replace", "target": "custom_header" }` takes effect only where a
+`custom_header` template exists (for a given customer, tenant or environment).
+A `target` that is not a valid name for the loader (e.g. a path leading outside its
+directories) is not skipped: it raises an error — see [The loader](#the-loader).
+
 ---
 
 ### IfNot
@@ -1764,6 +1771,10 @@ The `custom_dir` is checked first, so placing a file there silently overrides th
 standard version without changing any composition rules. This is useful for
 customer-specific or environment-specific variants.
 
+Names are logical names, not paths: a name must resolve (symlinks included) inside the
+directory it is looked up in. Subdirectories are fine (`shared/footer`), but `..`,
+absolute paths or symlinks leading outside `base_dir` / `custom_dir` raise `ValueError`.
+
 #### Custom loaders
 
 Any object that implements a single `load(name: str) -> dict` method is a valid loader.
@@ -1793,6 +1804,14 @@ r = AndRepRenderer("invoice", loader=loader)
 
 The same loader resolves both the main template and any `target` named in composition
 rules, so shared templates are fetched from the same source transparently.
+
+A custom loader must follow the same contract as `FilesystemLoader`:
+
+- raise `FileNotFoundError` when a valid name has no template — composition rules with
+  that `target` are skipped;
+- raise `ValueError` for a name it considers invalid, and never resolve a name outside
+  its own storage. Composition targets come from the template content, so the loader is
+  where they are kept inside their perimeter.
 
 ---
 
