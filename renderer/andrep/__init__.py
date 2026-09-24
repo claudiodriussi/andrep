@@ -13,5 +13,6 @@ Minimal usage::
 """
 from .loader import FilesystemLoader, TemplateLoader
 from .renderer import AndRepRenderer, load_template
+from .variables import register_adapter
 
-__all__ = ["AndRepRenderer", "FilesystemLoader", "TemplateLoader", "load_template"]
+__all__ = ["AndRepRenderer", "FilesystemLoader", "TemplateLoader", "load_template", "register_adapter"]

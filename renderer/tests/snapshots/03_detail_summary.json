@@ -936,19 +936,8 @@
  {
   "band": "page_footer",
   "values": [
-   {
-    "currency": "",
-    "height": 1123,
-    "locale": "",
-    "marginBottom": 57,
-    "marginLeft": 38,
-    "marginRight": 38,
-    "marginTop": 38,
-    "orientation": "portrait",
-    "preset": "A4",
-    "width": 794
-   },
-   "[#_r.pages: AttributeError: 'DetailReport' object has no attribute 'pages'#]"
+   "[#_r.page: AttributeError: 'types.SimpleNamespace' object has no attribute 'page'#]",
+   "[#_r.pages: AttributeError: 'types.SimpleNamespace' object has no attribute 'pages'#]"
   ]
  }
 ]

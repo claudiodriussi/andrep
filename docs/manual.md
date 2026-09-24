@@ -1200,7 +1200,7 @@ AndRepRenderer(template, loader=None, trusted=False, pdf_backend=None)
 | --------------- | --------------------------------------------------------------------------------- |
 | `template`    | Template name (without `.json`) or path string                                  |
 | `loader`      | `TemplateLoader` instance — resolves template names and composition targets    |
-| `trusted`     | If `True`, expose `f_globals` of the caller in the eval namespace (see below) |
+| `trusted`     | If `True`, the caller trusts its templates: `f_globals` and all locals are exposed as they are, and the expression checks are off (see below) |
 | `pdf_backend` | PDF backend to use for `to_pdf()` — `"playwright"`, `"weasyprint"`, or a `PdfBackend` instance. `None` (default) resolves via `ANDREP_PDF_BACKEND` env var, then `"playwright"`. See [PDF backends](../renderer/README.md#pdf-backends-playwright-vs-weasyprint). |
 
 `FilesystemLoader(base_dir)` resolves template names relative to `base_dir` and handles
@@ -1216,13 +1216,40 @@ Entries are merged in order — later entries override earlier ones:
 | Priority    | Source                                  | Notes                                                         |
 | ----------- | --------------------------------------- | ------------------------------------------------------------- |
 | 1 (lowest)  | `f_globals` of caller                 | Only when `trusted=True`                                    |
-| 2           | `f_locals` of caller                  | Loop variables (`row`, counters, …)                        |
-| 3           | Explicit workspace `r["key"] = value` | Overrides locals with same name                               |
-| 4           | `r.globals`                           | Registered callables and objects                              |
+| 2           | `f_locals` of caller                  | Loop variables (`row`, counters, …) — data only            |
+| 3           | Explicit workspace `r["key"] = value` | Overrides locals with same name — data only                   |
+| 4           | `r.globals`                           | Registered functions                                          |
 | 5 (highest) | System variables                        | `_r`, `_name`, `_date`, `_time`, `_user`, `_page` |
 
-Dict and dict-like objects (including `sqlite3.Row`) are converted to `SimpleNamespace`
-automatically, so `row["price"]` in the data becomes `row.price` in the template.
+Templates see **data only**, always as a copy: `str`, `int`, `float`, `bool`, `None`,
+`Decimal`, `date` / `datetime` / `time` / `timedelta`, `bytes`, `list`, `tuple`, `set`,
+`dict`. Dicts with string keys and dict-like objects (anything with `keys()` and `[key]`,
+including `sqlite3.Row`) become `SimpleNamespace`, so `row["price"]` in the data becomes
+`row.price` in the template. Subclasses of these types are normalized to the base type.
+
+Anything else — a connection, a cursor, the renderer itself, an ORM object — is not
+data:
+
+- a **local variable** that is not data is simply left out: a loop can keep its
+  connection and cursor in scope. A template that uses it shows
+  `[#con.execute: 'con' is not data (sqlite3.Connection)#]`;
+- the **workspace** raises `TypeError` on assignment: `r["con"] = con` fails on that line.
+
+Other types become data through an **adapter** — a function that converts a value,
+registered once per type:
+
+```python
+import enum, uuid
+import andrep
+
+andrep.register_adapter(uuid.UUID, str)
+andrep.register_adapter(enum.Enum, lambda e: e.value)
+```
+
+`_r` is a snapshot of the renderer's public data attributes (accumulators, `title`,
+metadata), taken when the namespace is built: `[_r.total]` works, methods of the renderer
+are not available. With `trusted=True` everything is exposed as it is, as in earlier
+versions.
 
 ---
 
@@ -1242,13 +1269,16 @@ r.emit("totals")
 
 ### Registering globals
 
-`r.globals` makes objects or functions available in all expressions across all emissions:
+`r.globals` makes functions available in all expressions across all emissions:
 
 ```python
 r.globals["fmt_pct"] = lambda v: f"{float(v):.1f}%"
-r.globals["config"]  = app_config
-# template: [fmt_pct(row.tax_rate)]   [config.company_name]
+# template: [fmt_pct(row.tax_rate)]
 ```
+
+Register **functions, not objects**: templates cannot read attributes of arbitrary
+objects. For values, use the workspace: `r["config"] = {"company_name": "ACME"}` →
+`[config.company_name]`.
 
 ---
 

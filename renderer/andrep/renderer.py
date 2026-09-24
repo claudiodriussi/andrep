@@ -10,8 +10,8 @@ from html import escape
 from pathlib import Path
 
 from .loader import TemplateLoader
-from .expr_check import compile_expr
-from .variables import _apply_formatter, _parse_tokens, _to_ns, eval_expr
+from .expr_check import ATTR_FN, EXCLUDED_KEY, checked_getattr, compile_expr
+from .variables import NotData, _apply_formatter, _parse_tokens, _to_data, _to_ns, eval_expr
 
 
 # ---------------------------------------------------------------------------
@@ -313,7 +313,20 @@ class AndRepRenderer:
     # ------------------------------------------------------------------
 
     def __setitem__(self, key: str, value) -> None:
-        """Set a named value in the explicit workspace: r["row"] = article."""
+        """Set a named value in the explicit workspace: r["row"] = article.
+
+        The value must be data (see _to_data) unless trusted=True: it is
+        checked here, so a mistake points at this line.  It is converted at
+        each emit(), so later changes to the value are seen.
+        """
+        if not self.trusted:
+            try:
+                _to_data(value)
+            except NotData as e:
+                raise TypeError(
+                    f"r[{key!r}]: {e} is not data — convert it, register an adapter "
+                    "(andrep.register_adapter) or use trusted=True"
+                ) from None
         self._ctx[key] = value
 
     def __getitem__(self, key: str):
@@ -324,6 +337,24 @@ class AndRepRenderer:
     # Eval namespace construction
     # ------------------------------------------------------------------
 
+    # Renderer attributes that are engine internals, not report data
+    _R_INTERNALS = frozenset({
+        "template", "page", "bands", "globals", "formatters", "data",
+        "pdf_backend", "trusted", "base_dir", "phantom_batch",
+    })
+
+    def _r_snapshot(self) -> types.SimpleNamespace:
+        """_r for templates: the public data attributes of the renderer, copied now."""
+        snap = types.SimpleNamespace()
+        for key, value in vars(self).items():
+            if key.startswith("_") or key in self._R_INTERNALS:
+                continue
+            try:
+                setattr(snap, key, _to_data(value))
+            except NotData:
+                pass
+        return snap
+
     def _sys_vars(self) -> dict:
         return {
             "_date": self.report_date,
@@ -331,42 +362,51 @@ class AndRepRenderer:
             "_user": self.report_user,
             "_name": self.template.get("name", ""),
             "_page": self.cur_page,
-            "_r": self,  # live reference — safe because eval is immediate (before on_after_band)
+            "_r": self if self.trusted else self._r_snapshot(),
         }
+
+    def _finish_ns(self, ns: dict, excluded: dict) -> dict:
+        """Add helpers, registered globals and system vars (highest priority)."""
+        ns.update(_BUILTIN_CSS)
+        ns.update(self.globals)
+        ns.update(self._sys_vars())
+        ns[EXCLUDED_KEY] = {k: why for k, why in excluded.items() if k not in ns}
+        ns[ATTR_FN] = checked_getattr
+        ns["__builtins__"] = {}
+        return ns
 
     def _build_eval_ns(self, frame) -> dict:
         """Build eval namespace from caller frame + workspace + system vars.
 
         Called once per emit(); the result is stored and reused for every cell
-        in that band emission.
+        in that band emission.  Locals that are not data are left out (a
+        template using one shows a marker saying so); with trusted=True the
+        caller's globals and all locals are exposed as they are.
         """
         ns: dict = {}
+        excluded: dict = {}
         if self.trusted:
             ns.update(frame.f_globals)
-        # f_locals: apply _to_ns so sqlite3.Row / plain dicts get attribute access
+            for k, v in frame.f_locals.items():
+                ns[k] = _to_ns(v)
+            for k, v in self._ctx.items():
+                ns[k] = _to_ns(v)
+            return self._finish_ns(ns, excluded)
         for k, v in frame.f_locals.items():
-            ns[k] = _to_ns(v)
-        # explicit workspace — overrides locals
+            try:
+                ns[k] = _to_data(v)
+            except NotData as e:
+                excluded[k] = f"'{k}' is not data ({e})"
+        # explicit workspace — overrides locals; checked by __setitem__
         for k, v in self._ctx.items():
-            ns[k] = _to_ns(v)
-        # built-in CSS helpers + registered globals — override locals
-        ns.update(_BUILTIN_CSS)
-        ns.update(self.globals)
-        # system vars — highest priority
-        ns.update(self._sys_vars())
-        ns["__builtins__"] = {}
-        return ns
+            ns[k] = _to_data(v)
+        return self._finish_ns(ns, excluded)
 
     def _sys_eval_ns(self) -> dict:
         """Eval namespace for auto-inserted bands (header/footer) — no caller frame."""
-        ns: dict = {}
-        for k, v in self._ctx.items():
-            ns[k] = _to_ns(v)
-        ns.update(_BUILTIN_CSS)
-        ns.update(self.globals)
-        ns.update(self._sys_vars())
-        ns["__builtins__"] = {}
-        return ns
+        convert = _to_ns if self.trusted else _to_data
+        ns = {k: convert(v) for k, v in self._ctx.items()}
+        return self._finish_ns(ns, {})
 
     def _compile_band(self, band_name: str, ns: dict, band_css: str, cell_patches: dict) -> dict:
         """Evaluate all cell expressions for one band. Returns a compiled record."""

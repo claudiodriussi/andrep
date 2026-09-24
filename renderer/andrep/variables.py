@@ -5,6 +5,7 @@ Public API:
     resolve_content(content, ns) -> str   — full resolve (parse + eval + format)
     _parse_tokens(content)        -> list  — parse once, reuse across many evals
     eval_expr(expr, ns)           -> any   — evaluate a single expression
+    register_adapter(cls, fn)             — make instances of cls readable by templates
     _apply_formatter(value, fmt, r=None) -> any  — apply one formatter to a value
 
 The `ns` parameter is a pre-built eval namespace dict (already contains
@@ -17,21 +18,27 @@ formatter registry ``r.formatters``.  Pass ``r=self`` from ``_cell_html``.
 """
 import re
 import types
-from datetime import date, datetime
+from datetime import date, datetime, time, timedelta
+from decimal import Decimal
 
-from .expr_check import compile_expr
+from .expr_check import ATTR_FN, EXCLUDED_KEY, checked_getattr, compile_expr
 
 
 def _to_ns(data):
     """Recursively convert dict / dict-like / list to SimpleNamespace for
     attribute access in template expressions.
 
-    - dict           → SimpleNamespace (recursive)
+    Permissive variant for event hooks (self.data) and trusted=True; the
+    expression namespace uses the strict _to_data.
+
+    - dict           → SimpleNamespace (recursive); dicts with non-str keys stay dicts
     - dict-like      → SimpleNamespace (objects with .keys() + [key], e.g. sqlite3.Row)
     - list           → list of converted items
     - anything else  → returned as-is (SQLAlchemy Row, Odoo record, int, str, …)
     """
     if isinstance(data, dict):
+        if not all(isinstance(k, str) for k in data):
+            return {k: _to_ns(v) for k, v in data.items()}
         ns = types.SimpleNamespace()
         for k, v in data.items():
             setattr(ns, k, _to_ns(v))
@@ -54,6 +61,85 @@ def _to_ns(data):
     return data
 
 
+# ---------------------------------------------------------------------------
+# Strict conversion for the expression namespace: data only
+# ---------------------------------------------------------------------------
+
+class NotData(TypeError):
+    """A value that is not data and has no registered adapter."""
+
+
+# Scalars and how a subclass is normalized to its base type, so that templates
+# only see the methods of the base type (e.g. markupsafe.Markup -> str).
+# datetime before date: datetime is a subclass of date.
+_SCALARS = (
+    (bool, bool),
+    (int, int),
+    (float, float),
+    (str, str.__str__),
+    (bytes, bytes),
+    (Decimal, Decimal),
+    (datetime, lambda v: datetime(v.year, v.month, v.day, v.hour, v.minute, v.second,
+                                  v.microsecond, v.tzinfo, fold=v.fold)),
+    (date, lambda v: date(v.year, v.month, v.day)),
+    (time, lambda v: time(v.hour, v.minute, v.second, v.microsecond, v.tzinfo, fold=v.fold)),
+    (timedelta, lambda v: timedelta(v.days, v.seconds, v.microseconds)),
+)
+
+_EXACT_SCALARS = frozenset({type(None)} | {base for base, _ in _SCALARS})
+
+_adapters: dict = {}
+
+
+def register_adapter(cls, fn) -> None:
+    """Make instances of *cls* (and subclasses) readable by templates.
+
+    *fn(value)* must return data (it is converted again), e.g.::
+
+        andrep.register_adapter(uuid.UUID, str)
+        andrep.register_adapter(enum.Enum, lambda e: e.value)
+    """
+    _adapters[cls] = fn
+
+
+def _to_data(value):
+    """Convert *value* to data for the expression namespace, or raise NotData.
+
+    - scalars (str, int, float, bool, None, Decimal, date/datetime/time,
+      timedelta, bytes) — subclasses normalized to the base type
+    - dict with str keys, SimpleNamespace, mappings (keys() + [key], e.g.
+      sqlite3.Row) → SimpleNamespace; other dicts stay dicts
+    - list, tuple, set, frozenset → same container, items converted
+    - objects of a type with a registered adapter → adapter(value), converted
+    - anything else → NotData (a container holding one is NotData as a whole)
+
+    Always returns a copy: templates never touch the caller's objects.
+    """
+    if type(value) in _EXACT_SCALARS:
+        return value
+    for cls in type(value).__mro__:
+        fn = _adapters.get(cls)
+        if fn is not None:
+            return _to_data(fn(value))
+    for base, normalize in _SCALARS:
+        if isinstance(value, base):
+            return value if type(value) is base else normalize(value)
+    if isinstance(value, types.SimpleNamespace):
+        return types.SimpleNamespace(**{k: _to_data(v) for k, v in vars(value).items()})
+    if isinstance(value, dict):
+        items = {_to_data(k): _to_data(v) for k, v in value.items()}
+        if all(isinstance(k, str) for k in items):
+            return types.SimpleNamespace(**items)
+        return items
+    if isinstance(value, (list, tuple, set, frozenset)):
+        base = next(t for t in (list, tuple, set, frozenset) if isinstance(value, t))
+        return base(_to_data(v) for v in value)
+    if hasattr(value, "keys") and hasattr(value, "__getitem__"):
+        return _to_data({k: value[k] for k in value.keys()})
+    kind = type(value)
+    raise NotData(f"{kind.__module__}.{kind.__qualname__}")
+
+
 def eval_expr(expr, ns):
     """Evaluate *expr* in the pre-built namespace *ns*.
 
@@ -67,12 +153,17 @@ def eval_expr(expr, ns):
     """
     if isinstance(expr, str):
         expr = compile_expr(expr)
+        ns.setdefault(ATTR_FN, checked_getattr)
     if expr.code is None:
         return expr.marker(expr.error)
     try:
         return eval(expr.code, ns)  # noqa: S307 — validated subset, no builtins
     except ZeroDivisionError:
         return 0
+    except NameError as e:
+        # A local left out of the namespace because it is not data
+        why = ns.get(EXCLUDED_KEY, {}).get(getattr(e, "name", None))
+        return expr.marker(why or f"NameError: {e}")
     except Exception as e:
         return expr.marker(f"{type(e).__name__}: {e}")
 
