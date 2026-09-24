@@ -2,6 +2,12 @@
 
 This directory contains loop engine clients and renderer servers for AndRep.
 
+> **Demo only.** These clients and servers show how to integrate AndRep; to keep
+> them concise, everything related to security has been intentionally omitted
+> (no authentication, open CORS, the JS client evaluates expressions with
+> `new Function`, request metadata is trusted). Do not expose them as-is.
+> The security model of the renderer itself is described in `docs/SECURITY.md`.
+
 ## Architecture
 
 ```

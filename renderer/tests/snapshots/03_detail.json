@@ -1,0 +1,1400 @@
+[
+ {
+  "band": "page_header",
+  "values": [
+   "ACME Fireworks & Electronic Components Corp.",
+   "01/01/2026",
+   "1 Canyon Road, Desert Flats, AZ",
+   "detail",
+   "orders@acme-kaboom.example",
+   1,
+   "VAT: US000001",
+   "Articles & Movements Detail"
+  ]
+ },
+ {
+  "band": "cat_header",
+  "values": [
+   "CONN",
+   "Connectors and cables"
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART019",
+   "USB-C cable 1m",
+   "STD",
+   "PCS",
+   3.5
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART019",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART020",
+   "USB-A to micro-B cable 2m",
+   "STD",
+   "PCS",
+   2.8
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART020",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART021",
+   "2.54mm pin header 40p straight",
+   "STD",
+   "PCS",
+   0.6
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART021",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART022",
+   "JST-XH 2p connector set",
+   "STD",
+   "PCS",
+   0.35
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART022",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "cat_footer",
+  "values": [
+   "Connectors and cables",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "__page_break__"
+ },
+ {
+  "band": "cat_header",
+  "values": [
+   "KIT",
+   "Development kits"
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "KIT001",
+   "STM32 development starter kit",
+   "KIT",
+   "PCS",
+   38.0
+  ]
+ },
+ {
+  "band": "mov_header"
+ },
+ {
+  "band": "movement",
+  "values": [
+   "2026-01-08",
+   null,
+   "PCS",
+   20.0,
+   32.0,
+   640.0,
+   null
+  ]
+ },
+ {
+  "band": "movement",
+  "band_css": "background:#f8fafc",
+  "css_extras": [
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   ""
+  ],
+  "values": [
+   "2026-02-01",
+   null,
+   "PCS",
+   5.0,
+   38.0,
+   null,
+   190.0
+  ]
+ },
+ {
+  "band": "movement",
+  "values": [
+   "2026-03-10",
+   null,
+   "PCS",
+   3.0,
+   38.0,
+   null,
+   114.0
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "KIT001",
+   640.0,
+   304.0
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "KIT002",
+   "Environmental sensors kit",
+   "KIT",
+   "PCS",
+   52.0
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "KIT002",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "KIT003",
+   "ESP32 IoT prototyping kit",
+   "KIT",
+   "PCS",
+   65.0
+  ]
+ },
+ {
+  "band": "mov_header"
+ },
+ {
+  "band": "movement",
+  "values": [
+   "2026-01-08",
+   null,
+   "PCS",
+   15.0,
+   57.0,
+   855.0,
+   null
+  ]
+ },
+ {
+  "band": "movement",
+  "band_css": "background:#f8fafc",
+  "css_extras": [
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   ""
+  ],
+  "values": [
+   "2026-02-25",
+   null,
+   "PCS",
+   4.0,
+   65.0,
+   null,
+   260.0
+  ]
+ },
+ {
+  "band": "movement",
+  "values": [
+   "2026-03-15",
+   "Customer: Beta Inc",
+   "PCS",
+   6.0,
+   65.0,
+   null,
+   390.0
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "KIT003",
+   855.0,
+   650.0
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "KIT004",
+   "Power electronics learning kit",
+   "KIT",
+   "PCS",
+   48.0
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "KIT004",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "cat_footer",
+  "values": [
+   "Development kits",
+   1495.0,
+   954.0
+  ]
+ },
+ {
+  "band": "__page_break__"
+ },
+ {
+  "band": "cat_header",
+  "values": [
+   "MCU",
+   "Microcontrollers and SBCs"
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART023",
+   "STM32F103C8T6 microcontroller",
+   "STD",
+   "PCS",
+   4.2
+  ]
+ },
+ {
+  "band": "mov_header"
+ },
+ {
+  "band": "movement",
+  "values": [
+   "2026-01-10",
+   "Purchase order PO2026/005",
+   "PCS",
+   50.0,
+   3.9,
+   195.0,
+   null
+  ]
+ },
+ {
+  "band": "movement",
+  "band_css": "background:#f8fafc",
+  "css_extras": [
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   ""
+  ],
+  "values": [
+   "2026-02-15",
+   null,
+   "PCS",
+   10.0,
+   4.2,
+   null,
+   42.0
+  ]
+ },
+ {
+  "band": "movement",
+  "values": [
+   "2026-03-05",
+   null,
+   "PCS",
+   8.0,
+   4.2,
+   null,
+   33.6
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART023",
+   195.0,
+   75.6
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART024",
+   "ESP32-WROOM-32 module",
+   "STD",
+   "PCS",
+   5.9
+  ]
+ },
+ {
+  "band": "mov_header"
+ },
+ {
+  "band": "movement",
+  "values": [
+   "2026-01-15",
+   null,
+   "PCS",
+   40.0,
+   5.2,
+   208.0,
+   null
+  ]
+ },
+ {
+  "band": "movement",
+  "band_css": "background:#f8fafc",
+  "css_extras": [
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   ""
+  ],
+  "values": [
+   "2026-02-20",
+   null,
+   "PCS",
+   12.0,
+   5.9,
+   null,
+   70.80000000000001
+  ]
+ },
+ {
+  "band": "movement",
+  "values": [
+   "2026-03-08",
+   "Customer: Acme Ltd",
+   "PCS",
+   8.0,
+   5.9,
+   null,
+   47.2
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART024",
+   208.0,
+   118.00000000000001
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART025",
+   "Raspberry Pi Pico",
+   "STD",
+   "PCS",
+   6.5
+  ]
+ },
+ {
+  "band": "mov_header"
+ },
+ {
+  "band": "movement",
+  "values": [
+   "2026-01-18",
+   null,
+   "PCS",
+   30.0,
+   5.8,
+   174.0,
+   null
+  ]
+ },
+ {
+  "band": "movement",
+  "band_css": "background:#f8fafc",
+  "css_extras": [
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   ""
+  ],
+  "values": [
+   "2026-02-22",
+   null,
+   "PCS",
+   5.0,
+   6.5,
+   null,
+   32.5
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART025",
+   174.0,
+   32.5
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART026",
+   "Arduino Nano clone",
+   "STD",
+   "PCS",
+   4.8
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART026",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "cat_footer",
+  "values": [
+   "Microcontrollers and SBCs",
+   577.0,
+   226.10000000000002
+  ]
+ },
+ {
+  "band": "__page_break__"
+ },
+ {
+  "band": "cat_header",
+  "values": [
+   "PASS",
+   "Passive components"
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART001",
+   "10 ohm ceramic resistor 1/4W",
+   "STD",
+   "PCS",
+   0.45
+  ]
+ },
+ {
+  "band": "mov_header"
+ },
+ {
+  "band": "movement",
+  "values": [
+   "2026-01-05",
+   "Purchase order PO2026/001",
+   "PCS",
+   500.0,
+   0.38,
+   190.0,
+   null
+  ]
+ },
+ {
+  "band": "movement",
+  "band_css": "background:#f8fafc",
+  "css_extras": [
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   ""
+  ],
+  "values": [
+   "2026-01-20",
+   null,
+   "PCS",
+   50.0,
+   0.45,
+   null,
+   22.5
+  ]
+ },
+ {
+  "band": "movement",
+  "values": [
+   "2026-02-03",
+   null,
+   "PCS",
+   80.0,
+   0.45,
+   null,
+   36.0
+  ]
+ },
+ {
+  "band": "movement",
+  "band_css": "background:#f8fafc",
+  "css_extras": [
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   ""
+  ],
+  "values": [
+   "2026-03-01",
+   "Purchase order PO2026/018",
+   "PCS",
+   200.0,
+   0.37,
+   74.0,
+   null
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART001",
+   264.0,
+   58.5
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART002",
+   "100 ohm ceramic resistor 1/4W",
+   "STD",
+   "PCS",
+   0.45
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART002",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART003",
+   "1K ohm resistor 1/4W",
+   "STD",
+   "PCS",
+   0.45
+  ]
+ },
+ {
+  "band": "mov_header"
+ },
+ {
+  "band": "movement",
+  "values": [
+   "2026-01-05",
+   "Purchase order PO2026/001",
+   "PCS",
+   300.0,
+   0.38,
+   114.0,
+   null
+  ]
+ },
+ {
+  "band": "movement",
+  "band_css": "background:#f8fafc",
+  "css_extras": [
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   ""
+  ],
+  "values": [
+   "2026-02-10",
+   null,
+   "PCS",
+   40.0,
+   0.45,
+   null,
+   18.0
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART003",
+   114.0,
+   18.0
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART004",
+   "10K ohm resistor 1/4W",
+   "STD",
+   "PCS",
+   0.45
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART004",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART005",
+   "100nF ceramic capacitor 50V",
+   "STD",
+   "PCS",
+   0.3
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART005",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART006",
+   "10uF electrolytic capacitor 25V",
+   "STD",
+   "PCS",
+   0.55
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART006",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART007",
+   "100uF electrolytic capacitor 25V",
+   "STD",
+   "PCS",
+   0.8
+  ]
+ },
+ {
+  "band": "mov_header"
+ },
+ {
+  "band": "movement",
+  "values": [
+   "2026-01-05",
+   "Purchase order PO2026/001",
+   "PCS",
+   300.0,
+   0.7,
+   210.0,
+   null
+  ]
+ },
+ {
+  "band": "movement",
+  "band_css": "background:#f8fafc",
+  "css_extras": [
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   ""
+  ],
+  "values": [
+   "2026-02-10",
+   null,
+   "PCS",
+   40.0,
+   0.8,
+   null,
+   32.0
+  ]
+ },
+ {
+  "band": "movement",
+  "values": [
+   "2026-02-28",
+   null,
+   "PCS",
+   60.0,
+   0.8,
+   null,
+   48.0
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART007",
+   210.0,
+   80.0
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART008",
+   "470uF electrolytic capacitor 16V",
+   "STD",
+   "PCS",
+   0.95
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART008",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART009",
+   "10uH inductor SMD 2A",
+   "STD",
+   "PCS",
+   1.2
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART009",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART010",
+   "Crystal 16MHz HC-49",
+   "STD",
+   "PCS",
+   0.9
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART010",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "cat_footer",
+  "values": [
+   "Passive components",
+   588.0,
+   156.5
+  ]
+ },
+ {
+  "band": "__page_break__"
+ },
+ {
+  "band": "cat_header",
+  "values": [
+   "POWER",
+   "Power supplies"
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART027",
+   "LM7805 5V regulator TO-220",
+   "STD",
+   "PCS",
+   0.75
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART027",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART028",
+   "LM317 adjustable regulator",
+   "STD",
+   "PCS",
+   0.85
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART028",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART029",
+   "DC-DC step-down module 3A",
+   "STD",
+   "PCS",
+   3.2
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART029",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART030",
+   "12V 2A switching power supply",
+   "STD",
+   "PCS",
+   14.5
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART030",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "cat_footer",
+  "values": [
+   "Power supplies",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "__page_break__"
+ },
+ {
+  "band": "cat_header",
+  "values": [
+   "SEMI",
+   "Semiconductors"
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART011",
+   "1N4148 signal diode",
+   "STD",
+   "PCS",
+   0.12
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART011",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART012",
+   "1N4007 rectifier diode 1A",
+   "STD",
+   "PCS",
+   0.18
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART012",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART013",
+   "LED red 5mm",
+   "STD",
+   "PCS",
+   0.15
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART013",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART014",
+   "LED green 5mm",
+   "STD",
+   "PCS",
+   0.15
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART014",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART015",
+   "BC547 NPN transistor",
+   "STD",
+   "PCS",
+   0.2
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART015",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART016",
+   "IRF540N N-channel MOSFET",
+   "STD",
+   "PCS",
+   1.8
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART016",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART017",
+   "LM358 dual op-amp DIP8",
+   "STD",
+   "PCS",
+   0.65
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART017",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART018",
+   "NE555 timer DIP8",
+   "STD",
+   "PCS",
+   0.55
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART018",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "cat_footer",
+  "values": [
+   "Semiconductors",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "__page_break__"
+ },
+ {
+  "band": "cat_header",
+  "values": [
+   "SRV",
+   "Services"
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "SRV001",
+   "Technical support",
+   "SRV",
+   "HRS",
+   85.0
+  ]
+ },
+ {
+  "band": "mov_header"
+ },
+ {
+  "band": "movement",
+  "values": [
+   "2026-01-22",
+   "Customer: Acme Ltd",
+   "HRS",
+   8.0,
+   85.0,
+   null,
+   680.0
+  ]
+ },
+ {
+  "band": "movement",
+  "band_css": "background:#f8fafc",
+  "css_extras": [
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   ""
+  ],
+  "values": [
+   "2026-02-14",
+   "Customer: Beta Inc",
+   "HRS",
+   4.0,
+   85.0,
+   null,
+   340.0
+  ]
+ },
+ {
+  "band": "movement",
+  "values": [
+   "2026-03-03",
+   "Customer: Acme Ltd",
+   "HRS",
+   12.0,
+   85.0,
+   null,
+   1020.0
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "SRV001",
+   0.0,
+   2040.0
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "SRV002",
+   "Testing and certification",
+   "SRV",
+   "HRS",
+   95.0
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "SRV002",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "SRV003",
+   "PCB design and layout",
+   "SRV",
+   "HRS",
+   110.0
+  ]
+ },
+ {
+  "band": "mov_header"
+ },
+ {
+  "band": "movement",
+  "values": [
+   "2026-02-05",
+   "Project: IoT gateway board",
+   "HRS",
+   16.0,
+   110.0,
+   null,
+   1760.0
+  ]
+ },
+ {
+  "band": "movement",
+  "band_css": "background:#f8fafc",
+  "css_extras": [
+   "",
+   "",
+   "",
+   "",
+   "",
+   "",
+   ""
+  ],
+  "values": [
+   "2026-03-12",
+   "Project: sensor node v2",
+   "HRS",
+   8.0,
+   110.0,
+   null,
+   880.0
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "SRV003",
+   0.0,
+   2640.0
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "SRV004",
+   "Firmware development",
+   "SRV",
+   "HRS",
+   120.0
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "SRV004",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "cat_footer",
+  "values": [
+   "Services",
+   0.0,
+   4680.0
+  ]
+ },
+ {
+  "band": "__page_break__"
+ },
+ {
+  "band": "cat_header",
+  "values": [
+   "TOOL",
+   "Tools and instruments"
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART031",
+   "Digital multimeter pocket",
+   "STD",
+   "PCS",
+   18.0
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART031",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART032",
+   "Soldering iron 60W adjustable",
+   "STD",
+   "PCS",
+   32.0
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART032",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "art_header",
+  "values": [
+   "ART033",
+   "Breadboard 830 tie-points",
+   "STD",
+   "PCS",
+   5.5
+  ]
+ },
+ {
+  "band": "art_footer",
+  "values": [
+   "ART033",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "cat_footer",
+  "values": [
+   "Tools and instruments",
+   0.0,
+   0.0
+  ]
+ },
+ {
+  "band": "__page_break__"
+ },
+ {
+  "band": "totals",
+  "values": [
+   41,
+   28,
+   2660.0,
+   6016.6
+  ]
+ },
+ {
+  "band": "page_footer",
+  "values": [
+   {
+    "currency": "",
+    "height": 1123,
+    "locale": "",
+    "marginBottom": 57,
+    "marginLeft": 38,
+    "marginRight": 38,
+    "marginTop": 38,
+    "orientation": "portrait",
+    "preset": "A4",
+    "width": 794
+   },
+   "[#_r.pages#]"
+  ]
+ }
+]

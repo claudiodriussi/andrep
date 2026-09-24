@@ -1,0 +1,383 @@
+[
+ {
+  "band": "page_header"
+ },
+ {
+  "band": "sep",
+  "values": [
+   "① Fixed height 100px — img,contain — text notes"
+  ]
+ },
+ {
+  "band": "col_header"
+ },
+ {
+  "band": "band_contain",
+  "values": [
+   "ART023",
+   "STM32F103C8T6 microcontroller",
+   "https://picsum.photos/seed/stm32/120/80",
+   "@data/ART023.txt"
+  ]
+ },
+ {
+  "band": "band_contain",
+  "values": [
+   "ART024",
+   "ESP32-WROOM-32 module",
+   "https://picsum.photos/seed/esp32/120/80",
+   "@data/ART024.md"
+  ]
+ },
+ {
+  "band": "band_contain",
+  "values": [
+   "ART025",
+   "Raspberry Pi Pico",
+   "https://picsum.photos/seed/pico/120/80",
+   "RP2040 dual-core Cortex-M0+ at 133 MHz, 264 KB SRAM, 2 MB flash, 26 GPIO, USB 1.1. Ideal for MicroPython and C/C++ projects."
+  ]
+ },
+ {
+  "band": "band_contain",
+  "values": [
+   "ART026",
+   "Arduino Nano clone",
+   "https://picsum.photos/seed/arduino/120/80",
+   null
+  ]
+ },
+ {
+  "band": "band_contain",
+  "values": [
+   "ART031",
+   "Digital multimeter pocket",
+   "@data/img/ART031.svg",
+   "@data/ART031.txt"
+  ]
+ },
+ {
+  "band": "band_contain",
+  "values": [
+   "ART032",
+   "Soldering iron 60W adjustable",
+   "@data/img/ART032.svg",
+   null
+  ]
+ },
+ {
+  "band": "band_contain",
+  "values": [
+   "ART033",
+   "Breadboard 830 tie-points",
+   "@data/img/ART033.svg",
+   null
+  ]
+ },
+ {
+  "band": "band_contain",
+  "values": [
+   "SRV003",
+   "PCB design and layout",
+   null,
+   "@data/SRV003.txt"
+  ]
+ },
+ {
+  "band": "band_contain",
+  "values": [
+   "SRV004",
+   "Firmware development",
+   null,
+   "Custom firmware for STM32, ESP32 and RP2040. Includes HAL/BSP setup, RTOS integration, unit tests and documentation."
+  ]
+ },
+ {
+  "band": "band_contain",
+  "values": [
+   "KIT001",
+   "STM32 development starter kit",
+   "@data/img/KIT001.svg",
+   "@data/KIT001.md"
+  ]
+ },
+ {
+  "band": "band_contain",
+  "values": [
+   "KIT002",
+   "Environmental sensors kit",
+   "https://picsum.photos/seed/kit002/120/80",
+   null
+  ]
+ },
+ {
+  "band": "band_contain",
+  "values": [
+   "KIT003",
+   "ESP32 IoT prototyping kit",
+   "https://picsum.photos/seed/kit003/120/80",
+   "@data/KIT003.md"
+  ]
+ },
+ {
+  "band": "band_contain",
+  "values": [
+   "KIT004",
+   "Power electronics learning kit",
+   "https://picsum.photos/seed/kit004/120/80",
+   null
+  ]
+ },
+ {
+  "band": "sep",
+  "values": [
+   "② Fixed height 100px — img,cover — markdown notes (autoStretch)"
+  ]
+ },
+ {
+  "band": "col_header"
+ },
+ {
+  "band": "band_cover",
+  "values": [
+   "ART023",
+   "STM32F103C8T6 microcontroller",
+   "https://picsum.photos/seed/stm32/120/80",
+   "@data/ART023.txt"
+  ]
+ },
+ {
+  "band": "band_cover",
+  "values": [
+   "ART024",
+   "ESP32-WROOM-32 module",
+   "https://picsum.photos/seed/esp32/120/80",
+   "@data/ART024.md"
+  ]
+ },
+ {
+  "band": "band_cover",
+  "values": [
+   "ART025",
+   "Raspberry Pi Pico",
+   "https://picsum.photos/seed/pico/120/80",
+   "RP2040 dual-core Cortex-M0+ at 133 MHz, 264 KB SRAM, 2 MB flash, 26 GPIO, USB 1.1. Ideal for MicroPython and C/C++ projects."
+  ]
+ },
+ {
+  "band": "band_cover",
+  "values": [
+   "ART026",
+   "Arduino Nano clone",
+   "https://picsum.photos/seed/arduino/120/80",
+   null
+  ]
+ },
+ {
+  "band": "band_cover",
+  "values": [
+   "ART031",
+   "Digital multimeter pocket",
+   "@data/img/ART031.svg",
+   "@data/ART031.txt"
+  ]
+ },
+ {
+  "band": "band_cover",
+  "values": [
+   "ART032",
+   "Soldering iron 60W adjustable",
+   "@data/img/ART032.svg",
+   null
+  ]
+ },
+ {
+  "band": "band_cover",
+  "values": [
+   "ART033",
+   "Breadboard 830 tie-points",
+   "@data/img/ART033.svg",
+   null
+  ]
+ },
+ {
+  "band": "band_cover",
+  "values": [
+   "SRV003",
+   "PCB design and layout",
+   null,
+   "@data/SRV003.txt"
+  ]
+ },
+ {
+  "band": "band_cover",
+  "values": [
+   "SRV004",
+   "Firmware development",
+   null,
+   "Custom firmware for STM32, ESP32 and RP2040. Includes HAL/BSP setup, RTOS integration, unit tests and documentation."
+  ]
+ },
+ {
+  "band": "band_cover",
+  "values": [
+   "KIT001",
+   "STM32 development starter kit",
+   "@data/img/KIT001.svg",
+   "@data/KIT001.md"
+  ]
+ },
+ {
+  "band": "band_cover",
+  "values": [
+   "KIT002",
+   "Environmental sensors kit",
+   "https://picsum.photos/seed/kit002/120/80",
+   null
+  ]
+ },
+ {
+  "band": "band_cover",
+  "values": [
+   "KIT003",
+   "ESP32 IoT prototyping kit",
+   "https://picsum.photos/seed/kit003/120/80",
+   "@data/KIT003.md"
+  ]
+ },
+ {
+  "band": "band_cover",
+  "values": [
+   "KIT004",
+   "Power electronics learning kit",
+   "https://picsum.photos/seed/kit004/120/80",
+   null
+  ]
+ },
+ {
+  "band": "sep",
+  "values": [
+   "③ AutoStretch — proportional image — markdown notes"
+  ]
+ },
+ {
+  "band": "col_header"
+ },
+ {
+  "band": "band_auto",
+  "values": [
+   "ART023",
+   "STM32F103C8T6 microcontroller",
+   "https://picsum.photos/seed/stm32/120/80",
+   "@data/ART023.txt"
+  ]
+ },
+ {
+  "band": "band_auto",
+  "values": [
+   "ART024",
+   "ESP32-WROOM-32 module",
+   "https://picsum.photos/seed/esp32/120/80",
+   "@data/ART024.md"
+  ]
+ },
+ {
+  "band": "band_auto",
+  "values": [
+   "ART025",
+   "Raspberry Pi Pico",
+   "https://picsum.photos/seed/pico/120/80",
+   "RP2040 dual-core Cortex-M0+ at 133 MHz, 264 KB SRAM, 2 MB flash, 26 GPIO, USB 1.1. Ideal for MicroPython and C/C++ projects."
+  ]
+ },
+ {
+  "band": "band_auto",
+  "values": [
+   "ART026",
+   "Arduino Nano clone",
+   "https://picsum.photos/seed/arduino/120/80",
+   null
+  ]
+ },
+ {
+  "band": "band_auto",
+  "values": [
+   "ART031",
+   "Digital multimeter pocket",
+   "@data/img/ART031.svg",
+   "@data/ART031.txt"
+  ]
+ },
+ {
+  "band": "band_auto",
+  "values": [
+   "ART032",
+   "Soldering iron 60W adjustable",
+   "@data/img/ART032.svg",
+   null
+  ]
+ },
+ {
+  "band": "band_auto",
+  "values": [
+   "ART033",
+   "Breadboard 830 tie-points",
+   "@data/img/ART033.svg",
+   null
+  ]
+ },
+ {
+  "band": "band_auto",
+  "values": [
+   "SRV003",
+   "PCB design and layout",
+   null,
+   "@data/SRV003.txt"
+  ]
+ },
+ {
+  "band": "band_auto",
+  "values": [
+   "SRV004",
+   "Firmware development",
+   null,
+   "Custom firmware for STM32, ESP32 and RP2040. Includes HAL/BSP setup, RTOS integration, unit tests and documentation."
+  ]
+ },
+ {
+  "band": "band_auto",
+  "values": [
+   "KIT001",
+   "STM32 development starter kit",
+   "@data/img/KIT001.svg",
+   "@data/KIT001.md"
+  ]
+ },
+ {
+  "band": "band_auto",
+  "values": [
+   "KIT002",
+   "Environmental sensors kit",
+   "https://picsum.photos/seed/kit002/120/80",
+   null
+  ]
+ },
+ {
+  "band": "band_auto",
+  "values": [
+   "KIT003",
+   "ESP32 IoT prototyping kit",
+   "https://picsum.photos/seed/kit003/120/80",
+   "@data/KIT003.md"
+  ]
+ },
+ {
+  "band": "band_auto",
+  "values": [
+   "KIT004",
+   "Power electronics learning kit",
+   "https://picsum.photos/seed/kit004/120/80",
+   null
+  ]
+ }
+]

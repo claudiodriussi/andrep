@@ -1,0 +1,640 @@
+[
+ {
+  "band": "first_header",
+  "embeds": {
+   "r113": {
+    "band": "company_block",
+    "values": [
+     "@data/img/andrep-logo.png",
+     "ACME Electronics & Components",
+     "12 Industrial Park, London EC1A 1BB — orders@acme-electronics.com",
+     "VAT GB123456789"
+    ]
+   },
+   "r114": {
+    "band": "customer_block",
+    "values": [
+     "ROSS SYSTEMS LTD",
+     "45 Commerce Street, Manchester M1 2BX"
+    ]
+   }
+  },
+  "values": [
+   "SALES INVOICE",
+   "2025-INV-200",
+   "30/10/2025",
+   1,
+   "Bank transfer 60 days end of month"
+  ]
+ },
+ {
+  "band": "band_desc",
+  "values": [
+   "Shipment no. 3342 dated 01/09/25  —  ORDER no. 51297 dated 04/07/25"
+  ]
+ },
+ {
+  "band": "band_article",
+  "values": [
+   "ART001",
+   "10 ohm ceramic resistor 1/4W",
+   "PCS",
+   1620,
+   0.45,
+   0.0,
+   729.0,
+   "22"
+  ]
+ },
+ {
+  "band": "band_article",
+  "values": [
+   "ART002",
+   "100 ohm ceramic resistor 1/4W",
+   "PCS",
+   216,
+   0.45,
+   0.0,
+   97.2,
+   "22"
+  ]
+ },
+ {
+  "band": "band_desc",
+  "values": [
+   "Ref. Shipment no. 32738-05.08.2025  /  Ref. Shipment no. 32369-04.08.2025"
+  ]
+ },
+ {
+  "band": "band_desc",
+  "values": [
+   "Shipment no. 3381 dated 03/09/25  —  ORDER no. 51297 dated 04/07/25"
+  ]
+ },
+ {
+  "band": "band_article",
+  "values": [
+   "ART003",
+   "1K ohm resistor 1/4W",
+   "PCS",
+   2866,
+   0.45,
+   0.0,
+   1289.7,
+   "22"
+  ]
+ },
+ {
+  "band": "band_desc",
+  "values": [
+   "Ref. Shipment no. 32738-05.08.2025  /  Ref. Shipment no. 32807-06.08.2025"
+  ]
+ },
+ {
+  "band": "band_desc",
+  "values": [
+   "Shipment no. 3465 dated 09/09/25  —  ORDER no. 51275 dated 01/07/25"
+  ]
+ },
+ {
+  "band": "band_article",
+  "values": [
+   "ART005",
+   "100nF ceramic capacitor 50V",
+   "PCS",
+   4800,
+   0.3,
+   0.0,
+   1440.0,
+   "22"
+  ]
+ },
+ {
+  "band": "band_article_img",
+  "values": [
+   "ART031",
+   "@data/img/ART031.svg",
+   "Digital multimeter pocket",
+   "PCS",
+   75,
+   18.0,
+   0.0,
+   1350.0,
+   "22"
+  ]
+ },
+ {
+  "band": "band_desc",
+  "values": [
+   "Ref. Shipment no. 32136-01.08.2025  /  Ref. Shipment no. 32938-07.08.2025"
+  ]
+ },
+ {
+  "band": "band_direct",
+  "values": [
+   "Freight and packaging — urgent shipment surcharge per agreement ref. 2025-LOG-001 September 2025 delivery",
+   "FLT",
+   1,
+   65.0,
+   0.0,
+   65.0,
+   "22"
+  ]
+ },
+ {
+  "band": "band_desc",
+  "values": [
+   "Shipment no. 3520 dated 11/09/25  —  ORDER no. 51275 dated 01/07/25"
+  ]
+ },
+ {
+  "band": "band_article_img",
+  "values": [
+   "ART032",
+   "@data/img/ART032.svg",
+   "Soldering iron 60W adjustable",
+   "PCS",
+   40,
+   32.0,
+   0.0,
+   1280.0,
+   "22"
+  ]
+ },
+ {
+  "band": "band_desc",
+  "values": [
+   "Ref. Shipment no. 32938-07.08.2025"
+  ]
+ },
+ {
+  "band": "band_desc",
+  "values": [
+   "Shipment no. 3547 dated 12/09/25  —  ORDER no. 51275 dated 01/07/25"
+  ]
+ },
+ {
+  "band": "band_article",
+  "values": [
+   "ART004",
+   "10K ohm resistor 1/4W",
+   "PCS",
+   3000,
+   0.45,
+   0.0,
+   1350.0,
+   "22"
+  ]
+ },
+ {
+  "band": "band_article",
+  "values": [
+   "ART006",
+   "10uF electrolytic capacitor 25V",
+   "PCS",
+   1080,
+   0.55,
+   5.0,
+   564.3,
+   "22"
+  ]
+ },
+ {
+  "band": "band_desc",
+  "values": [
+   "Ref. Shipment no. 32938-07.08.2025  /  Ref. Shipment no. 33012-13.09.2025"
+  ]
+ },
+ {
+  "band": "band_desc",
+  "values": [
+   "Shipment no. 3612 dated 15/09/25  —  ORDER no. 51276 dated 02/07/25"
+  ]
+ },
+ {
+  "band": "band_article",
+  "values": [
+   "ART007",
+   "100uF electrolytic capacitor 25V",
+   "PCS",
+   1800,
+   0.8,
+   0.0,
+   1440.0,
+   "22"
+  ]
+ },
+ {
+  "band": "band_article_img",
+  "values": [
+   "ART033",
+   "@data/img/ART033.svg",
+   "Breadboard 830 tie-points",
+   "PCS",
+   250,
+   5.5,
+   3.0,
+   1333.75,
+   "22"
+  ]
+ },
+ {
+  "band": "band_desc",
+  "values": [
+   "Ref. Shipment no. 33215-15.09.2025"
+  ]
+ },
+ {
+  "band": "band_desc",
+  "values": [
+   "Shipment no. 3684 dated 19/09/25  —  ORDER no. 51298 dated 04/07/25"
+  ]
+ },
+ {
+  "band": "band_article",
+  "values": [
+   "ART008",
+   "470uF electrolytic capacitor 16V",
+   "PCS",
+   1188,
+   0.95,
+   0.0,
+   1128.6,
+   "22"
+  ]
+ },
+ {
+  "band": "band_desc",
+  "values": [
+   "Ref. Shipment no. 36625-09.09.2025"
+  ]
+ },
+ {
+  "band": "band_desc",
+  "values": [
+   "Shipment no. 3738 dated 23/09/25  —  ORDER no. 51298 dated 04/07/25"
+  ]
+ },
+ {
+  "band": "band_article",
+  "values": [
+   "ART009",
+   "10uH inductor SMD 2A",
+   "PCS",
+   864,
+   1.2,
+   0.0,
+   1036.8,
+   "22"
+  ]
+ },
+ {
+  "band": "band_article",
+  "values": [
+   "ART010",
+   "Crystal 16MHz HC-49",
+   "PCS",
+   1600,
+   0.9,
+   0.0,
+   1440.0,
+   "22"
+  ]
+ },
+ {
+  "band": "band_desc",
+  "values": [
+   "Ref. Shipment no. 36625-09.09.2025  /  Ref. Shipment no. 37130-11.09.2025"
+  ]
+ },
+ {
+  "band": "band_desc",
+  "values": [
+   "Shipment no. 3797 dated 25/09/25  —  ORDER no. 51298 dated 04/07/25"
+  ]
+ },
+ {
+  "band": "band_article",
+  "values": [
+   "ART011",
+   "1N4148 signal diode",
+   "PCS",
+   1620,
+   0.12,
+   0.0,
+   194.4,
+   "22"
+  ]
+ },
+ {
+  "band": "band_article",
+  "values": [
+   "ART012",
+   "1N4007 rectifier diode 1A",
+   "PCS",
+   1923,
+   0.18,
+   0.0,
+   346.14,
+   "22"
+  ]
+ },
+ {
+  "band": "band_desc",
+  "values": [
+   "Ref. Shipment no. 36625-09.09.2025  /  Ref. Shipment no. 37130-11.09.2025  /  Ref. Shipment no. 37344-12.09.2025"
+  ]
+ },
+ {
+  "band": "band_desc",
+  "values": [
+   "Shipment no. 3845 dated 27/09/25  —  ORDER no. 51299 dated 05/07/25"
+  ]
+ },
+ {
+  "band": "band_article",
+  "values": [
+   "ART001",
+   "10 ohm ceramic resistor 1/4W",
+   "PCS",
+   3240,
+   0.45,
+   0.0,
+   1458.0,
+   "22"
+  ]
+ },
+ {
+  "band": "band_article_img",
+  "values": [
+   "ART031",
+   "@data/img/ART031.svg",
+   "Digital multimeter pocket",
+   "PCS",
+   80,
+   18.0,
+   2.0,
+   1411.2,
+   "22"
+  ]
+ },
+ {
+  "band": "band_desc",
+  "values": [
+   "Ref. Shipment no. 37344-12.09.2025  /  Ref. Shipment no. 37520-13.09.2025"
+  ]
+ },
+ {
+  "band": "band_direct",
+  "values": [
+   "On-site technical assistance — quality inspection MICHIGAN batch September 2025 ref. AT-2025-042 internal laboratory",
+   "HRS",
+   4,
+   85.0,
+   0.0,
+   340.0,
+   "22"
+  ]
+ },
+ {
+  "band": "band_desc",
+  "values": [
+   "Shipment no. 3880 dated 30/09/25  —  ORDER no. 51299 dated 05/07/25"
+  ]
+ },
+ {
+  "band": "band_article",
+  "values": [
+   "ART003",
+   "1K ohm resistor 1/4W",
+   "PCS",
+   3000,
+   0.45,
+   0.0,
+   1350.0,
+   "22"
+  ]
+ },
+ {
+  "band": "band_article",
+  "values": [
+   "ART005",
+   "100nF ceramic capacitor 50V",
+   "PCS",
+   2700,
+   0.3,
+   5.0,
+   769.5,
+   "22"
+  ]
+ },
+ {
+  "band": "band_article_img",
+  "values": [
+   "ART032",
+   "@data/img/ART032.svg",
+   "Soldering iron 60W adjustable",
+   "PCS",
+   40,
+   32.0,
+   0.0,
+   1280.0,
+   "22"
+  ]
+ },
+ {
+  "band": "band_desc",
+  "values": [
+   "Ref. Shipment no. 37520-13.09.2025  /  Ref. Shipment no. 37891-16.09.2025"
+  ]
+ },
+ {
+  "band": "band_desc",
+  "values": [
+   "Shipment no. 3921 dated 01/10/25  —  ORDER no. 51300 dated 07/07/25"
+  ]
+ },
+ {
+  "band": "band_article",
+  "values": [
+   "ART007",
+   "100uF electrolytic capacitor 25V",
+   "PCS",
+   1620,
+   0.8,
+   0.0,
+   1296.0,
+   "22"
+  ]
+ },
+ {
+  "band": "band_article",
+  "values": [
+   "ART008",
+   "470uF electrolytic capacitor 16V",
+   "PCS",
+   810,
+   0.95,
+   2.5,
+   750.26,
+   "22"
+  ]
+ },
+ {
+  "band": "band_desc",
+  "values": [
+   "Ref. Shipment no. 37891-16.09.2025"
+  ]
+ },
+ {
+  "band": "band_desc",
+  "values": [
+   "Shipment no. 3975 dated 03/10/25  —  ORDER no. 51300 dated 07/07/25"
+  ]
+ },
+ {
+  "band": "band_article",
+  "values": [
+   "ART009",
+   "10uH inductor SMD 2A",
+   "PCS",
+   1200,
+   1.2,
+   0.0,
+   1440.0,
+   "22"
+  ]
+ },
+ {
+  "band": "band_article_img",
+  "values": [
+   "ART033",
+   "@data/img/ART033.svg",
+   "Breadboard 830 tie-points",
+   "PCS",
+   250,
+   5.5,
+   3.0,
+   1333.75,
+   "22"
+  ]
+ },
+ {
+  "band": "band_article",
+  "values": [
+   "ART010",
+   "Crystal 16MHz HC-49",
+   "PCS",
+   540,
+   0.9,
+   0.0,
+   486.0,
+   "22"
+  ]
+ },
+ {
+  "band": "band_desc",
+  "values": [
+   "Ref. Shipment no. 37891-16.09.2025  /  Ref. Shipment no. 38102-18.09.2025"
+  ]
+ },
+ {
+  "band": "band_desc",
+  "values": [
+   "Shipment no. 4023 dated 06/10/25  —  ORDER no. 51301 dated 08/07/25"
+  ]
+ },
+ {
+  "band": "band_article",
+  "values": [
+   "ART011",
+   "1N4148 signal diode",
+   "PCS",
+   4320,
+   0.12,
+   0.0,
+   518.4,
+   "22"
+  ]
+ },
+ {
+  "band": "band_article",
+  "values": [
+   "ART012",
+   "1N4007 rectifier diode 1A",
+   "PCS",
+   2160,
+   0.18,
+   0.0,
+   388.8,
+   "22"
+  ]
+ },
+ {
+  "band": "band_article_img",
+  "values": [
+   "ART031",
+   "@data/img/ART031.svg",
+   "Digital multimeter pocket",
+   "PCS",
+   80,
+   18.0,
+   2.0,
+   1411.2,
+   "22"
+  ]
+ },
+ {
+  "band": "band_desc",
+  "values": [
+   "Ref. Shipment no. 38102-18.09.2025  /  Ref. Shipment no. 38330-20.09.2025"
+  ]
+ },
+ {
+  "band": "band_desc",
+  "values": [
+   "Shipment no. 4087 dated 09/10/25  —  ORDER no. 51301 dated 08/07/25"
+  ]
+ },
+ {
+  "band": "band_article",
+  "values": [
+   "ART001",
+   "10 ohm ceramic resistor 1/4W",
+   "PCS",
+   2700,
+   0.45,
+   0.0,
+   1215.0,
+   "22"
+  ]
+ },
+ {
+  "band": "band_article",
+  "values": [
+   "ART003",
+   "1K ohm resistor 1/4W",
+   "PCS",
+   1350,
+   0.45,
+   5.0,
+   577.12,
+   "22"
+  ]
+ },
+ {
+  "band": "band_desc",
+  "values": [
+   "Ref. Shipment no. 38330-20.09.2025"
+  ]
+ },
+ {
+  "band": "last_footer",
+  "values": [
+   31110.12,
+   6844.23,
+   37954.35,
+   "Your data is processed under EU Regulation 2016/679 (GDPR); for further information please visit our company website. This document is issued for accounting purposes only. The original is available at the electronic address you provided or in your reserved area on our customer portal."
+  ]
+ }
+]

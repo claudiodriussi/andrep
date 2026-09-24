@@ -33,6 +33,7 @@ playwright = ["playwright"]
 barcode    = ["python-barcode", "qrcode"]
 markdown   = ["markdown"]
 all        = ["weasyprint", "playwright", "python-barcode", "qrcode", "markdown"]
+dev        = ["pytest"]
 
 [project.urls]
 Homepage   = "https://github.com/claudiodriussi/andrep"
@@ -45,3 +46,7 @@ andrep-expr = "andrep.expr_cli:main"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["andrep*"]
+
+[tool.pytest.ini_options]
+testpaths  = ["tests"]
+pythonpath = ["."]

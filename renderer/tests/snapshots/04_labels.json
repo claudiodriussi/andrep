@@ -1,0 +1,374 @@
+[
+ {
+  "band": "page_header"
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123457",
+   "ART001",
+   0.45,
+   "10 ohm ceramic resistor 1/4W"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123464",
+   "ART002",
+   0.45,
+   "100 ohm ceramic resistor 1/4W"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123471",
+   "ART003",
+   0.45,
+   "1K ohm resistor 1/4W"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123488",
+   "ART004",
+   0.45,
+   "10K ohm resistor 1/4W"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123495",
+   "ART005",
+   0.3,
+   "100nF ceramic capacitor 50V"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123501",
+   "ART006",
+   0.55,
+   "10uF electrolytic capacitor 25V"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123518",
+   "ART007",
+   0.8,
+   "100uF electrolytic capacitor 25V"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123525",
+   "ART008",
+   0.95,
+   "470uF electrolytic capacitor 16V"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123532",
+   "ART009",
+   1.2,
+   "10uH inductor SMD 2A"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123549",
+   "ART010",
+   0.9,
+   "Crystal 16MHz HC-49"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123556",
+   "ART011",
+   0.12,
+   "1N4148 signal diode"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123563",
+   "ART012",
+   0.18,
+   "1N4007 rectifier diode 1A"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123570",
+   "ART013",
+   0.15,
+   "LED red 5mm"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123587",
+   "ART014",
+   0.15,
+   "LED green 5mm"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123594",
+   "ART015",
+   0.2,
+   "BC547 NPN transistor"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123600",
+   "ART016",
+   1.8,
+   "IRF540N N-channel MOSFET"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123617",
+   "ART017",
+   0.65,
+   "LM358 dual op-amp DIP8"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123624",
+   "ART018",
+   0.55,
+   "NE555 timer DIP8"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123631",
+   "ART019",
+   3.5,
+   "USB-C cable 1m"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123648",
+   "ART020",
+   2.8,
+   "USB-A to micro-B cable 2m"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123655",
+   "ART021",
+   0.6,
+   "2.54mm pin header 40p straight"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123662",
+   "ART022",
+   0.35,
+   "JST-XH 2p connector set"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123679",
+   "ART023",
+   4.2,
+   "STM32F103C8T6 microcontroller"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123686",
+   "ART024",
+   5.9,
+   "ESP32-WROOM-32 module"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123693",
+   "ART025",
+   6.5,
+   "Raspberry Pi Pico"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123709",
+   "ART026",
+   4.8,
+   "Arduino Nano clone"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123716",
+   "ART027",
+   0.75,
+   "LM7805 5V regulator TO-220"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123723",
+   "ART028",
+   0.85,
+   "LM317 adjustable regulator"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123730",
+   "ART029",
+   3.2,
+   "DC-DC step-down module 3A"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123747",
+   "ART030",
+   14.5,
+   "12V 2A switching power supply"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123754",
+   "ART031",
+   18.0,
+   "Digital multimeter pocket"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123761",
+   "ART032",
+   32.0,
+   "Soldering iron 60W adjustable"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123778",
+   "ART033",
+   5.5,
+   "Breadboard 830 tie-points"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123785",
+   "KIT001",
+   38.0,
+   "STM32 development starter kit"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123792",
+   "KIT002",
+   52.0,
+   "Environmental sensors kit"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123808",
+   "KIT003",
+   65.0,
+   "ESP32 IoT prototyping kit"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   "5901234123815",
+   "KIT004",
+   48.0,
+   "Power electronics learning kit"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   null,
+   "SRV001",
+   85.0,
+   "Technical support"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   null,
+   "SRV002",
+   95.0,
+   "Testing and certification"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   null,
+   "SRV003",
+   110.0,
+   "PCB design and layout"
+  ]
+ },
+ {
+  "band": "band",
+  "values": [
+   null,
+   "SRV004",
+   120.0,
+   "Firmware development"
+  ]
+ }
+]

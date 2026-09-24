@@ -1,0 +1,955 @@
+[
+ {
+  "band": "page_header"
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART001",
+     "10 ohm ceramic resistor 1/4W",
+     null
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     0.45,
+     "5901234123457",
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART002",
+     "100 ohm ceramic resistor 1/4W",
+     null
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     0.45,
+     "5901234123464",
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART003",
+     "1K ohm resistor 1/4W",
+     null
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     0.45,
+     "5901234123471",
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART004",
+     "10K ohm resistor 1/4W",
+     null
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     0.45,
+     "5901234123488",
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART005",
+     "100nF ceramic capacitor 50V",
+     null
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     0.3,
+     "5901234123495",
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART006",
+     "10uF electrolytic capacitor 25V",
+     null
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     0.55,
+     "5901234123501",
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART007",
+     "100uF electrolytic capacitor 25V",
+     null
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     0.8,
+     "5901234123518",
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART008",
+     "470uF electrolytic capacitor 16V",
+     null
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     0.95,
+     "5901234123525",
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART009",
+     "10uH inductor SMD 2A",
+     null
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     1.2,
+     "5901234123532",
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART010",
+     "Crystal 16MHz HC-49",
+     null
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     0.9,
+     "5901234123549",
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART011",
+     "1N4148 signal diode",
+     null
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     0.12,
+     "5901234123556",
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART012",
+     "1N4007 rectifier diode 1A",
+     null
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     0.18,
+     "5901234123563",
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART013",
+     "LED red 5mm",
+     null
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     0.15,
+     "5901234123570",
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART014",
+     "LED green 5mm",
+     null
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     0.15,
+     "5901234123587",
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART015",
+     "BC547 NPN transistor",
+     null
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     0.2,
+     "5901234123594",
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART016",
+     "IRF540N N-channel MOSFET",
+     null
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     1.8,
+     "5901234123600",
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART017",
+     "LM358 dual op-amp DIP8",
+     null
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     0.65,
+     "5901234123617",
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART018",
+     "NE555 timer DIP8",
+     null
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     0.55,
+     "5901234123624",
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART019",
+     "USB-C cable 1m",
+     null
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     3.5,
+     "5901234123631",
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART020",
+     "USB-A to micro-B cable 2m",
+     null
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     2.8,
+     "5901234123648",
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART021",
+     "2.54mm pin header 40p straight",
+     null
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     0.6,
+     "5901234123655",
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART022",
+     "JST-XH 2p connector set",
+     null
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     0.35,
+     "5901234123662",
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART023",
+     "STM32F103C8T6 microcontroller",
+     "https://picsum.photos/seed/stm32/120/80"
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     4.2,
+     "5901234123679",
+     "@data/ART023.txt"
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART024",
+     "ESP32-WROOM-32 module",
+     "https://picsum.photos/seed/esp32/120/80"
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     5.9,
+     "5901234123686",
+     "@data/ART024.md"
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART025",
+     "Raspberry Pi Pico",
+     "https://picsum.photos/seed/pico/120/80"
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     6.5,
+     "5901234123693",
+     "RP2040 dual-core Cortex-M0+ at 133 MHz, 264 KB SRAM, 2 MB flash, 26 GPIO, USB 1.1. Ideal for MicroPython and C/C++ projects."
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART026",
+     "Arduino Nano clone",
+     "https://picsum.photos/seed/arduino/120/80"
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     4.8,
+     "5901234123709",
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART027",
+     "LM7805 5V regulator TO-220",
+     null
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     0.75,
+     "5901234123716",
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART028",
+     "LM317 adjustable regulator",
+     null
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     0.85,
+     "5901234123723",
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART029",
+     "DC-DC step-down module 3A",
+     null
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     3.2,
+     "5901234123730",
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART030",
+     "12V 2A switching power supply",
+     null
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     14.5,
+     "5901234123747",
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART031",
+     "Digital multimeter pocket",
+     "@data/img/ART031.svg"
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     18.0,
+     "5901234123754",
+     "@data/ART031.txt"
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART032",
+     "Soldering iron 60W adjustable",
+     "@data/img/ART032.svg"
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     32.0,
+     "5901234123761",
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "ART033",
+     "Breadboard 830 tie-points",
+     "@data/img/ART033.svg"
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "STD",
+     "PCS",
+     5.5,
+     "5901234123778",
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "SRV001",
+     "Technical support",
+     null
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "SRV",
+     "HRS",
+     85.0,
+     null,
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "SRV002",
+     "Testing and certification",
+     null
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "SRV",
+     "HRS",
+     95.0,
+     null,
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "SRV003",
+     "PCB design and layout",
+     null
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "SRV",
+     "HRS",
+     110.0,
+     null,
+     "@data/SRV003.txt"
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "SRV004",
+     "Firmware development",
+     null
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "SRV",
+     "HRS",
+     120.0,
+     null,
+     "Custom firmware for STM32, ESP32 and RP2040. Includes HAL/BSP setup, RTOS integration, unit tests and documentation."
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "KIT001",
+     "STM32 development starter kit",
+     "@data/img/KIT001.svg"
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "KIT",
+     "PCS",
+     38.0,
+     "5901234123785",
+     "@data/KIT001.md"
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "KIT002",
+     "Environmental sensors kit",
+     "https://picsum.photos/seed/kit002/120/80"
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "KIT",
+     "PCS",
+     52.0,
+     "5901234123792",
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "KIT003",
+     "ESP32 IoT prototyping kit",
+     "https://picsum.photos/seed/kit003/120/80"
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "KIT",
+     "PCS",
+     65.0,
+     "5901234123808",
+     "@data/KIT003.md"
+    ]
+   }
+  }
+ },
+ {
+  "band": "band",
+  "embeds": {
+   "c3": {
+    "band": "art_left",
+    "values": [
+     "KIT004",
+     "Power electronics learning kit",
+     "https://picsum.photos/seed/kit004/120/80"
+    ]
+   },
+   "c4": {
+    "band": "art_right",
+    "values": [
+     "KIT",
+     "PCS",
+     48.0,
+     "5901234123815",
+     null
+    ]
+   }
+  }
+ },
+ {
+  "band": "totals",
+  "values": [
+   41,
+   726.75
+  ]
+ }
+]
