@@ -142,8 +142,8 @@ See [Chapter 7](#7-pagination) for the full pagination reference.
 
 ### System variables
 
-A set of variables is injected automatically into every cell: `[_DATE]`, `[_TIME]`,
-`[_USER]`, `[_PAGE]`, and `[_r]` (the renderer instance, for accessing accumulators).
+A set of variables is injected automatically into every cell: `[_date]`, `[_time]`,
+`[_user]`, `[_page]`, `[_name]`, and `[_r]` (the renderer instance, for accessing accumulators).
 
 See [Chapter 5](#5-variables--formatters) for the complete reference.
 
@@ -888,7 +888,7 @@ Cell content is free text with embedded **tokens** delimited by `[` and `]`. Tex
 tokens is rendered literally.
 
 ```
-"Invoice [_DATE]  —  page [_PAGE]"
+"Invoice [_date]  —  page [_page]"
 →  "Invoice 28/03/2026  —  page 1"
 ```
 
@@ -1085,14 +1085,14 @@ Injected automatically into every cell by the renderer:
 
 | Variable    | Content                                                        |
 | ----------- | -------------------------------------------------------------- |
-| `[_DATE]` | Print date (`dd/mm/yyyy`)                                    |
-| `[_TIME]` | Print time (`HH:MM:SS`)                                      |
-| `[_USER]` | User running the report (OS environment `USER`)              |
-| `[_PAGE]` | Current page number (PDF only; 1-based)                        |
+| `[_date]` | Print date (`dd/mm/yyyy`)                                    |
+| `[_time]` | Print time (`HH:MM:SS`)                                      |
+| `[_user]` | User running the report (OS environment `USER`)              |
+| `[_page]` | Current page number (PDF only; 1-based)                        |
 | `[_r]`    | The renderer instance — access accumulators:`[_r.total\|.2]` |
-| `[_name]` | Name of the band currently being rendered                      |
+| `[_name]` | Template name                                                  |
 
-> **Note:** `[_PAGES]` (total page count) is not available. The renderer streams bands
+> **Note:** a total page count (`[_pages]`) is not available. The renderer streams bands
 > without a full pre-layout pass. For "Page X of Y" use a two-pass strategy in the caller.
 
 ---
@@ -1102,9 +1102,15 @@ Injected automatically into every cell by the renderer:
 | Situation                               | Result                              |
 | --------------------------------------- | ----------------------------------- |
 | Division by zero                        | `0`                               |
-| Any other evaluation error              | `[#expr#]` (visible debug marker) |
+| Any other evaluation error              | `[#expr: reason#]` (visible marker) |
+| Expression outside the allowed subset   | `[#expr: reason#]` — never evaluated |
 | Missing image / file with `silent`    | `""` (empty string)               |
 | Missing image / file without `silent` | `[#ref#]` (visible debug marker)  |
+
+Expressions are validated and compiled once, when the template is loaded. Names and
+attributes starting with `_` are not allowed (except the system variables above), nor
+are constructs such as `lambda` or assignments; the full rules are in
+[docs/SECURITY.md](SECURITY.md).
 
 ---
 

@@ -10,6 +10,7 @@ from html import escape
 from pathlib import Path
 
 from .loader import TemplateLoader
+from .expr_check import compile_expr
 from .variables import _apply_formatter, _parse_tokens, _to_ns, eval_expr
 
 
@@ -287,12 +288,23 @@ class AndRepRenderer:
         for row in self.template.get("rows", []):
             self.bands.setdefault(row["name"], []).append(row)
 
-        # Pre-parse cell content tokens once — eval only at compile time
+        # Parse cell content tokens and validate + compile their expressions
+        # once, at load time.  Only compiled expressions are ever evaluated.
         self._cell_tokens: dict[int, list] = {}
+        self._cell_exprs: dict[int, list] = {}    # CompiledExpr per [expr] token
+        self._css_exprs: dict[int, object] = {}   # CompiledExpr for "@expr" cssExtra
         for band_rows in self.bands.values():
             for row in band_rows:
                 for cell in row.get("cells", []):
-                    self._cell_tokens[id(cell)] = _parse_tokens(cell.get("content", ""))
+                    tokens = _parse_tokens(cell.get("content", ""))
+                    self._cell_tokens[id(cell)] = tokens
+                    self._cell_exprs[id(cell)] = [
+                        compile_expr(expr, trusted=self.trusted)
+                        for _, expr, _ in tokens if expr is not None
+                    ]
+                    css = cell.get("cssExtra", "")
+                    if css.startswith("@"):
+                        self._css_exprs[id(cell)] = compile_expr(css[1:], trusted=self.trusted)
 
         self.on_init()
 
@@ -370,15 +382,14 @@ class AndRepRenderer:
                         embeds[cell.get("id", str(id(cell)))] = self._compile_band(target, ns, "", {})
                     # embed cells carry no token values; cssExtra still applies
                 else:
-                    for _, expr, _ in self._cell_tokens[id(cell)]:
-                        if expr is not None:
-                            values.append(eval_expr(expr, ns))
-                raw = cell.get("cssExtra", "")
-                if raw.startswith("@"):
-                    res = eval_expr(raw[1:], ns)
+                    for expr in self._cell_exprs[id(cell)]:
+                        values.append(eval_expr(expr, ns))
+                css_expr = self._css_exprs.get(id(cell))
+                if css_expr is not None:
+                    res = eval_expr(css_expr, ns)
                     cell_css = str(res) if res else ""
                 else:
-                    cell_css = raw
+                    cell_css = cell.get("cssExtra", "")
                 content = cell.get("content", "")
                 for match, patch_css in cell_patches.items():
                     if match in content:

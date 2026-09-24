@@ -1394,7 +1394,7 @@
     "preset": "A4",
     "width": 794
    },
-   "[#_r.pages#]"
+   "[#_r.pages: AttributeError: 'DetailReport' object has no attribute 'pages'#]"
   ]
  }
 ]

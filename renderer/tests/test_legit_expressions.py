@@ -1,16 +1,15 @@
 """
 Every expression used by the shipped templates must stay accepted.
 
-Today the check is "valid Python expression syntax"; once the expression
-validator exists, it becomes "accepted by the validator" — same list, stricter
-check. Expression translations (template["expressions"]) are skipped: they
+Each one must be accepted by the expression validator (andrep.expr_check).
+Expression translations (template["expressions"]) are skipped: they
 target other languages (e.g. "js" for the JS client).
 """
-import ast
 import json
 
 import pytest
 
+from andrep.expr_check import compile_expr
 from andrep.variables import _parse_tokens
 from conftest import EXAMPLES_DIR, REPO_DIR
 
@@ -49,4 +48,5 @@ def test_expressions_found():
 
 @pytest.mark.parametrize("source, expr", EXPRESSIONS, ids=[f"{s}:{e}" for s, e in EXPRESSIONS])
 def test_expression_accepted(source, expr):
-    ast.parse(expr, mode="eval")
+    compiled = compile_expr(expr)
+    assert compiled.code is not None, compiled.error

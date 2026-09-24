@@ -19,6 +19,8 @@ import re
 import types
 from datetime import date, datetime
 
+from .expr_check import compile_expr
+
 
 def _to_ns(data):
     """Recursively convert dict / dict-like / list to SimpleNamespace for
@@ -55,15 +57,24 @@ def _to_ns(data):
 def eval_expr(expr, ns):
     """Evaluate *expr* in the pre-built namespace *ns*.
 
-    *ns* must already contain ``"__builtins__": {}`` to restrict access.
-    Returns the computed value or the literal string ``'[#expr#]'`` on error.
+    *expr* is a ``CompiledExpr`` (validated when the template was loaded) or a
+    string, which is validated here.  *ns* must already contain
+    ``"__builtins__": {}``.
+
+    Returns the computed value, ``0`` on division by zero, or the visible
+    marker ``'[#expr: reason#]'`` when the expression was rejected or fails.
+    A rejected expression is never evaluated.
     """
+    if isinstance(expr, str):
+        expr = compile_expr(expr)
+    if expr.code is None:
+        return expr.marker(expr.error)
     try:
-        return eval(expr, ns)  # noqa: S307
+        return eval(expr.code, ns)  # noqa: S307 — validated subset, no builtins
     except ZeroDivisionError:
         return 0
-    except Exception:
-        return f"[#{expr}#]"
+    except Exception as e:
+        return expr.marker(f"{type(e).__name__}: {e}")
 
 
 def _fmt_load(value, params, r):
