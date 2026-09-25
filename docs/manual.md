@@ -743,17 +743,17 @@ plain-text with `<br>` line breaks.
   before laying out the page.
 - To load content from an external file, use the `load` formatter:
   `["@data/notes.md" | load]`. The `@` prefix resolves the path relative to `r.base_dir`
-  (see [Attributes](#attributes)); if `base_dir` is not set, `Path.cwd()` is used.
+  (see [Resources](#resources)); if `base_dir` is not set, `Path.cwd()` is used.
 
 ---
 
 ### image
 
-`content` is a URL, absolute file path, or base64 data URI. It can be a literal string or
-a `[expr|fmt]` token that resolves to one of those forms.
+`content` is a path relative to `r.base_dir`, a URL, or a base64 data URI. It can be a
+literal string or a `[expr|fmt]` token that resolves to one of those forms.
 
-The recommended approach is to use the `img` formatter, which resolves local paths to
-base64 data URIs automatically and gives you control over the scaling mode:
+The recommended approach is to use the `img` formatter, which gives you control over the
+scaling mode:
 
 ```json
 { "type": "image", "content": "[row.photo | img,contain]" }
@@ -764,9 +764,9 @@ base64 data URIs automatically and gives you control over the scaling mode:
 The `@` prefix resolves the path relative to `r.base_dir` (the same convention used by
 the `load` formatter — see [Attributes](#attributes)).
 
-If no `img` formatter is used, the renderer treats the value as a plain URL and generates
-a basic `<img>` tag with `autoStretch`-aware sizing. Local file paths are not resolved to
-base64 in this fallback mode, so images may not appear in PDF output.
+If no `img` formatter is used, the renderer generates a basic `<img>` tag with
+`autoStretch`-aware sizing. Either way the image is read through the
+[resource resolver](#resources) and embedded in the document.
 
 ---
 
@@ -1015,9 +1015,9 @@ If the value is not a `date` / `datetime` object it is converted to string uncha
 
 ### Image formatter — `img`
 
-Converts a path, URL, or base64 data URI into an HTML `<img>` element. Local file paths
-(including `@relative/path` references) are resolved to base64 data URIs automatically, so
-the image is embedded in the HTML and works in PDF output too.
+Converts a path, URL, or base64 data URI into an HTML `<img>` element. The image is read
+through the [resource resolver](#resources) and embedded as a base64 data URI, so the
+document is self-contained and works in PDF output too.
 
 ```
 [row.photo | img]              proportional, width 100%, height adapts
@@ -1027,14 +1027,14 @@ the image is embedded in the HTML and works in PDF output too.
 [row.photo | img,cover,silent] cover mode, no error if image is missing
 ```
 
-`silent` suppresses the `[#ref#]` error marker for missing files.
+On error the cell shows `[#ref: reason#]`; `silent` leaves it empty instead.
 
 ---
 
 ### File loader — `load`
 
-Loads the content of a local file or a URL and returns it as a string. Useful for cells
-that embed external text or Markdown content.
+Loads the content of a file or a URL (through the [resource resolver](#resources)) and
+returns it as a string. Useful for cells that embed external text or Markdown content.
 
 ```
 ["@data/notes.txt" | load]            load text file relative to base_dir
@@ -1044,9 +1044,41 @@ that embed external text or Markdown content.
 
 `@ref` notation:
 
-- `@relative/path` — resolved relative to `r.base_dir` (set at renderer construction)
-- `@/absolute/path` — absolute filesystem path
-- `@https://...` — HTTP fetch
+- `@relative/path` — resolved relative to `r.base_dir`
+- `@name:relative/path` — inside a named root of the resolver (see below)
+- `@https://...` — HTTP fetch from a public host
+
+### Resources
+
+Everything a template refers to — `load`, `img`, image cells — is read by the renderer
+through a **resource resolver** and embedded in the document as a `data:` URL. The
+generated HTML is self-contained (and larger); the PDF backend never fetches anything.
+
+The default resolver reads:
+
+- files **inside** `r.base_dir` (the current directory if not set) — relative paths only:
+  `..`, absolute paths and symlinks leading outside are refused;
+- files inside **named roots**, e.g. `media:2026/09/photo.jpg`;
+- `http(s)://` URLs of **public** hosts — local and private network addresses are refused,
+  redirects included.
+
+Each resource is read once per renderer (a logo in the page header is fetched once, not
+once per page). On error the cell shows `[#ref: reason#]`.
+
+To add roots, turn the network off or use another source, pass a resolver:
+
+```python
+from andrep import AndRepRenderer, DefaultResolver
+
+r = AndRepRenderer("invoice", loader=loader,
+                   resolver=DefaultResolver(base_dir="data",
+                                            roots={"media": "/srv/app/media"},
+                                            network=False))
+```
+
+A custom resolver is any object with `open(ref) -> (bytes, mime)` that raises
+`andrep.ResourceError` when a resource cannot be read — e.g. one reading from a database
+or from an application's media storage.
 
 ---
 
@@ -1105,7 +1137,7 @@ Injected automatically into every cell by the renderer:
 | Any other evaluation error              | `[#expr: reason#]` (visible marker) |
 | Expression outside the allowed subset   | `[#expr: reason#]` — never evaluated |
 | Missing image / file with `silent`    | `""` (empty string)               |
-| Missing image / file without `silent` | `[#ref#]` (visible debug marker)  |
+| Missing image / file without `silent` | `[#ref: reason#]` (visible marker) |
 
 Expressions are validated and compiled once, when the template is loaded. Names and
 attributes starting with `_` are not allowed (except the system variables above), nor
@@ -1193,7 +1225,7 @@ and so on — no explicit passing required.
 ### Constructor
 
 ```python
-AndRepRenderer(template, loader=None, trusted=False, pdf_backend=None)
+AndRepRenderer(template, loader=None, trusted=False, pdf_backend=None, resolver=None)
 ```
 
 | Parameter       | Description                                                                       |
@@ -1202,6 +1234,7 @@ AndRepRenderer(template, loader=None, trusted=False, pdf_backend=None)
 | `loader`      | `TemplateLoader` instance — resolves template names and composition targets    |
 | `trusted`     | If `True`, the caller trusts its templates: `f_globals` and all locals are exposed as they are, and the expression checks are off (see below) |
 | `pdf_backend` | PDF backend to use for `to_pdf()` — `"playwright"`, `"weasyprint"`, or a `PdfBackend` instance. `None` (default) resolves via `ANDREP_PDF_BACKEND` env var, then `"playwright"`. See [PDF backends](../renderer/README.md#pdf-backends-playwright-vs-weasyprint). |
+| `resolver`    | Where `load` / `img` / image cells read resources from — see [Resources](#resources). `None` (default): files inside `base_dir`, public http(s) |
 
 `FilesystemLoader(base_dir)` resolves template names relative to `base_dir` and handles
 composition (loading referenced templates from the same directory).
@@ -1387,7 +1420,8 @@ r.emit("next_section_header")
 | `data`        | SimpleNamespace | `f_locals` captured at the last emit() — available in hooks              |
 | `globals`     | dict            | Registered callables / objects                                              |
 | `formatters`  | dict            | Custom formatters — checked before built-ins                               |
-| `base_dir`    | Path            | Root for `@relative/path` references in the `load` / `img` formatters |
+| `base_dir`    | Path            | Root for relative resource paths (`load`, `img`, image cells) — see [Resources](#resources) |
+| `resolver`    | ResourceResolver | Where resources are read from; `None` = default resolver on `base_dir` |
 
 ---
 

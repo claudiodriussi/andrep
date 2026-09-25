@@ -11,7 +11,8 @@ from pathlib import Path
 
 from .loader import TemplateLoader
 from .expr_check import ATTR_FN, EXCLUDED_KEY, checked_getattr, compile_expr
-from .variables import NotData, _apply_formatter, _parse_tokens, _to_data, _to_ns, eval_expr
+from .resources import DefaultResolver, ResourceError
+from .variables import NotData, _apply_formatter, _img_src, _parse_tokens, _to_data, _to_ns, eval_expr
 
 
 # ---------------------------------------------------------------------------
@@ -223,6 +224,7 @@ class AndRepRenderer:
         loader: TemplateLoader = None,
         trusted: bool = False,
         pdf_backend=None,
+        resolver=None,
     ):
         self.template = load_template(template, loader=loader)
         self.page = self.template.get("page", {})
@@ -242,9 +244,14 @@ class AndRepRenderer:
         # template: [row.level | indent]
         self.formatters: dict = {}
 
-        # Base directory for the load formatter — resolves @relative/path refs
-        # r.base_dir = Path(__file__).parent / "data"
+        # Base directory for resources (load / img formatters, image cells) —
+        # resolves @relative/path refs.  r.base_dir = Path(__file__).parent / "data"
         self.base_dir = None
+
+        # ResourceResolver for load / img / image cells; None = DefaultResolver
+        # on base_dir (files inside base_dir, http(s) to public hosts).
+        self.resolver = resolver
+        self._resources: dict = {}   # ref -> (bytes, mime) or ResourceError, per renderer
 
         # Batch all phantom-pass rows into a single WeasyPrint render (faster).
         # Set to False to revert to one render per row (easier to debug).
@@ -340,7 +347,7 @@ class AndRepRenderer:
     # Renderer attributes that are engine internals, not report data
     _R_INTERNALS = frozenset({
         "template", "page", "bands", "globals", "formatters", "data",
-        "pdf_backend", "trusted", "base_dir", "phantom_batch",
+        "pdf_backend", "trusted", "base_dir", "phantom_batch", "resolver",
     })
 
     def _r_snapshot(self) -> types.SimpleNamespace:
@@ -520,6 +527,20 @@ class AndRepRenderer:
     # ------------------------------------------------------------------
     # Utilities
     # ------------------------------------------------------------------
+
+    def _open_resource(self, ref: str) -> "tuple[bytes, str]":
+        """Read *ref* through the resolver, once per renderer (a logo in the page
+        header is fetched once, not once per page).  Raises ResourceError."""
+        if ref not in self._resources:
+            resolver = self.resolver or DefaultResolver(base_dir=self.base_dir)
+            try:
+                self._resources[ref] = resolver.open(ref)
+            except ResourceError as e:
+                self._resources[ref] = e
+        result = self._resources[ref]
+        if isinstance(result, ResourceError):
+            raise result
+        return result
 
     def has_band(self, name: str) -> bool:
         """Return True if the template contains a band with the given name."""
@@ -887,8 +908,11 @@ class AndRepRenderer:
                 break
             if isinstance(v, str) and (v.startswith("<img") or v.startswith("<svg")):
                 return self._graphic_cell_html(cell, v, css_extra, band_css, actual_h)
-            # No formatter or formatter returned a plain URL — legacy behaviour
-            src  = str(v) if v is not None else ""
+            # No formatter: the value is a reference (path, @ref, URL, data: URL),
+            # read through the resolver and embedded like the img formatter does
+            src = _img_src(v, False, self) if v else ""
+            if src.startswith("[#"):
+                return self._graphic_cell_html(cell, escape(src), css_extra, band_css, actual_h)
             auto = cell.get("autoStretch", False)
             if auto:
                 img = f'<img src="{escape(src)}" style="width:100%;height:auto;display:block">'

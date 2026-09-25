@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from andrep import AndRepRenderer
+from andrep import AndRepRenderer, DefaultResolver, ResourceError
 
 RENDERER_DIR = Path(__file__).resolve().parent.parent
 EXAMPLES_DIR = RENDERER_DIR / "examples"
@@ -77,6 +77,20 @@ def sample_db(tmp_path_factory) -> Path:
     con.executescript((EXAMPLES_DIR / "create_db.sql").read_text(encoding="utf-8"))
     con.close()
     return db
+
+
+@pytest.fixture(autouse=True)
+def no_network(request, monkeypatch):
+    """Tests never reach the network: remote resources fail as when offline.
+
+    Tests marked ``real_fetch`` keep the real code (they only talk to 127.0.0.1).
+    """
+    if "real_fetch" in request.keywords:
+        return
+
+    def offline(self, url):
+        raise ResourceError("network access is disabled in tests")
+    monkeypatch.setattr(DefaultResolver, "_fetch", offline)
 
 
 @pytest.fixture

@@ -16,12 +16,14 @@ The optional `r` parameter is the AndRepRenderer instance.  It is used by
 context-aware built-in formatters (e.g. ``load``) and by the per-renderer
 formatter registry ``r.formatters``.  Pass ``r=self`` from ``_cell_html``.
 """
+import base64
 import re
 import types
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
 from .expr_check import ATTR_FN, EXCLUDED_KEY, checked_getattr, compile_expr
+from .resources import DefaultResolver, ResourceError
 
 
 def _to_ns(data):
@@ -168,27 +170,33 @@ def eval_expr(expr, ns):
         return expr.marker(f"{type(e).__name__}: {e}")
 
 
+def _open_resource(ref, r):
+    """(bytes, mime) for *ref*, through the renderer's resolver when available."""
+    if r is not None and hasattr(r, "_open_resource"):
+        return r._open_resource(ref)
+    return DefaultResolver().open(ref)
+
+
+def _data_url(ref, r):
+    """*ref* as a ``data:`` URL — raises ResourceError."""
+    data, mime = _open_resource(ref, r)
+    return f"data:{mime};base64,{base64.b64encode(data).decode()}"
+
+
 def _fmt_load(value, params, r):
     """Built-in ``load`` formatter — resolves ``@ref`` references.
 
-    If *value* starts with ``@`` it is treated as a reference:
-      - ``@https://...`` / ``@http://...``  — HTTP fetch
-      - ``@/abs/path``  or  ``@rel/path``   — local filesystem
-        Relative paths are resolved against ``r.base_dir`` when set,
-        otherwise against ``Path.cwd()``.
+    If *value* starts with ``@`` the rest is read through the renderer's
+    resource resolver (see resources.py): a path relative to ``r.base_dir``,
+    a named root (``media:x.txt``) or an ``http(s)://`` URL of a public host.
 
     If *value* does not start with ``@`` it is returned unchanged (inline).
 
     Parameters (comma-separated after ``load``):
       ``base64``   — return a ``data:mime;base64,...`` string instead of text
-      ``silent``   — return ``""`` on any error (default: ``"[#ref#]"``)
-      encoding     — text encoding for local files, default ``utf-8``
+      ``silent``   — return ``""`` on any error (default: ``"[#ref: reason#]"``)
+      encoding     — text encoding, default ``utf-8``
     """
-    import base64 as _b64
-    import mimetypes
-    import urllib.request
-    from pathlib import Path
-
     if value is None:
         return ""
     val = str(value)
@@ -204,26 +212,28 @@ def _fmt_load(value, params, r):
     )
 
     try:
-        if ref.startswith(("http://", "https://")):
-            with urllib.request.urlopen(ref) as resp:
-                data = resp.read()
-                if binary:
-                    mime = resp.headers.get_content_type() or "application/octet-stream"
-                    return f"data:{mime};base64,{_b64.b64encode(data).decode()}"
-                return data.decode(enc)
-        else:
-            base_dir = getattr(r, "base_dir", None) or Path.cwd()
-            p = Path(ref)
-            if not p.is_absolute():
-                p = Path(base_dir) / p
-            p = p.resolve()
-            if binary:
-                data = p.read_bytes()
-                mime = mimetypes.guess_type(str(p))[0] or "application/octet-stream"
-                return f"data:{mime};base64,{_b64.b64encode(data).decode()}"
-            return p.read_text(encoding=enc)
-    except Exception:
-        return "" if silent else f"[#{ref}#]"
+        if binary:
+            return _data_url(ref, r)
+        data, _ = _open_resource(ref, r)
+        return data.decode(enc)
+    except (ResourceError, LookupError, UnicodeDecodeError) as e:
+        return "" if silent else f"[#{ref}: {e}#]"
+
+
+def _img_src(value, silent, r):
+    """``src`` for an image value: a data: URL, "" (silent) or an error marker.
+
+    ``data:`` URLs are used as they are; anything else — ``@ref``, a path, an
+    ``http(s)://`` URL — is read through the resolver and embedded.
+    """
+    src = str(value)
+    if src.startswith("data:"):
+        return src
+    ref = src[1:] if src.startswith("@") else src
+    try:
+        return _data_url(ref, r)
+    except ResourceError as e:
+        return "" if silent else f"[#{ref}: {e}#]"
 
 
 def _fmt_img(value, params, r=None):
@@ -240,10 +250,10 @@ def _fmt_img(value, params, r=None):
       ``natural`` — ``max-width/max-height:100%`` — no upscaling; image stays
                    at its natural size, clipped if larger than cell.
 
-    ``@ref`` paths and absolute file paths are resolved automatically:
-    local files become ``data:mime;base64,...`` URLs; internet URLs and
-    existing data URLs are used as-is.  No need to chain ``load,base64``
-    explicitly.  Use ``silent`` to suppress errors for missing files::
+    The value — ``@ref``, a path relative to ``r.base_dir``, a named root or an
+    ``http(s)://`` URL — is read through the resource resolver and embedded as
+    a ``data:`` URL; existing ``data:`` URLs are used as they are.  On error the
+    cell shows ``[#ref: reason#]``; ``silent`` leaves it empty::
 
         [row.image | img,cover]
         ["@data/logo.png" | img,natural,silent]
@@ -253,23 +263,12 @@ def _fmt_img(value, params, r=None):
     Use solid colours in SVG files intended for PDF output.
     """
     from html import escape as _esc
-    from pathlib import Path
 
     if not value:
         return ""
-    src = str(value)
-
-    # Resolve local file references to base64 data URLs
-    _load_params = {"base64"}
-    if "silent" in params:
-        _load_params.add("silent")
-    if src.startswith("@"):
-        src = _fmt_load(src, _load_params, r)
-    elif not src.startswith(("http://", "https://", "data:")):
-        # Bare absolute path (e.g. /home/user/img/photo.png)
-        p = Path(src)
-        if p.is_absolute():
-            src = _fmt_load(f"@{src}", _load_params, r)
+    src = _img_src(value, "silent" in params, r)
+    if not src or src.startswith("[#"):
+        return src
 
     mode = next((p for p in params if p in ("contain", "cover", "natural")), None)
 
