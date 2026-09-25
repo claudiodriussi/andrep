@@ -182,3 +182,28 @@ def test_custom_resolver():
     r = AndRepRenderer(make_template({"band": ['["@anything" | load]']}), resolver=Memory())
     r.emit("band")
     assert "from memory" in r.to_html()
+
+
+def markdown_html(markdown_text: str, media) -> str:
+    """Render a markdown cell whose text is loaded from notes.md (inside base_dir)."""
+    pytest.importorskip("markdown")
+    (media / "notes.md").write_text(markdown_text, encoding="utf-8")
+    template = make_template({})
+    template["rows"] = [{"name": "band", "height": 40, "cells": [
+        {"id": "m", "type": "markdown", "content": '["@notes.md" | load]', "width": 200}]}]
+    r = AndRepRenderer(template)
+    r.base_dir = media
+    r.emit("band")
+    return r.to_html()
+
+
+def test_markdown_images_are_embedded(media):
+    html = markdown_html("Logo: ![logo](img/logo.png) and <img src='img/logo.png'>", media)
+    assert html.count("data:image/png;base64,") == 2
+    assert "img/logo.png" not in html
+
+
+def test_markdown_image_errors_are_visible(media):
+    html = markdown_html("![missing](img/missing.png)", media)
+    assert "[#img/missing.png: No such file or directory#]" in html
+    assert "<img" not in html.split("<body>")[1]

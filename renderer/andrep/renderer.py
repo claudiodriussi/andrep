@@ -3,10 +3,11 @@ renderer.py — AndRepRenderer: emit / compile / to_html / to_pdf / to_json
 """
 import json
 import os
+import re
 import sys
 import types
 from datetime import datetime
-from html import escape
+from html import escape, unescape
 from pathlib import Path
 
 from .loader import TemplateLoader
@@ -138,6 +139,14 @@ def load_template(template, loader: TemplateLoader = None):
 # ---------------------------------------------------------------------------
 
 _PAGE_ROLES = {"first_header", "page_header", "page_footer", "last_footer", "page_filler"}
+
+# Content-Security-Policy of every generated document: no scripts, no
+# connections, images and fonts only as data: URLs (resources are embedded by
+# the resolver), inline styles allowed.  Stops markup written in a template or
+# found in the data from running or fetching anything when the HTML is opened
+# in a browser; a second layer for the Chromium PDF backend.
+CSP = "default-src 'none'; img-src data:; font-src data:; style-src 'unsafe-inline'"
+_CSP_META = f'<meta http-equiv="Content-Security-Policy" content="{CSP}">'
 
 
 # ---------------------------------------------------------------------------
@@ -542,6 +551,25 @@ class AndRepRenderer:
             raise result
         return result
 
+    _IMG_TAG = re.compile(r"<img\b[^>]*>", re.IGNORECASE)
+    _SRC_ATTR = re.compile(r"""\bsrc=(["'])(.*?)\1""", re.IGNORECASE | re.DOTALL)
+
+    def _embed_images(self, html: str) -> str:
+        """Read the images of rendered Markdown through the resolver and embed
+        them as data: URLs, like the img formatter; a failing one becomes the
+        visible marker [#ref: reason#]."""
+        def embed(tag_match):
+            tag = tag_match.group(0)
+            src_match = self._SRC_ATTR.search(tag)
+            if not src_match:
+                return tag
+            src = _img_src(unescape(src_match.group(2)), False, self)
+            if src.startswith("[#"):
+                return escape(src)
+            start, end = src_match.span(2)
+            return tag[:start] + escape(src) + tag[end:]
+        return self._IMG_TAG.sub(embed, html)
+
     def has_band(self, name: str) -> bool:
         """Return True if the template contains a band with the given name."""
         return name in self.bands
@@ -831,6 +859,7 @@ class AndRepRenderer:
         return (
             "<!DOCTYPE html><html><head>"
             '<meta charset="utf-8">'
+            + _CSP_META +
             "<style>"
             "* { box-sizing: border-box; margin: 0; padding: 0; }"
             f"@page {{ size: {content_w}px 99999px; margin: 0; }}"
@@ -936,7 +965,7 @@ class AndRepRenderer:
             raw_md = "".join(parts)
             try:
                 import markdown as _md
-                html_content = _md.markdown(raw_md)
+                html_content = self._embed_images(_md.markdown(raw_md))
             except ImportError:
                 html_content = escape(raw_md).replace("\n", "<br>")
             _ub = cell.get("rotation", 0) == 0 and cell.get("style", {}).get("verticalAlignment", "top") == "top"
@@ -1261,6 +1290,7 @@ class AndRepRenderer:
         return (
             "<!DOCTYPE html>\n<html><head>\n"
             '<meta charset="utf-8">\n'
+            + _CSP_META + "\n"
             "<style>\n"
             "* { box-sizing: border-box; margin: 0; padding: 0; }\n"
             f"body {{ width: {width}px; padding: {mt}px {mr}px {mb}px {ml}px; }}\n"
@@ -1602,6 +1632,7 @@ class AndRepRenderer:
         return (
             "<!DOCTYPE html>\n<html><head>\n"
             '<meta charset="utf-8">\n'
+            + _CSP_META + "\n"
             "<style>\n"
             "* { box-sizing: border-box; margin: 0; padding: 0; }\n"
             f"@page {{ size: {pw}px {ph}px; margin: 0; }}\n"

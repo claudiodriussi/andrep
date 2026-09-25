@@ -175,6 +175,14 @@ difference either way. See `_docs/RENDERER.md` for details.
 For the vast majority of business reports (lists, invoices, labels, forms) both
 backends produce excellent, visually equivalent results.
 
+**Backends fetch nothing.** The renderer embeds every resource as a `data:` URL (see
+*Resources* in the manual), so both backends load `data:` URLs only: WeasyPrint through a
+URL fetcher that refuses anything else, Playwright in its own browser context with
+JavaScript disabled and every network request aborted — also when you pass a shared
+browser.
+
 **Adding a third backend**: implement `measure_heights(doc_html, count)` and
 `render(doc_html)` (see the `PdfBackend` Protocol in `andrep/backends.py`) and call
 `andrep.backends.register_backend("name", YourBackend)` — no core changes needed.
+A third-party backend should follow the same rule: load `data:` URLs only, run no
+scripts.

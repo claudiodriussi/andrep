@@ -39,31 +39,29 @@ class PdfBackend(Protocol):
 # ---------------------------------------------------------------------------
 
 class WeasyPrintBackend:
-    """Requires: pip install weasyprint (or andrep[pdf])"""
+    """Requires: pip install weasyprint (or andrep[pdf])
+
+    Loads nothing but data: URLs: the renderer embeds every resource, so any
+    other URL in the document comes from markup that must not fetch anything.
+    """
 
     def __init__(self):
-        self._fetcher = None  # created lazily, shared across measure/render calls
+        self._fetcher = None  # created lazily
 
     def _get_fetcher(self):
-        """URL fetcher cache, shared between phantom measurement and final
-        render so each image URL is only downloaded once (per backend instance).
-        """
         if self._fetcher is None:
             try:
-                from weasyprint.urls import URLFetcher, URLFetcherResponse  # type: ignore
+                from weasyprint.urls import URLFetcher  # type: ignore
             except ImportError as e:
                 raise ImportError(
                     "weasyprint is not installed: pip install weasyprint"
                 ) from e
             base_fetcher = URLFetcher()
-            cache: dict = {}  # url -> (bytes, EmailMessage headers)
 
-            def fetcher(url: str) -> "URLFetcherResponse":
-                if url not in cache:
-                    resp = base_fetcher.fetch(url)
-                    cache[url] = (resp.read(), resp.headers)
-                data, headers = cache[url]
-                return URLFetcherResponse(url, body=data, headers=headers)
+            def fetcher(url: str):
+                if not url.startswith("data:"):
+                    raise ValueError(f"AndRep loads data: URLs only, not {url[:80]}")
+                return base_fetcher.fetch(url)
 
             self._fetcher = fetcher
         return self._fetcher
@@ -110,12 +108,17 @@ class PlaywrightBackend:
     this to share one warm Chromium process across many renders (e.g. a
     long-running server), which is where the real performance advantage
     over WeasyPrint materializes.
+
+    The backend always works in its own browser context, with JavaScript
+    disabled and every network request aborted: the renderer embeds all
+    resources as data: URLs.
     """
 
     def __init__(self, browser=None):
         self._browser = browser
         self._owns_browser = browser is None
         self._playwright_cm = None
+        self._context = None
         self._page = None
 
     def _ensure_page(self):
@@ -138,7 +141,12 @@ class PlaywrightBackend:
                 )
             self._browser = chromium.launch()
         if self._page is None:
-            self._page = self._browser.new_page()
+            # Own context, also with a shared browser: JavaScript off, and every
+            # request aborted — the renderer embeds resources as data: URLs,
+            # which never go through the network (nor through route()).
+            self._context = self._browser.new_context(java_script_enabled=False)
+            self._page = self._context.new_page()
+            self._page.route("**/*", lambda route: route.abort())
             self._page.emulate_media(media="print")
         return self._page
 
@@ -163,8 +171,9 @@ class PlaywrightBackend:
         return page.pdf(prefer_css_page_size=True)
 
     def close(self) -> None:
-        if self._page is not None:
-            self._page.close()
+        if self._context is not None:
+            self._context.close()   # closes the page too
+            self._context = None
             self._page = None
         if self._owns_browser and self._browser is not None:
             self._browser.close()

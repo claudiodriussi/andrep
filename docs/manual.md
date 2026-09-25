@@ -741,6 +741,10 @@ plain-text with `<br>` line breaks.
   rendered height depends on the content length.
 - In PDF output, `autoStretch` triggers a phantom render pass to measure the actual height
   before laying out the page.
+- Images in the Markdown (`![alt](data/photo.png)`) are read through the
+  [resource resolver](#resources) — paths relative to `r.base_dir` — and embedded.
+  In Markdown written directly in the cell content, `[alt]` is read as an AndRep
+  expression: keep such text in a file and load it (below).
 - To load content from an external file, use the `load` formatter:
   `["@data/notes.md" | load]`. The `@` prefix resolves the path relative to `r.base_dir`
   (see [Resources](#resources)); if `base_dir` is not set, `Path.cwd()` is used.
@@ -1079,6 +1083,17 @@ r = AndRepRenderer("invoice", loader=loader,
 A custom resolver is any object with `open(ref) -> (bytes, mime)` that raises
 `andrep.ResourceError` when a resource cannot be read — e.g. one reading from a database
 or from an application's media storage.
+
+The document itself fetches nothing: the PDF backends load `data:` URLs only (Playwright
+also runs with JavaScript disabled), and every generated HTML document carries a
+Content-Security-Policy that allows no scripts, no connections, and images and fonts only
+as `data:` URLs. Images in Markdown cells (`![alt](img/photo.png)`, `<img src="…">`) are
+read through the resolver and embedded like the `img` formatter does; a `url(…)` in
+`cssExtra` is not loaded — use an image cell or the `img` formatter.
+
+If you insert the generated HTML **inside another page** (e.g. with `innerHTML`) the CSP
+of the document no longer applies: sanitize it or isolate it (e.g. in a sandboxed
+`<iframe>`).
 
 ---
 
