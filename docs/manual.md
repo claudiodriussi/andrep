@@ -13,6 +13,8 @@
 9. [CLI &amp; multi-language](#9-cli--multi-language) — subprocess, JS client, REST server, expression translations
 10. [Compiled records as a universal format](#10-the-compiled-records-as-a-universal-intermediate-format) — alternative renderers, spreadsheet, CSV, testing
 
+Security model, integration notes and how to report a vulnerability: [SECURITY.md](SECURITY.md).
+
 ---
 
 ## 1. Concepts

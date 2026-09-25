@@ -17,6 +17,12 @@ AndRep is a reporting system built around two independent concerns:
 
 Because the loop engine is plain code — no proprietary query language, no schema binding, no wizard — you have full control over data access, grouping, and business logic. Templates are pure JSON; the renderer knows nothing about your database.
 
+> **Security.** Templates are treated as untrusted data: expressions are limited to a
+> checked subset of Python that reads data only, resources are confined and embedded,
+> and generated documents run no scripts. If templates can be edited by people who do
+> not run the server, read [docs/SECURITY.md](docs/SECURITY.md) — it also explains how to
+> report a vulnerability.
+
 ---
 
 ## Architecture
@@ -151,6 +157,7 @@ This rewrite brings the same proven approach to an open, cross-platform stack: H
 
 - [Tutorial](docs/tutorial.md) — getting started, from zero to your first report
 - [User Manual](docs/manual.md) — complete reference
+- [Security](docs/SECURITY.md) — security model, integration notes, reporting a vulnerability
 
 ---
 
