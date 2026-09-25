@@ -13,7 +13,9 @@ from pathlib import Path
 from .loader import TemplateLoader
 from .expr_check import ATTR_FN, EXCLUDED_KEY, checked_getattr, compile_expr
 from .resources import DefaultResolver, ResourceError
-from .variables import NotData, _apply_formatter, _img_src, _parse_tokens, _to_data, _to_ns, eval_expr
+from .variables import (
+    NotData, _apply_formatter, _img_src, _parse_tokens, _to_data, _to_ns, eval_expr, json_value,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -686,13 +688,13 @@ class AndRepRenderer:
         """
         self.compile()
         Path(path).write_text(
-            json.dumps(self._compiled, ensure_ascii=False, indent=2), encoding="utf-8"
+            json.dumps(self._compiled, ensure_ascii=False, indent=2, default=json_value), encoding="utf-8"
         )
 
     def to_json(self) -> str:
         """Return the compiled output as a JSON string."""
         self.compile()
-        return json.dumps(self._compiled, ensure_ascii=False, indent=2)
+        return json.dumps(self._compiled, ensure_ascii=False, indent=2, default=json_value)
 
     # ------------------------------------------------------------------
     # External loop engine support

@@ -284,6 +284,36 @@ def _fmt_img(value, params, r=None):
     return f'<img src="{_esc(src)}" style="{style}">'
 
 
+def _as_date(value):
+    """An ISO date string (as found in compiled records read from JSON, or sent
+    by a JS client) as a datetime; any other value unchanged."""
+    if isinstance(value, str):
+        try:
+            return datetime.fromisoformat(value)
+        except ValueError:
+            pass
+    return value
+
+
+def json_value(value):
+    """``default=`` for json.dumps of compiled records: values that JSON has no
+    type for.  Dates become ISO strings (date formatters accept them back),
+    Decimal a number, timedelta seconds, bytes base64."""
+    if isinstance(value, (datetime, date, time)):
+        return value.isoformat()
+    if isinstance(value, Decimal):
+        return float(value)
+    if isinstance(value, timedelta):
+        return value.total_seconds()
+    if isinstance(value, types.SimpleNamespace):
+        return vars(value)
+    if isinstance(value, (set, frozenset)):
+        return list(value)
+    if isinstance(value, bytes):
+        return base64.b64encode(value).decode()
+    raise TypeError(f"{type(value).__name__} is not JSON serializable")
+
+
 def _apply_formatter(value, fmt, r=None):
     """Apply a single formatter to a value.
 
@@ -320,6 +350,7 @@ def _apply_formatter(value, fmt, r=None):
             return "0"
         return str(value)
     if fmt == "date":
+        value = _as_date(value)
         if isinstance(value, (date, datetime)):
             return value.strftime("%d/%m/%Y")
         return str(value) if value is not None else ""
@@ -334,6 +365,7 @@ def _apply_formatter(value, fmt, r=None):
 
     # Explicit date format: contains d/m/y (e.g. dd/mm/yyyy)
     if re.match(r"^[dDmMyY/\-\s]+$", fmt) and any(c in fmt.lower() for c in "dmy"):
+        value = _as_date(value)
         if isinstance(value, (date, datetime)):
             py_fmt = (
                 fmt.replace("dd", "%d")

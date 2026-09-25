@@ -71,3 +71,20 @@ def test_composed_template():
     r = AndRepRenderer("sells", loader=FilesystemLoader(base_dir=EXAMPLES_DIR / "templates"))
     composed = {k: v for k, v in r.template.items() if k != "composition"}
     check_snapshot("01_sells_composed", composed)
+
+
+def test_compiled_records_with_dates_and_decimals_round_trip():
+    """to_json() handles values JSON has no type for; from_compiled() formats them."""
+    import datetime
+    from decimal import Decimal
+    from andrep import AndRepRenderer
+    from conftest import make_template
+
+    template = make_template({"band": ["[d | date]", "[t]", "[amount | .2]"]})
+    r = AndRepRenderer(template)
+    d, t, amount = datetime.date(2026, 9, 25), datetime.datetime(2026, 9, 25, 8, 30), Decimal("1234.50")  # noqa: F841
+    r.emit("band")
+    records = json.loads(r.to_json())
+    assert records[0]["values"] == ["2026-09-25", "2026-09-25T08:30:00", 1234.5]
+    html = AndRepRenderer.from_compiled(template, records).to_html()
+    assert "25/09/2026" in html and "1.234,50" in html

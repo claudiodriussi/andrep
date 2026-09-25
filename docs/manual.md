@@ -2003,6 +2003,11 @@ to one `emit()` call in the loop engine.
 
 **Rules:**
 
+- Values are raw (before formatters). Types JSON has no notation for are written by
+  `to_json()` / `save_output()` as: dates and times → ISO strings (`"2026-09-25"`),
+  `Decimal` → number, `timedelta` → seconds, `bytes` → base64. The `date` formatter and
+  explicit date patterns (`dd/mm/yyyy`) accept ISO strings, so `from_compiled()` formats
+  them as before — and a JS client can send JavaScript dates as they serialize.
 - Page-role bands (`first_header`, `page_header`, `page_footer`, `last_footer`,
   `page_filler`) must **not** appear in the records — the renderer inserts them
   automatically.
