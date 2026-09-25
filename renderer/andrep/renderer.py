@@ -149,6 +149,22 @@ CSP = "default-src 'none'; img-src data:; font-src data:; style-src 'unsafe-inli
 _CSP_META = f'<meta http-equiv="Content-Security-Policy" content="{CSP}">'
 
 
+class _LazyLocals:
+    """self.data for event hooks: the caller's locals at emit() time, each
+    converted with _to_ns when a hook first reads it (converting them all at
+    every emit would cost O(rows²) when the loop keeps its result set in a local)."""
+
+    def __init__(self, local_vars: dict):
+        self.__dict__["_raw"] = local_vars
+
+    def __getattr__(self, name):
+        raw = self.__dict__["_raw"]
+        if name not in raw:
+            raise AttributeError(name)
+        value = self.__dict__[name] = _to_ns(raw[name])
+        return value
+
+
 # ---------------------------------------------------------------------------
 # Built-in CSS helper functions — available in cssExtra @expressions
 # ---------------------------------------------------------------------------
@@ -271,7 +287,7 @@ class AndRepRenderer:
 
         # f_locals captured at the last emit() call — readable in event handlers
         # as self.data.varname  (same notation as template expressions)
-        self.data: types.SimpleNamespace | None = None
+        self.data: "_LazyLocals | None" = None
 
         # Per-emission style overrides — set via patch_band() / patch() in on_before_band()
         # Captured at emit() time and reset automatically after each emission.
@@ -322,6 +338,13 @@ class AndRepRenderer:
                     css = cell.get("cssExtra", "")
                     if css.startswith("@"):
                         self._css_exprs[id(cell)] = compile_expr(css[1:], trusted=self.trusted)
+
+        # Names read by the template: only these are converted from the caller's
+        # locals at each emit() — a loop keeps its whole result set in a local,
+        # converting it at every row would cost O(rows²).
+        compiled = [e for exprs in self._cell_exprs.values() for e in exprs]
+        compiled += self._css_exprs.values()
+        self._used_names = frozenset().union(*(e.names for e in compiled))
 
         self.on_init()
 
@@ -380,7 +403,8 @@ class AndRepRenderer:
             "_name": self.template.get("name", ""),
             "_page": self.cur_page,
             "_pages": self._page_count if self._page_count is not None else self.cur_page,
-            "_r": self if self.trusted else self._r_snapshot(),
+            "_r": self if self.trusted else
+                  self._r_snapshot() if "_r" in self._used_names else None,
         }
 
     def _finish_ns(self, ns: dict, excluded: dict) -> dict:
@@ -403,27 +427,30 @@ class AndRepRenderer:
         """
         ns: dict = {}
         excluded: dict = {}
+        used = self._used_names
+        local_vars = {k: v for k, v in frame.f_locals.items() if k in used}
+        workspace = {k: v for k, v in self._ctx.items() if k in used}
         if self.trusted:
             ns.update(frame.f_globals)
-            for k, v in frame.f_locals.items():
+            for k, v in local_vars.items():
                 ns[k] = _to_ns(v)
-            for k, v in self._ctx.items():
+            for k, v in workspace.items():
                 ns[k] = _to_ns(v)
             return self._finish_ns(ns, excluded)
-        for k, v in frame.f_locals.items():
+        for k, v in local_vars.items():
             try:
                 ns[k] = _to_data(v)
             except NotData as e:
                 excluded[k] = f"'{k}' is not data ({e})"
         # explicit workspace — overrides locals; checked by __setitem__
-        for k, v in self._ctx.items():
+        for k, v in workspace.items():
             ns[k] = _to_data(v)
         return self._finish_ns(ns, excluded)
 
     def _sys_eval_ns(self) -> dict:
         """Eval namespace for auto-inserted bands (header/footer) — no caller frame."""
         convert = _to_ns if self.trusted else _to_data
-        ns = {k: convert(v) for k, v in self._ctx.items()}
+        ns = {k: convert(v) for k, v in self._ctx.items() if k in self._used_names}
         return self._finish_ns(ns, {})
 
     def _compile_band(self, band_name: str, ns: dict, band_css: str, cell_patches: dict) -> dict:
@@ -484,10 +511,8 @@ class AndRepRenderer:
             self.started = True
             self.on_before()
 
-        # Snapshot f_locals for event handlers (self.data.row.price)
-        self.data = types.SimpleNamespace(
-            **{k: _to_ns(v) for k, v in frame.f_locals.items()}
-        )
+        # f_locals for event handlers (self.data.row.price), converted on access
+        self.data = _LazyLocals(dict(frame.f_locals))
 
         self.on_before_band(band_name)   # hook may modify self._ctx / call patch_band / patch
 

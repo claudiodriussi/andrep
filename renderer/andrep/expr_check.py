@@ -63,14 +63,17 @@ class CompiledExpr:
     """A template expression, validated and compiled.
 
     ``code`` is None when the expression was rejected; ``error`` says why.
+    ``names`` are the names the expression reads — the renderer converts only
+    these from the caller's locals.
     """
 
-    __slots__ = ("source", "code", "error")
+    __slots__ = ("source", "code", "error", "names")
 
-    def __init__(self, source: str, code=None, error: str = ""):
+    def __init__(self, source: str, code=None, error: str = "", names=frozenset()):
         self.source = source
         self.code = code
         self.error = error
+        self.names = names
 
     def marker(self, reason: str) -> str:
         """What the report shows in place of a failed expression."""
@@ -132,9 +135,10 @@ def compile_expr(source: str, trusted: bool = False) -> CompiledExpr:
         tree = ast.parse(source.strip(), mode="eval")
     except SyntaxError as e:
         return CompiledExpr(source, error=f"syntax error: {e.msg}")
+    names = frozenset(n.id for n in ast.walk(tree) if isinstance(n, ast.Name))
     if not trusted:
         reason = _check(tree)
         if reason:
             return CompiledExpr(source, error=reason)
         tree = ast.fix_missing_locations(_AttributesToCalls().visit(tree))
-    return CompiledExpr(source, code=compile(tree, "<template>", "eval"))
+    return CompiledExpr(source, code=compile(tree, "<template>", "eval"), names=names)

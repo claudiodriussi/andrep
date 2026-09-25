@@ -136,3 +136,43 @@ def test_golden_methods():
     if os.environ.get("ANDREP_UPDATE_SNAPSHOTS") == "1" or not GOLDEN.exists():
         GOLDEN.write_text(json.dumps(current, indent=1) + "\n", encoding="utf-8")
     assert current == json.loads(GOLDEN.read_text(encoding="utf-8"))
+
+
+# ---------------------------------------------------------------------------
+# Only the names a template reads are converted (cost linear in the rows)
+# ---------------------------------------------------------------------------
+
+class CountingRows:
+    """A dict-like result set that counts how often it is converted."""
+
+    def __init__(self):
+        self.conversions = 0
+
+    def keys(self):
+        self.conversions += 1
+        return ["x"]
+
+    def __getitem__(self, key):
+        return 1
+
+
+def test_unused_locals_are_not_converted():
+    rows = CountingRows()
+    r = AndRepRenderer(make_template({"band": ["[row.x]"]}))
+    for i in range(3):
+        _emit(r, {"row": {"x": i}, "rows": rows})
+    assert emitted_values(r) == [0, 1, 2]
+    assert rows.conversions == 0
+
+
+def test_hooks_convert_locals_on_access():
+    seen = []
+
+    class Report(AndRepRenderer):
+        def on_after_band(self, band_name):
+            seen.append(self.data.row.x)
+
+    rows = CountingRows()
+    r = Report(make_template({"band": ["[row.x]"]}))
+    _emit(r, {"row": {"x": 7}, "rows": rows})
+    assert seen == [7] and rows.conversions == 0
