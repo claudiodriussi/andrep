@@ -145,7 +145,7 @@ See [Chapter 7](#7-pagination) for the full pagination reference.
 ### System variables
 
 A set of variables is injected automatically into every cell: `[_date]`, `[_time]`,
-`[_user]`, `[_page]`, `[_name]`, and `[_r]` (the renderer instance, for accessing accumulators).
+`[_user]`, `[_page]`, `[_pages]`, `[_name]`, and `[_r]` (the renderer instance, for accessing accumulators).
 
 See [Chapter 5](#5-variables--formatters) for the complete reference.
 
@@ -1138,11 +1138,15 @@ Injected automatically into every cell by the renderer:
 | `[_time]` | Print time (`HH:MM:SS`)                                      |
 | `[_user]` | User running the report (OS environment `USER`)              |
 | `[_page]` | Current page number (PDF only; 1-based)                        |
+| `[_pages]` | Number of the last page — "Page [_page] of [_pages]" (PDF only)   |
 | `[_r]`    | The renderer instance — access accumulators:`[_r.total\|.2]` |
 | `[_name]` | Template name                                                  |
 
-> **Note:** a total page count (`[_pages]`) is not available. The renderer streams bands
-> without a full pre-layout pass. For "Page X of Y" use a two-pass strategy in the caller.
+> **Note:** `[_page]` and `[_pages]` are meaningful in the page bands (`first_header`,
+> `page_header`, `page_footer`, `last_footer`, `page_filler`), which the PDF output
+> renders page by page after laying out the whole document. Bands emitted by the loop are
+> evaluated at `emit()` time, before pages exist. In HTML output the document is a single
+> page: `[_pages]` equals `[_page]`.
 
 ---
 
@@ -1430,7 +1434,7 @@ r.emit("next_section_header")
 | `report_date` | str             | Print date `dd/mm/yyyy` — set before first emit to override              |
 | `report_time` | str             | Print time `HH:MM:SS`                                                     |
 | `report_user` | str             | OS user (`USER` / `USERNAME` env var)                                   |
-| `cur_page`    | int             | Current page number — increment manually when concatenating reports        |
+| `cur_page`    | int             | Number of the first page (default 1) — set it when chaining reports        |
 | `cur_band`    | str             | Band currently being emitted                                                |
 | `last_band`   | str             | Band emitted at the previous emit() call                                    |
 | `started`     | bool            | `True` after the first emit()                                             |
@@ -1661,6 +1665,26 @@ for order in orders:
 (prepending `page_header`). It has no effect in HTML output — pages are a PDF-only
 concept.
 
+#### Sections: `page_break(reset=True)`
+
+`page_break(reset=True)` starts a new **section**, printed like a report of its own:
+page numbers restart from 1, `[_pages]` counts the pages of the section, and the section
+gets its own `first_header` and `last_footer`. Typical use: all the invoices of a month
+in one document, each numbered "Page 1 of N":
+
+```python
+for i, invoice in enumerate(invoices):
+    if i:
+        r.page_break(reset=True)    # new invoice, new numbering, own first/last bands
+    r.emit("inv_head")
+    for line in invoice.lines:
+        r.emit("inv_line")
+    r.emit("inv_totals")
+```
+
+To chain separate reports with continuous numbering, set `r.cur_page` to the number of
+the first page before rendering.
+
 ---
 
 ### HTML vs PDF differences
@@ -1672,6 +1696,7 @@ concept.
 | `page_filler`                   | Rendered inline                | Fills remaining space on last page |
 | `autoStretch`                   | CSS `height: auto`           | Phantom pass required              |
 | `page_break()`                  | No effect                      | Forces a new page                  |
+| `page_break(reset=True)`        | No effect                      | New section: numbering restarts, own first/last bands |
 
 ---
 
@@ -1970,7 +1995,7 @@ to one `emit()` call in the loop engine.
 
 | Field          | Type     | Required | Description                                                                                                                            |
 | -------------- | -------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `band`       | string   | yes      | Band name. Use `"__page_break__"` to force a page break.                                                                             |
+| `band`       | string   | yes      | Band name. Use `"__page_break__"` to force a page break; add `"reset": true` to start a new section.                                  |
 | `values`     | any[]    | no       | Evaluated expression values, one per `[expr]` token across all cells of the band, in document order. Omit if the band has no tokens. |
 | `css_extras` | string[] | no       | Per-cell CSS overrides, one entry per cell (including embed cells). Empty string means no override.                                    |
 | `band_css`   | string   | no       | CSS applied to the entire band container.                                                                                              |

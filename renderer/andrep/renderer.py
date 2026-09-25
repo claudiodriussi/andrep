@@ -289,7 +289,8 @@ class AndRepRenderer:
         self.report_time: str = now.strftime("%H:%M:%S")
         self.report_user: str = os.environ.get("USER", os.environ.get("USERNAME", ""))
         self.title: str = self.template.get("name", "")   # _r.title — overridable
-        self.cur_page: int = 1   # increment manually to chain reports
+        self.cur_page: int = 1   # number of the first page — set it to chain reports
+        self._page_count = None  # number of the last page of the section, while paginating
         self._pdf_mode: bool = False   # True while generating PDF HTML (disables writing-mode)
         self._phantom_ctx: bool = False  # True during phantom HTML generation (use min-height)
 
@@ -378,6 +379,7 @@ class AndRepRenderer:
             "_user": self.report_user,
             "_name": self.template.get("name", ""),
             "_page": self.cur_page,
+            "_pages": self._page_count if self._page_count is not None else self.cur_page,
             "_r": self if self.trusted else self._r_snapshot(),
         }
 
@@ -574,9 +576,16 @@ class AndRepRenderer:
         """Return True if the template contains a band with the given name."""
         return name in self.bands
 
-    def page_break(self) -> None:
-        """Insert an explicit page break marker into the emission list."""
-        self._emissions.append({"band": "__page_break__"})
+    def page_break(self, reset: bool = False) -> None:
+        """Insert an explicit page break marker into the emission list.
+
+        reset=True starts a new section of the PDF, printed like a report of its
+        own: page numbers restart from 1, ``_pages`` counts the pages of the
+        section, first_header and last_footer are repeated for it (e.g. all the
+        invoices of a month in one document).
+        """
+        self._emissions.append({"band": "__page_break__", "reset": True} if reset
+                               else {"band": "__page_break__"})
 
     def patch_band(self, cssExtra: str = "") -> None:
         """Apply CSS to ALL cells of the current band emission.
@@ -1349,7 +1358,7 @@ class AndRepRenderer:
             band_name = record["band"]
 
             if band_name == "__page_break__":
-                rec_plan.append(("break",))
+                rec_plan.append(("break", record.get("reset", False)))
                 continue
 
             rows = self.bands.get(band_name, [])
@@ -1408,7 +1417,7 @@ class AndRepRenderer:
 
             if kind == "break":
                 _flush()
-                items.append(("__break__", 0, None))
+                items.append(("__reset__" if entry[1] else "__break__", 0, None))
 
             elif kind == "multi":
                 _, col_w, gap, columns, inner, h = entry
@@ -1562,40 +1571,55 @@ class AndRepRenderer:
         items = self._records_to_items(self._emissions, content_w, bands_cfg)
 
         # ── paginate items into pages ────────────────────────────────────────
+        # A page break with reset starts a new section: its first page has the
+        # first_header, its last page the last_footer, numbering restarts.
         pages: "list[list[tuple[str, int, int | None]]]" = []
+        sections: "list[int]" = []   # section index of each page
         cur: "list[tuple[str, int, int | None]]" = []
         cur_h    = 0
-        is_first = True
+        section  = 0
         avail    = _avail(is_first=True)
 
         for html, h, tag in items:
-            if html == "__break__":
+            if html in ("__break__", "__reset__"):
                 pages.append(cur)
-                cur, cur_h, is_first = [], 0, False
-                avail = _avail(is_first=False)
+                sections.append(section)
+                is_first = html == "__reset__"
+                section += is_first
+                cur, cur_h = [], 0
+                avail = _avail(is_first=is_first)
                 continue
             if cur_h + h > avail and cur:
                 pages.append(cur)
-                cur, cur_h, is_first = [], 0, False
+                sections.append(section)
+                cur, cur_h = [], 0
                 avail = _avail(is_first=False)
             cur.append((html, h, tag))
             cur_h += h
 
         pages.append(cur)
-        total_pages = len(pages)
+        sections.append(section)
+        section_size = {s: sections.count(s) for s in set(sections)}
 
         # ── render each page ────────────────────────────────────────────────
         page_divs: list[str] = []
 
+        index = 0   # page index inside its section
         for page_idx, page_items in enumerate(pages):
-            page_num   = page_idx + 1
-            is_first_p = page_idx == 0
-            is_last_p  = page_idx == total_pages - 1
+            section = sections[page_idx]
+            if page_idx and section != sections[page_idx - 1]:
+                index = 0
+            start      = self.cur_page if section == 0 else 1
+            page_num   = start + index
+            is_first_p = index == 0
+            is_last_p  = index == section_size[section] - 1
+            index += 1
 
-            # Build eval ns with the correct _page value for this page
-            saved_page, self.cur_page = self.cur_page, page_num
+            # Build eval ns with the correct _page / _pages for this page
+            saved = self.cur_page, self._page_count
+            self.cur_page, self._page_count = page_num, start + section_size[section] - 1
             ns = self._sys_eval_ns()
-            self.cur_page = saved_page
+            self.cur_page, self._page_count = saved
 
             hdr_html = self._render_page_hdr(is_first_p, ns, content_w)
             ftr_html = self._render_page_ftr(is_last_p,  ns, content_w)
@@ -1618,7 +1642,7 @@ class AndRepRenderer:
                         actual_h=space,
                     )
 
-            pb = "" if is_last_p else "page-break-after:always;"
+            pb = "" if page_idx == len(pages) - 1 else "page-break-after:always;"
             page_divs.append(
                 f'<div style="width:{pw}px;height:{ph}px;{pb}'
                 f'padding:{mt}px {mr}px {mb}px {ml}px;box-sizing:border-box;overflow:hidden">\n'

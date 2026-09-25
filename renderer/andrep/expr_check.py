@@ -22,7 +22,7 @@ from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
 # System variables injected by the renderer — the only names starting with "_"
-SYSTEM_NAMES = frozenset({"_r", "_page", "_date", "_time", "_user", "_name"})
+SYSTEM_NAMES = frozenset({"_r", "_page", "_pages", "_date", "_time", "_user", "_name"})
 
 # Namespace keys used by compiled expressions; templates cannot name them
 # (names starting with "_" are rejected by the validator).

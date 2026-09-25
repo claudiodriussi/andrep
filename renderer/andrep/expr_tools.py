@@ -16,7 +16,7 @@ import copy
 from .variables import _parse_tokens
 
 # System variables injected by the renderer — language-neutral, skip in extract
-_SYSTEM_VARS = {"_page", "_name", "_date", "_time", "_user", "_r"}
+_SYSTEM_VARS = {"_page", "_pages", "_name", "_date", "_time", "_user", "_r"}
 
 
 def _is_literal(expr: str) -> bool:

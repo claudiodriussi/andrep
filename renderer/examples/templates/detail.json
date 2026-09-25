@@ -1480,7 +1480,7 @@
         },
         {
           "id": "c31",
-          "content": "Page [_r.page] of [_r.pages]",
+          "content": "Page [_page] of [_pages]",
           "type": "text",
           "x": 400,
           "width": 318,

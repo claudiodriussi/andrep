@@ -1382,8 +1382,8 @@
  {
   "band": "page_footer",
   "values": [
-   "[#_r.page: AttributeError: 'types.SimpleNamespace' object has no attribute 'page'#]",
-   "[#_r.pages: AttributeError: 'types.SimpleNamespace' object has no attribute 'pages'#]"
+   1,
+   1
   ]
  }
 ]
