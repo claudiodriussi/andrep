@@ -12,7 +12,7 @@ from pathlib import Path
 
 from .loader import TemplateLoader
 from .locales import Locale, get_locale
-from .expr_check import ATTR_FN, EXCLUDED_KEY, checked_getattr, compile_expr
+from .expr_check import ATTR_FN, EXCLUDED_KEY, carry_fields, checked_getattr, compile_expr
 from .resources import DefaultResolver, ResourceError
 from .variables import (
     NotData, _apply_formatter, _img_src, _parse_tokens, _to_data, _to_ns, eval_expr, json_value,
@@ -384,6 +384,20 @@ class AndRepRenderer:
         compiled += self._css_exprs.values()
         self._used_names = frozenset().union(*(e.names for e in compiled))
 
+        # Carry forward: renderer attributes read through _page_start / _page_end
+        # in the page bands are snapshot after every emit(); pagination then
+        # gives each page the values at its start and at its end.
+        self._carry_fields: set = set()
+        for band_name in _PAGE_ROLES & self.bands.keys():
+            for row in self.bands[band_name]:
+                for cell in row.get("cells", []):
+                    for expr in self._cell_exprs[id(cell)]:
+                        self._carry_fields |= carry_fields(expr.source)
+                    if id(cell) in self._css_exprs:
+                        self._carry_fields |= carry_fields(self._css_exprs[id(cell)].source)
+        self._carry_initial: dict = {}
+        self._carry_page = None   # (start, end) snapshots while rendering a PDF page
+
         self.on_init()
 
     # ------------------------------------------------------------------
@@ -433,6 +447,17 @@ class AndRepRenderer:
                 pass
         return snap
 
+    def _carry_snapshot(self) -> dict:
+        """Current values of the carry-forward fields (data only)."""
+        snap = {}
+        for field in self._carry_fields:
+            if hasattr(self, field):
+                try:
+                    snap[field] = _to_data(getattr(self, field))
+                except NotData:
+                    pass
+        return snap
+
     def _sys_vars(self) -> dict:
         return {
             "_date": self.report_date if self.report_date is not None
@@ -444,7 +469,17 @@ class AndRepRenderer:
             "_pages": self._page_count if self._page_count is not None else self.cur_page,
             "_r": self if self.trusted else
                   self._r_snapshot() if "_r" in self._used_names else None,
+            **self._carry_vars(),
         }
+
+    def _carry_vars(self) -> dict:
+        """_page_start / _page_end: per page while rendering a PDF, otherwise the
+        initial values and the current ones (HTML output is a single page)."""
+        if not self._carry_fields:
+            return {"_page_start": types.SimpleNamespace(), "_page_end": types.SimpleNamespace()}
+        start, end = self._carry_page or (self._carry_initial, self._carry_snapshot())
+        return {"_page_start": types.SimpleNamespace(**start),
+                "_page_end": types.SimpleNamespace(**end)}
 
     def _finish_ns(self, ns: dict, excluded: dict) -> dict:
         """Add helpers, registered globals and system vars (highest priority)."""
@@ -549,6 +584,7 @@ class AndRepRenderer:
         if not self.started:
             self.started = True
             self.on_before()
+            self._carry_initial = self._carry_snapshot()
 
         # f_locals for event handlers (self.data.row.price), converted on access
         self.data = _LazyLocals(dict(frame.f_locals))
@@ -568,6 +604,8 @@ class AndRepRenderer:
         self._cell_patches = {}
 
         self.on_after_band(band_name)
+        if self._carry_fields and not silent:
+            self._emissions[-1]["carry"] = self._carry_snapshot()
         self.last_band = self.cur_band
         self.cur_band = band_name
 
@@ -1388,12 +1426,13 @@ class AndRepRenderer:
         records: "list[dict]",
         content_w: int,
         bands_cfg: dict,
-    ) -> "list[tuple[str, int, int | None]]":
-        """Convert compiled records to a flat list of (html, height, flex_gap|None).
+    ) -> "list[tuple[str, int, int | None, dict | None]]":
+        """Convert compiled records to a flat list of (html, height, flex_gap|None, carry).
 
         Single-column bands → one item per row.
         Multi-column bands  → one item per packed row-of-C-columns (height = max in group).
-        Page-break markers  → ("__break__", 0, None).
+        Page-break markers  → ("__break__", 0, None, None).
+        carry = the record's snapshot of the fields read by _page_start/_page_end.
 
         flex_gap = None  → normal row; no flex wrapper needed.
         flex_gap = int   → row is a horizontal group of multi-column items;
@@ -1404,8 +1443,8 @@ class AndRepRenderer:
           Phase 2: measure all phantom rows in one call (batch or per-row per phantom_batch).
           Phase 3: generate items using measured heights.
         """
-        items: list[tuple[str, int, "int | None"]] = []
-        multi_buf: list[tuple[str, int]] = []
+        items: list = []
+        multi_buf: list = []   # (html, height, carry)
         multi_columns = 0
         multi_gap     = 0
         multi_col_w   = 0
@@ -1415,7 +1454,8 @@ class AndRepRenderer:
                 return
             for i in range(0, len(multi_buf), multi_columns):
                 group = multi_buf[i: i + multi_columns]
-                items.append(("".join(h for h, _ in group), max(h for _, h in group), multi_gap))
+                items.append(("".join(h for h, _, _ in group), max(h for _, h, _ in group),
+                              multi_gap, group[-1][2]))
             multi_buf.clear()
 
         # ── Phase 1: pre-process records, collect phantom HTML ────────────────
@@ -1453,7 +1493,7 @@ class AndRepRenderer:
                     for row in rows
                 )
                 rec_plan.append(("multi", col_w, gap, columns, inner,
-                                  sum(self._row_height(r) for r in rows)))
+                                  sum(self._row_height(r) for r in rows), record.get("carry")))
             else:
                 values_list = record.get("values",     [])
                 css_list    = record.get("css_extras", [])
@@ -1479,7 +1519,8 @@ class AndRepRenderer:
                     val_idx += n_vals
                     css_idx += n_css
                 keep_together = cfg.get("keepTogether", False)
-                rec_plan.append(("single", band_css, embed_map, row_plans, keep_together))
+                rec_plan.append(("single", band_css, embed_map, row_plans, keep_together,
+                                 record.get("carry")))
 
         # ── Phase 2: measure all phantom rows (batch or per-row) ─────────────
         ph_heights = self._measure_phantom_heights(ph_html_list, content_w)
@@ -1490,19 +1531,19 @@ class AndRepRenderer:
 
             if kind == "break":
                 _flush()
-                items.append(("__reset__" if entry[1] else "__break__", 0, None))
+                items.append(("__reset__" if entry[1] else "__break__", 0, None, None))
 
             elif kind == "multi":
-                _, col_w, gap, columns, inner, h = entry
+                _, col_w, gap, columns, inner, h, carry = entry
                 if columns != multi_columns or gap != multi_gap:
                     _flush()
                     multi_columns, multi_gap, multi_col_w = columns, gap, col_w
                 multi_buf.append((
-                    f'<div style="width:{multi_col_w}px;overflow:hidden">{inner}</div>\n', h,
+                    f'<div style="width:{multi_col_w}px;overflow:hidden">{inner}</div>\n', h, carry,
                 ))
 
             else:  # single
-                _, band_css, embed_map, row_plans, keep_together = entry
+                _, band_css, embed_map, row_plans, keep_together, carry = entry
                 _flush()
                 multi_columns = 0
                 group_html = ""
@@ -1522,19 +1563,19 @@ class AndRepRenderer:
                         group_html += html
                         group_h    += actual_h
                     else:
-                        items.append((html, actual_h, None))
+                        items.append((html, actual_h, None, carry))
                 if keep_together:
-                    items.append((group_html, group_h, None))
+                    items.append((group_html, group_h, None, carry))
 
         _flush()
         return items
 
-    def _items_to_html(self, items: "list[tuple[str, int, int | None]]") -> str:
+    def _items_to_html(self, items: list) -> str:
         """Assemble a flat items list to HTML, managing flex containers for multi-column."""
         parts: list[str] = []
         in_flex_gap: "int | None" = None
 
-        for html, _h, tag in items:
+        for html, _h, tag, _carry in items:
             if tag is not None:
                 if in_flex_gap != tag:
                     if in_flex_gap is not None:
@@ -1646,14 +1687,14 @@ class AndRepRenderer:
         # ── paginate items into pages ────────────────────────────────────────
         # A page break with reset starts a new section: its first page has the
         # first_header, its last page the last_footer, numbering restarts.
-        pages: "list[list[tuple[str, int, int | None]]]" = []
+        pages: "list[list[tuple]]" = []
         sections: "list[int]" = []   # section index of each page
-        cur: "list[tuple[str, int, int | None]]" = []
+        cur: "list[tuple]" = []
         cur_h    = 0
         section  = 0
         avail    = _avail(is_first=True)
 
-        for html, h, tag in items:
+        for html, h, tag, carry in items:
             if html in ("__break__", "__reset__"):
                 pages.append(cur)
                 sections.append(section)
@@ -1667,7 +1708,7 @@ class AndRepRenderer:
                 sections.append(section)
                 cur, cur_h = [], 0
                 avail = _avail(is_first=False)
-            cur.append((html, h, tag))
+            cur.append((html, h, tag, carry))
             cur_h += h
 
         pages.append(cur)
@@ -1678,6 +1719,7 @@ class AndRepRenderer:
         page_divs: list[str] = []
 
         index = 0   # page index inside its section
+        carry = self._carry_initial   # values at the end of the previous page
         for page_idx, page_items in enumerate(pages):
             section = sections[page_idx]
             if page_idx and section != sections[page_idx - 1]:
@@ -1688,11 +1730,18 @@ class AndRepRenderer:
             is_last_p  = index == section_size[section] - 1
             index += 1
 
-            # Build eval ns with the correct _page / _pages for this page
-            saved = self.cur_page, self._page_count
+            # Carry forward: the page ends with the snapshot of its last band
+            page_start = carry
+            for item in page_items:
+                if item[3] is not None:
+                    carry = item[3]
+
+            # Build eval ns with the correct _page / _pages / carry for this page
+            saved = self.cur_page, self._page_count, self._carry_page
             self.cur_page, self._page_count = page_num, start + section_size[section] - 1
+            self._carry_page = (page_start, carry)
             ns = self._sys_eval_ns()
-            self.cur_page, self._page_count = saved
+            self.cur_page, self._page_count, self._carry_page = saved
 
             hdr_html = self._render_page_hdr(is_first_p, ns, content_w)
             ftr_html = self._render_page_ftr(is_last_p,  ns, content_w)
@@ -1705,7 +1754,7 @@ class AndRepRenderer:
             # last_footer start at the same y-position on every page.
             filler_html = ""
             if has_filler:
-                used_h = sum(h for _, h, _ in page_items)
+                used_h = sum(item[1] for item in page_items)
                 space  = content_h - _hdr_h(is_first_p) - max_ftr_h - used_h
                 if space > 0:
                     # Pass actual_h=space so filler cells extend the full height,

@@ -1164,6 +1164,7 @@ Injected automatically into every cell by the renderer:
 | `[_user]` | User running the report (OS environment `USER`)              |
 | `[_page]` | Current page number (PDF only; 1-based)                        |
 | `[_pages]` | Number of the last page — "Page [_page] of [_pages]" (PDF only)   |
+| `[_page_start]` / `[_page_end]` | Values at the start / end of the page — see [Carry forward](#carry-forward) |
 | `[_r]`    | The renderer instance — access accumulators:`[_r.total\|.2]` |
 | `[_name]` | Template name                                                  |
 
@@ -1603,6 +1604,7 @@ walks through running them; here the focus is on which API patterns each one exe
 | `05_barcode_test.py` | Direct use of `barcode_svg()` and `qr_svg()` utilities; EAN-13, Code128, Code39, ITF, EAN-8, QR with various sizes                                                                          |
 | `06_img_markdown.py` | Image scaling modes (`img,contain` / `img,cover` / proportional) combined with `autoStretch` Markdown cells                                                                               |
 | `07_embed.py`        | `embed` cell type for side-by-side layout; `autoStretch` height propagation from inner to outer band                                                                                        |
+| `10_carry_forward.py` | Running balance carried from page to page: opening balance, "Brought forward", page total, "Carried forward", closing balance |
 | `08_invoice.py`      | Full pagination (`first_header`, `page_header`, `page_footer`, `last_footer`, `page_filler`), conditional band selection based on data, phantom pass for `autoStretch` descriptions |
 
 The examples cover the most common use cases. Some API features are not exercised in them
@@ -1781,6 +1783,57 @@ for i, invoice in enumerate(invoices):
 
 To chain separate reports with continuous numbering, set `r.cur_page` to the number of
 the first page before rendering.
+
+#### Carry forward
+
+Ledgers and long invoices repeat a running total from page to page: *carried forward* at
+the bottom of a page, *brought forward* at the top of the next one. The code keeps the
+total in the event hooks, as usual; the page bands read it through two system variables:
+
+| Variable          | Value                                              | Typical band                    |
+| ----------------- | -------------------------------------------------- | ------------------------------- |
+| `_page_start.x`   | `x` at the start of the page (end of the previous) | `page_header`: "Brought forward" |
+| `_page_end.x`     | `x` at the end of the page                         | `page_footer`: "Carried forward" |
+
+`x` is any attribute of the renderer. After every `emit()` the renderer takes a snapshot
+of the attributes that the page bands read through `_page_start` / `_page_end` — nothing
+to declare — and pagination gives each page the snapshot of its last band.
+
+```python
+class Ledger(AndRepRenderer):
+    def on_before(self):
+        self.balance = opening_balance          # _page_start.balance on the first page
+
+    def on_after_band(self, band_name):
+        if band_name == "band":
+            self.balance += self.data.row.amount
+```
+
+```
+first_header   Opening balance   [_page_start.balance | .2]
+page_header    Brought forward   [_page_start.balance | .2]
+page_footer    Page total        [_page_end.balance - _page_start.balance | .2]
+               Carried forward   [_page_end.balance | .2]
+last_footer    Closing balance   [_page_end.balance | .2]
+```
+
+The page roles already say where each line goes: no "brought forward" on the first page,
+no "carried forward" on the last. To show a line only when it matters, hide its cells
+with a computed `cssExtra` — e.g. the opening balance only when it is not zero:
+`@"" if _page_start.balance else "visibility:hidden"`. See `examples/10_carry_forward.py`.
+
+Notes:
+
+- On the first page `_page_start` holds the values right after `on_before()`, i.e. before
+  the first `emit()` — an opening balance.
+- With sections (`page_break(reset=True)`) the values simply follow the code: reset the
+  total in a hook if each section starts from zero.
+- A band of several rows split across two pages counts on the page where it ends.
+- In HTML output (one page) `_page_start` holds the opening values, `_page_end` the final
+  ones.
+- The snapshots travel in the compiled records (`carry`); records built by an external
+  loop may carry them too. `from_compiled()` has no opening values: on the first page
+  `_page_start` is empty.
 
 ---
 
@@ -2097,6 +2150,7 @@ to one `emit()` call in the loop engine.
 | `css_extras` | string[] | no       | Per-cell CSS overrides, one entry per cell (including embed cells). Empty string means no override.                                    |
 | `band_css`   | string   | no       | CSS applied to the entire band container.                                                                                              |
 | `embeds`     | object   | no       | Map of `cell_id → compiled_record` for `embed`-type cells.                                                                        |
+| `carry`      | object   | no       | Snapshot of the fields read through `_page_start` / `_page_end`, after this band — see [Carry forward](#carry-forward). |
 
 **Rules:**
 

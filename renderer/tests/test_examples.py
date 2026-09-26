@@ -31,6 +31,7 @@ CASES = [
     ("07_embed",              "07_embed",    {"band": "band"}),
     ("07_embed_orientation",  "07_embed",    {"band": "band_rot"}),
     ("08_invoice",            "08_invoice",  {}),
+    ("10_carry_forward",      "10_carry_forward", {}),
 ]
 
 

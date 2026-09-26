@@ -22,7 +22,8 @@ from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
 # System variables injected by the renderer — the only names starting with "_"
-SYSTEM_NAMES = frozenset({"_r", "_page", "_pages", "_date", "_time", "_user", "_name"})
+SYSTEM_NAMES = frozenset({"_r", "_page", "_pages", "_page_start", "_page_end",
+                          "_date", "_time", "_user", "_name"})
 
 # Namespace keys used by compiled expressions; templates cannot name them
 # (names starting with "_" are rejected by the validator).
@@ -123,6 +124,21 @@ def _check(tree: ast.AST) -> str:
         if isinstance(node, ast.comprehension) and node.is_async:
             return "async comprehension is not allowed"
     return ""
+
+
+CARRY_NAMES = ("_page_start", "_page_end")
+
+
+def carry_fields(source: str) -> set:
+    """Fields read from _page_start / _page_end, e.g. {"total"} for
+    "_page_end.total - _page_start.total" — the values to snapshot per band."""
+    try:
+        tree = ast.parse(source.strip(), mode="eval")
+    except SyntaxError:
+        return set()
+    return {node.attr for node in ast.walk(tree)
+            if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name)
+            and node.value.id in CARRY_NAMES}
 
 
 def compile_expr(source: str, trusted: bool = False) -> CompiledExpr:

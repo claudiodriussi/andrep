@@ -107,6 +107,7 @@ See [`examples/`](examples/) for full working examples:
 | `07_embed.py` | Embedded side-by-side bands |
 | `08_invoice.py` | Invoice |
 | `09_backend_parity.py` | Compares WeasyPrint vs Playwright output on the same document |
+| `10_carry_forward.py` | Running balance carried from page to page |
 
 ```bash
 cd renderer/examples
