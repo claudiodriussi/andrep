@@ -188,17 +188,26 @@ for Chromium the sum over its processes, which counts shared memory more than on
 | ----: | ---------------------------------- | ------------------------- |
 |    25 | 0.6 s · 0.6 GB                     | 8 s · 0.3 GB              |
 |    81 | 1.3 s · 1.0 GB                     | 27 s · 0.9 GB             |
-|   242 | 4.2 s · 1.9 GB                     | ~80 s · 2.7 GB            |
+|   242 | 4.2 s · 1.9 GB                     | 79 s · 2.7 GB             |
 |   989 | 35 s · 5.4 GB                      | —                         |
+|  2010 | 133 s · 9.0 GB                     | —                         |
+|  3015 | 294 s · 11.6 GB                    | —                         |
 
 The loop, the layout and the HTML take about a second per 300 pages; the rest is the PDF
-engine. Guidelines:
+engine. Python itself needs about 1 GB per 1000 pages. Past a thousand pages Chromium's
+time grows faster than the page count.
+
+**As a server**, with one warm browser shared across renders (`PlaywrightBackend`
+passed to `to_pdf()`), a 3-page invoice renders in 0.08 s — 300 invoices in 27 s — and
+Chromium's memory levels off at about 1.4 GB after the first hundred documents.
+
+Guidelines:
 
 - **Playwright is the engine for production.** WeasyPrint is an emergency fallback: fine
   for short documents, but its memory grows with the page count inside the Python process
   (about 11 MB per page).
 - A few hundred pages render in seconds. Around a thousand pages a machine needs several
-  GB free.
+  GB free; three thousand pages still work, in about five minutes.
 - For larger documents, split the work: separate PDFs chained with `r.cur_page` (the
   number of the first page), or sections with `page_break(reset=True)`. A document of
   thousands of pages is usually an archive, not something anyone reads.

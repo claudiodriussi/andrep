@@ -1376,6 +1376,76 @@ debugging or for passing to a separate renderer process via `from_compiled()`.
 
 ---
 
+### Post-processing with pypdf
+
+`to_pdf()` returns the PDF as bytes. What comes after — merging, stamping, a
+pre-existing form as background — is plain PDF work, and
+[pypdf](https://pypdf.readthedocs.io/) does it well: pure Python, no other dependency
+(`pip install pypdf`). AndRep does not depend on it; these are short recipes.
+
+```python
+from io import BytesIO
+from pypdf import PdfReader, PdfWriter
+
+pdf = r.to_pdf()
+```
+
+**A pre-existing PDF as background** — a fiscal form, letterhead paper. The report is
+drawn over it: the cells of the template must have a **transparent** background
+(*Background → transparent* in the editor), otherwise they cover the form.
+
+```python
+form = PdfReader("form.pdf").pages[0]
+writer = PdfWriter()
+for page in PdfReader(BytesIO(pdf)).pages:
+    page.merge_page(form, over=False)       # the form goes under the report
+    writer.add_page(page)
+writer.write("filled_form.pdf")
+```
+
+**A stamp on every page** — "COPY", "DRAFT", "CANCELLED". The stamp is a one-page PDF,
+for example made with AndRep itself:
+
+```python
+stamp = PdfReader("copy_stamp.pdf").pages[0]
+writer = PdfWriter(clone_from=BytesIO(pdf))
+for page in writer.pages:
+    page.merge_page(stamp)                  # over the report
+writer.write("invoice_copy.pdf")
+```
+
+**Merging documents, with bookmarks and metadata** — an invoice followed by the terms
+and conditions, several reports in one file:
+
+```python
+writer = PdfWriter()
+writer.append(BytesIO(pdf), outline_item="Invoice 2026/001")
+writer.append("terms_and_conditions.pdf", outline_item="Terms and conditions")
+writer.add_metadata({"/Title": "Invoice 2026/001", "/Author": "ACME Corp."})
+writer.write("invoice_2026_001.pdf")
+```
+
+**A range of pages** — e.g. one customer out of a monthly run (pages 5–7):
+
+```python
+writer = PdfWriter()
+writer.append(BytesIO(pdf), pages=(4, 7))   # 0-based, end excluded
+writer.write("customer.pdf")
+```
+
+**A password** — e.g. payslips sent by e-mail (AES needs `pip install "pypdf[crypto]"`):
+
+```python
+writer = PdfWriter(clone_from=BytesIO(pdf))
+writer.encrypt(user_password="secret", algorithm="AES-256")
+writer.write("payslip.pdf")
+```
+
+For digital signatures use a dedicated library (e.g. pyHanko); pypdf does not sign, and
+does not produce PDF/A.
+
+---
+
 ### Hooks
 
 Override these methods in a subclass to add behaviour at specific points in the lifecycle:
