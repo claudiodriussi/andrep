@@ -745,8 +745,8 @@ plain-text with `<br>` line breaks.
   before laying out the page.
 - Images in the Markdown (`![alt](data/photo.png)`) are read through the
   [resource resolver](#resources) — paths relative to `r.base_dir` — and embedded.
-  In Markdown written directly in the cell content, `[alt]` is read as an AndRep
-  expression: keep such text in a file and load it (below).
+  In Markdown written directly in the cell content, escape the bracket:
+  `!\[alt](data/photo.png)`. Markdown loaded from a value or a file needs nothing.
 - To load content from an external file, use the `load` formatter:
   `["@data/notes.md" | load]`. The `@` prefix resolves the path relative to `r.base_dir`
   (see [Resources](#resources)); if `base_dir` is not set, `Path.cwd()` is used.
@@ -912,6 +912,17 @@ Nested brackets are handled correctly, so array indexing works as expected:
 [items[0].name]
 [matrix[row_idx][col_idx] | .2]
 ```
+
+To write a literal `[`, escape it as `\[` — every other `[` opens an expression, and one
+that is not a valid expression shows the error marker:
+
+```
+"see note \[1]"          →  "see note [1]"
+"\[[qty]] pcs"           →  "[3] pcs"
+```
+
+Values are never parsed: brackets inside a value (e.g. Markdown loaded from a file)
+are printed as they are.
 
 The `|` character inside an expression is interpreted as the Python logical-OR operator
 (`||` is also valid Python). To use a literal `|` as the formatter separator when the

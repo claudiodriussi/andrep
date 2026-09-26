@@ -491,13 +491,18 @@ def _parse_tokens(content):
 
     - (text, None, None) → literal text token
     - ('', expr, [fmt, ...]) → variable token
+
+    ``\\[`` is a literal ``[`` — it opens no expression: ``see note \\[1]``.
     """
     result = []
     i = 0
     current_text = []
 
     while i < len(content):
-        if content[i] == "[":
+        if content[i] == "\\" and content[i + 1: i + 2] == "[":
+            current_text.append("[")
+            i += 2
+        elif content[i] == "[":
             # Find matching ] (handles nesting)
             depth = 1
             j = i + 1

@@ -57,7 +57,11 @@ export function parseTokens(content: string): Token[] {
   let currentText: string[] = [];
 
   while (i < content.length) {
-    if (content[i] === "[") {
+    if (content[i] === "\\" && content[i + 1] === "[") {
+      // \[ is a literal "[" — it opens no expression
+      currentText.push("[");
+      i += 2;
+    } else if (content[i] === "[") {
       let depth = 1;
       let j = i + 1;
       while (j < content.length && depth > 0) {
