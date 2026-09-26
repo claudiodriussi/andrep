@@ -168,7 +168,7 @@ class PlaywrightBackend:
         page = self._ensure_page()
         page.set_content(doc_html, wait_until="load")
         page.evaluate("document.fonts.ready")
-        return page.pdf(prefer_css_page_size=True)
+        return page.pdf(prefer_css_page_size=True, print_background=True)
 
     def close(self) -> None:
         if self._context is not None:

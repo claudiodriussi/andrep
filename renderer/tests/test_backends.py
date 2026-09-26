@@ -119,3 +119,18 @@ def test_generated_documents_carry_the_csp():
     assert '<meta http-equiv="Content-Security-Policy"' in html
     assert "default-src 'none'" in html
     assert html.index("Content-Security-Policy") < html.index("<style>")
+
+
+@pytest.mark.skipif(not chromium_available(), reason="chromium not installed")
+def test_playwright_prints_backgrounds():
+    """Cell background colours (e.g. zebra rows) must be in the PDF."""
+    backend = PlaywrightBackend()
+    try:
+        page = backend._ensure_page()
+        seen = {}
+        original = page.pdf
+        page.pdf = lambda **kwargs: seen.update(kwargs) or original(**kwargs)
+        backend.render("<html><body><div style='background:#f0f4f8'>x</div></body></html>")
+        assert seen.get("print_background") is True
+    finally:
+        backend.close()
