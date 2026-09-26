@@ -51,7 +51,7 @@
   "band": "band_contain",
   "values": [
    "ART031",
-   "Digital multimeter pocket",
+   "Digital pocket multimeter 600V AC/DC auto-ranging, continuity buzzer, temperature probe included",
    "@data/img/ART031.svg",
    "@data/ART031.txt"
   ]
@@ -60,7 +60,7 @@
   "band": "band_contain",
   "values": [
    "ART032",
-   "Soldering iron 60W adjustable",
+   "Soldering iron 60W adjustable temperature 200–480°C, ceramic heater, ESD-safe grip",
    "@data/img/ART032.svg",
    null
   ]
@@ -69,7 +69,7 @@
   "band": "band_contain",
   "values": [
    "ART033",
-   "Breadboard 830 tie-points",
+   "Solderless breadboard 830 tie-points, ABS base with adhesive pads, bus strips isolated",
    "@data/img/ART033.svg",
    null
   ]
@@ -177,7 +177,7 @@
   "band": "band_cover",
   "values": [
    "ART031",
-   "Digital multimeter pocket",
+   "Digital pocket multimeter 600V AC/DC auto-ranging, continuity buzzer, temperature probe included",
    "@data/img/ART031.svg",
    "@data/ART031.txt"
   ]
@@ -186,7 +186,7 @@
   "band": "band_cover",
   "values": [
    "ART032",
-   "Soldering iron 60W adjustable",
+   "Soldering iron 60W adjustable temperature 200–480°C, ceramic heater, ESD-safe grip",
    "@data/img/ART032.svg",
    null
   ]
@@ -195,7 +195,7 @@
   "band": "band_cover",
   "values": [
    "ART033",
-   "Breadboard 830 tie-points",
+   "Solderless breadboard 830 tie-points, ABS base with adhesive pads, bus strips isolated",
    "@data/img/ART033.svg",
    null
   ]
@@ -303,7 +303,7 @@
   "band": "band_auto",
   "values": [
    "ART031",
-   "Digital multimeter pocket",
+   "Digital pocket multimeter 600V AC/DC auto-ranging, continuity buzzer, temperature probe included",
    "@data/img/ART031.svg",
    "@data/ART031.txt"
   ]
@@ -312,7 +312,7 @@
   "band": "band_auto",
   "values": [
    "ART032",
-   "Soldering iron 60W adjustable",
+   "Soldering iron 60W adjustable temperature 200–480°C, ceramic heater, ESD-safe grip",
    "@data/img/ART032.svg",
    null
   ]
@@ -321,7 +321,7 @@
   "band": "band_auto",
   "values": [
    "ART033",
-   "Breadboard 830 tie-points",
+   "Solderless breadboard 830 tie-points, ABS base with adhesive pads, bus strips isolated",
    "@data/img/ART033.svg",
    null
   ]

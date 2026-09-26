@@ -8,7 +8,7 @@
    "c19": {
     "band": "art_left_rot",
     "values": [
-     "10 ohm ceramic resistor 1/4W",
+     "10 ohm ceramic resistor 1/4W 100ppm/°C tolerance ±5% ROHS compliant, bulk packaging, lot 2024-Q3",
      null
     ]
    },
@@ -33,7 +33,7 @@
    "c19": {
     "band": "art_left_rot",
     "values": [
-     "100 ohm ceramic resistor 1/4W",
+     "100 ohm ceramic resistor 1/4W ±5% ROHS compliant, tape & reel, lot 2024-Q3",
      null
     ]
    },
@@ -58,7 +58,7 @@
    "c19": {
     "band": "art_left_rot",
     "values": [
-     "1K ohm resistor 1/4W",
+     "1K ohm metal film resistor 1/4W ±1% tolerance, ROHS, bulk delivery lot 2024-Q4",
      null
     ]
    },
@@ -83,7 +83,7 @@
    "c19": {
     "band": "art_left_rot",
     "values": [
-     "10K ohm resistor 1/4W",
+     "10K ohm metal film resistor 1/4W ±1% low-noise, bulk packaging September 2024",
      null
     ]
    },
@@ -108,7 +108,7 @@
    "c19": {
     "band": "art_left_rot",
     "values": [
-     "100nF ceramic capacitor 50V",
+     "100nF ceramic capacitor 50V X7R dielectric ±10%, ROHS, bulk tape lot 2025-Q2",
      null
     ]
    },
@@ -133,7 +133,7 @@
    "c19": {
     "band": "art_left_rot",
     "values": [
-     "10uF electrolytic capacitor 25V",
+     "10uF electrolytic capacitor 25V 105°C low-ESR series, radial lead, lot September 2025",
      null
     ]
    },
@@ -158,7 +158,7 @@
    "c19": {
     "band": "art_left_rot",
     "values": [
-     "100uF electrolytic capacitor 25V",
+     "100uF electrolytic capacitor 25V general purpose 105°C radial, bulk lot 2025-Q1",
      null
     ]
    },
@@ -183,7 +183,7 @@
    "c19": {
     "band": "art_left_rot",
     "values": [
-     "470uF electrolytic capacitor 16V",
+     "470uF electrolytic capacitor 16V 105°C radial, bulk delivery confirmed lot 2025-08",
      null
     ]
    },
@@ -208,7 +208,7 @@
    "c19": {
     "band": "art_left_rot",
     "values": [
-     "10uH inductor SMD 2A",
+     "10uH shielded SMD inductor 2A ±20% tolerance 1210 package, special batch confirmed",
      null
     ]
    },
@@ -233,7 +233,7 @@
    "c19": {
     "band": "art_left_rot",
     "values": [
-     "Crystal 16MHz HC-49",
+     "Crystal oscillator 16MHz HC-49/U ±30ppm 18pF load capacity, lot 2025-09",
      null
     ]
    },
@@ -258,7 +258,7 @@
    "c19": {
     "band": "art_left_rot",
     "values": [
-     "1N4148 signal diode",
+     "1N4148 high-speed signal diode 100V 150mA DO-35, bulk pack lot 2025",
      null
     ]
    },
@@ -283,7 +283,7 @@
    "c19": {
     "band": "art_left_rot",
     "values": [
-     "1N4007 rectifier diode 1A",
+     "1N4007 general-purpose rectifier diode 1A 1000V DO-41, bulk delivery lot September 2025",
      null
     ]
    },
@@ -758,7 +758,7 @@
    "c19": {
     "band": "art_left_rot",
     "values": [
-     "Digital multimeter pocket",
+     "Digital pocket multimeter 600V AC/DC auto-ranging, continuity buzzer, temperature probe included",
      "@data/img/ART031.svg"
     ]
    },
@@ -783,7 +783,7 @@
    "c19": {
     "band": "art_left_rot",
     "values": [
-     "Soldering iron 60W adjustable",
+     "Soldering iron 60W adjustable temperature 200–480°C, ceramic heater, ESD-safe grip",
      "@data/img/ART032.svg"
     ]
    },
@@ -808,7 +808,7 @@
    "c19": {
     "band": "art_left_rot",
     "values": [
-     "Breadboard 830 tie-points",
+     "Solderless breadboard 830 tie-points, ABS base with adhesive pads, bus strips isolated",
      "@data/img/ART033.svg"
     ]
    },

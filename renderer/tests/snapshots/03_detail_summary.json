@@ -328,7 +328,7 @@
   "band": "art_header",
   "values": [
    "ART001",
-   "10 ohm ceramic resistor 1/4W",
+   "10 ohm ceramic resistor 1/4W 100ppm/°C tolerance ±5% ROHS compliant, bulk packaging, lot 2024-Q3",
    "STD",
    "PCS",
    0.45
@@ -349,7 +349,7 @@
   "band": "art_header",
   "values": [
    "ART002",
-   "100 ohm ceramic resistor 1/4W",
+   "100 ohm ceramic resistor 1/4W ±5% ROHS compliant, tape & reel, lot 2024-Q3",
    "STD",
    "PCS",
    0.45
@@ -367,7 +367,7 @@
   "band": "art_header",
   "values": [
    "ART003",
-   "1K ohm resistor 1/4W",
+   "1K ohm metal film resistor 1/4W ±1% tolerance, ROHS, bulk delivery lot 2024-Q4",
    "STD",
    "PCS",
    0.45
@@ -388,7 +388,7 @@
   "band": "art_header",
   "values": [
    "ART004",
-   "10K ohm resistor 1/4W",
+   "10K ohm metal film resistor 1/4W ±1% low-noise, bulk packaging September 2024",
    "STD",
    "PCS",
    0.45
@@ -406,7 +406,7 @@
   "band": "art_header",
   "values": [
    "ART005",
-   "100nF ceramic capacitor 50V",
+   "100nF ceramic capacitor 50V X7R dielectric ±10%, ROHS, bulk tape lot 2025-Q2",
    "STD",
    "PCS",
    0.3
@@ -424,7 +424,7 @@
   "band": "art_header",
   "values": [
    "ART006",
-   "10uF electrolytic capacitor 25V",
+   "10uF electrolytic capacitor 25V 105°C low-ESR series, radial lead, lot September 2025",
    "STD",
    "PCS",
    0.55
@@ -442,7 +442,7 @@
   "band": "art_header",
   "values": [
    "ART007",
-   "100uF electrolytic capacitor 25V",
+   "100uF electrolytic capacitor 25V general purpose 105°C radial, bulk lot 2025-Q1",
    "STD",
    "PCS",
    0.8
@@ -463,7 +463,7 @@
   "band": "art_header",
   "values": [
    "ART008",
-   "470uF electrolytic capacitor 16V",
+   "470uF electrolytic capacitor 16V 105°C radial, bulk delivery confirmed lot 2025-08",
    "STD",
    "PCS",
    0.95
@@ -481,7 +481,7 @@
   "band": "art_header",
   "values": [
    "ART009",
-   "10uH inductor SMD 2A",
+   "10uH shielded SMD inductor 2A ±20% tolerance 1210 package, special batch confirmed",
    "STD",
    "PCS",
    1.2
@@ -499,7 +499,7 @@
   "band": "art_header",
   "values": [
    "ART010",
-   "Crystal 16MHz HC-49",
+   "Crystal oscillator 16MHz HC-49/U ±30ppm 18pF load capacity, lot 2025-09",
    "STD",
    "PCS",
    0.9
@@ -635,7 +635,7 @@
   "band": "art_header",
   "values": [
    "ART011",
-   "1N4148 signal diode",
+   "1N4148 high-speed signal diode 100V 150mA DO-35, bulk pack lot 2025",
    "STD",
    "PCS",
    0.12
@@ -653,7 +653,7 @@
   "band": "art_header",
   "values": [
    "ART012",
-   "1N4007 rectifier diode 1A",
+   "1N4007 general-purpose rectifier diode 1A 1000V DO-41, bulk delivery lot September 2025",
    "STD",
    "PCS",
    0.18
@@ -903,7 +903,7 @@
   "band": "art_header",
   "values": [
    "ART031",
-   "Digital multimeter pocket",
+   "Digital pocket multimeter 600V AC/DC auto-ranging, continuity buzzer, temperature probe included",
    "STD",
    "PCS",
    18.0
@@ -921,7 +921,7 @@
   "band": "art_header",
   "values": [
    "ART032",
-   "Soldering iron 60W adjustable",
+   "Soldering iron 60W adjustable temperature 200–480°C, ceramic heater, ESD-safe grip",
    "STD",
    "PCS",
    32.0
@@ -939,7 +939,7 @@
   "band": "art_header",
   "values": [
    "ART033",
-   "Breadboard 830 tie-points",
+   "Solderless breadboard 830 tie-points, ABS base with adhesive pads, bus strips isolated",
    "STD",
    "PCS",
    5.5
