@@ -152,6 +152,35 @@ CSP = "default-src 'none'; img-src data:; font-src data:; style-src 'unsafe-inli
 _CSP_META = f'<meta http-equiv="Content-Security-Policy" content="{CSP}">'
 
 
+# Inline styles that can safely become a CSS rule: no quote, markup, braces,
+# comments or escapes — anything else (e.g. from markup in the data) stays inline.
+_STYLE_ATTR = re.compile(r'style="([^"<>{}*\\]*)"')
+_SVG = re.compile(r"(<svg\b.*?</svg>)", re.DOTALL | re.IGNORECASE)
+
+
+def _styles_to_classes(html: str) -> str:
+    """Replace each inline ``style="…"`` with ``class="sN"``, one class per
+    distinct style, the rules added to the document's <style> block.
+
+    Cells repeat a handful of styles thousands of times: a 242-page report
+    shrinks from 33 MB to 3 MB, which lowers memory and time in both PDF
+    backends and keeps large documents under Chromium's message size limit.
+
+    SVG is left as it is: WeasyPrint draws SVG with its own engine, which does
+    not apply the document's classes to SVG elements (barcodes would break).
+    """
+    classes: dict = {}
+
+    def to_class(match) -> str:
+        return f'class="s{classes.setdefault(match.group(1), len(classes))}"'
+
+    parts = _SVG.split(html)   # odd indexes: <svg>…</svg> blocks
+    body = "".join(part if i % 2 else _STYLE_ATTR.sub(to_class, part)
+                   for i, part in enumerate(parts))
+    rules = "".join(f".s{i}{{{style}}}\n" for style, i in classes.items())
+    return body.replace("</style>", rules + "</style>", 1)
+
+
 class _LazyLocals:
     """self.data for event hooks: the caller's locals at emit() time, each
     converted with _to_ns when a hook first reads it (converting them all at
@@ -909,7 +938,7 @@ class AndRepRenderer:
         return count
 
     def _phantom_doc(self, body_html: str, content_w: int) -> str:
-        return (
+        return _styles_to_classes(
             "<!DOCTYPE html><html><head>"
             '<meta charset="utf-8">'
             + _CSP_META +
@@ -1340,7 +1369,7 @@ class AndRepRenderer:
         if in_flex:
             body_parts.append(_close_flex())
 
-        return (
+        return _styles_to_classes(
             "<!DOCTYPE html>\n<html><head>\n"
             '<meta charset="utf-8">\n'
             + _CSP_META + "\n"
@@ -1697,7 +1726,7 @@ class AndRepRenderer:
                 + "</div>\n"
             )
 
-        return (
+        return _styles_to_classes(
             "<!DOCTYPE html>\n<html><head>\n"
             '<meta charset="utf-8">\n'
             + _CSP_META + "\n"

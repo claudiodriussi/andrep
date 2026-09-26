@@ -173,7 +173,35 @@ backends, and images at a reasonable resolution for their display size show no v
 difference either way. See `_docs/RENDERER.md` for details.
 
 For the vast majority of business reports (lists, invoices, labels, forms) both
-backends produce excellent, visually equivalent results.
+backends produce excellent, visually equivalent results. Line heights can differ by a
+pixel between the two engines, so a long document may break pages at a slightly
+different row: pick one engine and keep it when the layout must not change.
+
+### Large documents
+
+AndRep lays out the whole document before rendering it (that is what makes page numbers,
+"Page X of Y" and sections possible), then hands it to the PDF engine in one piece.
+Measured on a 40-rows-per-page list (22-core desktop; memory is the peak resident size —
+for Chromium the sum over its processes, which counts shared memory more than once):
+
+| Pages | Playwright: time · Chromium memory | WeasyPrint: time · memory |
+| ----: | ---------------------------------- | ------------------------- |
+|    25 | 0.6 s · 0.6 GB                     | 8 s · 0.3 GB              |
+|    81 | 1.3 s · 1.0 GB                     | 27 s · 0.9 GB             |
+|   242 | 4.2 s · 1.9 GB                     | ~80 s · 2.7 GB            |
+|   989 | 35 s · 5.4 GB                      | —                         |
+
+The loop, the layout and the HTML take about a second per 300 pages; the rest is the PDF
+engine. Guidelines:
+
+- **Playwright is the engine for production.** WeasyPrint is an emergency fallback: fine
+  for short documents, but its memory grows with the page count inside the Python process
+  (about 11 MB per page).
+- A few hundred pages render in seconds. Around a thousand pages a machine needs several
+  GB free.
+- For larger documents, split the work: separate PDFs chained with `r.cur_page` (the
+  number of the first page), or sections with `page_break(reset=True)`. A document of
+  thousands of pages is usually an archive, not something anyone reads.
 
 **Backends fetch nothing.** The renderer embeds every resource as a `data:` URL (see
 *Resources* in the manual), so both backends load `data:` URLs only: WeasyPrint through a

@@ -26,7 +26,7 @@ def formatted(page=None, **attrs) -> list:
 
 def _cell_texts(html: str) -> list:
     import re
-    return re.findall(r'<div style="[^"]*">([^<]*)</div>', html)
+    return re.findall(r'<div[^>]*>([^<]*)</div>', html)
 
 
 @pytest.fixture(autouse=True)
