@@ -818,7 +818,7 @@ class AndRepRenderer:
         Usage::
 
             records = json.loads(Path("records.json").read_text())
-            r = AndRepRenderer.from_compiled("template.json", records,
+            r = AndRepRenderer.from_compiled("articles", records, loader=loader,
                     metadata={"title": "Products", "name": ["Acme", "Rome"]})
             html = r.to_html()
             pdf  = r.to_pdf()

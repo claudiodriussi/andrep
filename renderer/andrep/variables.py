@@ -150,8 +150,9 @@ def eval_expr(expr, ns):
     string, which is validated here.  *ns* must already contain
     ``"__builtins__": {}``.
 
-    Returns the computed value, ``0`` on division by zero, or the visible
-    marker ``'[#expr: reason#]'`` when the expression was rejected or fails.
+    Returns the computed value, ``None`` (an empty cell) on division by zero,
+    or the visible marker ``'[#expr: reason#]'`` when the expression was
+    rejected or fails.
     A rejected expression is never evaluated.
     """
     if isinstance(expr, str):
@@ -162,7 +163,7 @@ def eval_expr(expr, ns):
     try:
         return eval(expr.code, ns)  # noqa: S307 — validated subset, no builtins
     except ZeroDivisionError:
-        return 0
+        return None   # an empty cell: no invented value (write "a / b if b else 0" for 0)
     except NameError as e:
         # A local left out of the namespace because it is not data
         why = ns.get(EXCLUDED_KEY, {}).get(getattr(e, "name", None))

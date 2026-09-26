@@ -1191,7 +1191,7 @@ Injected automatically into every cell by the renderer:
 
 | Situation                               | Result                              |
 | --------------------------------------- | ----------------------------------- |
-| Division by zero                        | `0`                               |
+| Division by zero                        | empty cell — write `[a / b if b else 0]` to print `0` |
 | Any other evaluation error              | `[#expr: reason#]` (visible marker) |
 | Expression outside the allowed subset   | `[#expr: reason#]` — never evaluated |
 | Missing image / file with `silent`    | `""` (empty string)               |
