@@ -97,7 +97,7 @@ def test_weasyprint_fetcher_accepts_data_urls_only():
     fetcher = WeasyPrintBackend()._get_fetcher()
     fetcher(DATA_PNG)
     for url in ("file:///etc/hostname", "http://example.com/x.png"):
-        with pytest.raises(ValueError, match="data: URLs only"):
+        with pytest.raises(ValueError, match="disallowed protocol"):
             fetcher(url)
 
 

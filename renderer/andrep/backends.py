@@ -56,14 +56,10 @@ class WeasyPrintBackend:
                 raise ImportError(
                     "weasyprint is not installed: pip install weasyprint"
                 ) from e
-            base_fetcher = URLFetcher()
-
-            def fetcher(url: str):
-                if not url.startswith("data:"):
-                    raise ValueError(f"AndRep loads data: URLs only, not {url[:80]}")
-                return base_fetcher.fetch(url)
-
-            self._fetcher = fetcher
+            # WeasyPrint refuses every other protocol itself (a warning, the
+            # resource is skipped) — a plain function in its place breaks
+            # WeasyPrint ≥ 70, which expects a URLFetcher.
+            self._fetcher = URLFetcher(allowed_protocols=["data"])
         return self._fetcher
 
     def measure_heights(self, doc_html: str, count: int) -> "list[int]":
