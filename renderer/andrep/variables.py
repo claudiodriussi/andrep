@@ -23,6 +23,7 @@ from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
 from .expr_check import ATTR_FN, EXCLUDED_KEY, checked_getattr, compile_expr
+from .locales import currency_symbol, get_locale
 from .resources import DefaultResolver, ResourceError
 
 
@@ -314,6 +315,11 @@ def json_value(value):
     raise TypeError(f"{type(value).__name__} is not JSON serializable")
 
 
+def _locale_of(r):
+    """The renderer's Locale, or the default one without a renderer."""
+    return r.locale_info() if hasattr(r, "locale_info") else get_locale()
+
+
 def _apply_formatter(value, fmt, r=None):
     """Apply a single formatter to a value.
 
@@ -349,17 +355,17 @@ def _apply_formatter(value, fmt, r=None):
         if value is None or value == "":
             return "0"
         return str(value)
+    loc = _locale_of(r)
     if fmt == "date":
         value = _as_date(value)
         if isinstance(value, (date, datetime)):
-            return value.strftime("%d/%m/%Y")
+            return value.strftime(loc.date)
         return str(value) if value is not None else ""
     if fmt == "currency":
         try:
             v = float(value)
-            # € 1.234,56  (Italian format)
-            formatted = f"{v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-            return f"€ {formatted}"
+            code = r.currency_code() if hasattr(r, "currency_code") else loc.currency
+            return f"{currency_symbol(code)} {loc.number(v, 2)}"
         except (TypeError, ValueError):
             return str(value)
 
@@ -393,9 +399,7 @@ def _apply_formatter(value, fmt, r=None):
         width = int(width_str) if width_str else 0
         try:
             v = float(value)
-            formatted = f"{v:{sign},.{decimals}f}"
-            # Italian separators
-            formatted = formatted.replace(",", "X").replace(".", ",").replace("X", ".")
+            formatted = loc.number(v, decimals, sign)
             if width:
                 formatted = formatted.rjust(width)
             return formatted

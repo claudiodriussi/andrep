@@ -11,6 +11,7 @@ from html import escape, unescape
 from pathlib import Path
 
 from .loader import TemplateLoader
+from .locales import Locale, get_locale
 from .expr_check import ATTR_FN, EXCLUDED_KEY, checked_getattr, compile_expr
 from .resources import DefaultResolver, ResourceError
 from .variables import (
@@ -303,8 +304,14 @@ class AndRepRenderer:
 
         # System variables — override before first emit() if needed
         now = datetime.now()
-        self.report_date: str = now.strftime("%d/%m/%Y")
+        self._now = now
+        self.report_date: str | None = None   # None = today, in the locale's date format
         self.report_time: str = now.strftime("%H:%M:%S")
+
+        # Number / date / currency conventions of the formatters — see locales.py.
+        # None: template page.locale / page.currency, then ANDREP_LOCALE, then en-US.
+        self.locale: str | None = None
+        self.currency: str | None = None
         self.report_user: str = os.environ.get("USER", os.environ.get("USERNAME", ""))
         self.title: str = self.template.get("name", "")   # _r.title — overridable
         self.cur_page: int = 1   # number of the first page — set it to chain reports
@@ -399,7 +406,8 @@ class AndRepRenderer:
 
     def _sys_vars(self) -> dict:
         return {
-            "_date": self.report_date,
+            "_date": self.report_date if self.report_date is not None
+                     else self._now.strftime(self.locale_info().date),
             "_time": self.report_time,
             "_user": self.report_user,
             "_name": self.template.get("name", ""),
@@ -565,6 +573,15 @@ class AndRepRenderer:
     # ------------------------------------------------------------------
     # Utilities
     # ------------------------------------------------------------------
+
+    def locale_info(self) -> Locale:
+        """The Locale in use: r.locale, template page.locale, ANDREP_LOCALE, en-US."""
+        code = self.locale or self.page.get("locale") or os.environ.get("ANDREP_LOCALE", "")
+        return get_locale(code)
+
+    def currency_code(self) -> str:
+        """The currency in use: r.currency, template page.currency, the locale's."""
+        return self.currency or self.page.get("currency") or self.locale_info().currency
 
     def _open_resource(self, ref: str) -> "tuple[bytes, str]":
         """Read *ref* through the resolver, once per renderer (a logo in the page

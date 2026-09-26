@@ -382,8 +382,8 @@ current template.
 | **Orientation**    | Portrait / Landscape (swaps width and height)           |
 | **Width / Height** | In pixels (A4 portrait: 794 × 1123 px at 96 dpi)       |
 | **Margins**        | Top, bottom, left, right (pixels)                       |
-| **Locale**         | Used by date and number formatters (e.g.`it`, `en`) |
-| **Currency**       | Symbol used by the `currency` formatter               |
+| **Locale**         | Used by date and number formatters (e.g.`it-IT`, `en-US`) — see [Locale](#locale) |
+| **Currency**       | ISO code used by the `currency` formatter (e.g. `EUR`)      |
 
 The dialog also contains a **Composition** section where you can add and remove merge rules
 that bring in bands from other template files at load time. See [Chapter 8](#8-template-composition)
@@ -517,7 +517,7 @@ can also edit it by hand or generate it programmatically.
 | `marginRight`  | integer px                                                | 38           | Right margin                                                       |
 | `orientation`  | `portrait`\|`landscape`                               | `portrait` | Swapping orientation swaps width and height                        |
 | `locale`       | string                                                    | `""`       | BCP 47 locale for date/number formatters (e.g.`it-IT`)           |
-| `currency`     | string                                                    | `""`       | Currency symbol/code for the `currency` formatter (e.g. `EUR`) |
+| `currency`     | string                                                    | `""`       | ISO 4217 code for the `currency` formatter (e.g. `EUR`); empty: the locale's currency |
 | `columns`      | integer                                                   | 1            | Number of page columns (label / multi-column layouts)              |
 | `columnGap`    | integer px                                                | 0            | Horizontal gap between page columns                                |
 
@@ -980,22 +980,22 @@ explicit.
 
 ### Numeric formatters
 
-Numbers are formatted with **Italian separators** by default: `.` as thousands separator
-and `,` as decimal separator.
+Numbers use the separators of the report's [locale](#locale). The examples below are for
+the default `en-US`; with `it-IT` the same value is `1.234,50`.
 
 | Formatter    | Effect                                                   | Example                               |
 | ------------ | -------------------------------------------------------- | ------------------------------------- |
-| `N`        | N decimal places, no thousands separator                 | `[v\|2]` → `"1234.50"`            |
-| `.N`       | Thousands separator + N decimals                         | `[v\|.2]` → `"1.234,50"`          |
-| `W.N`      | Right-justify in W characters, thousands + N decimals    | `[v\|10.2]` → `"  1.234,50"`      |
-| `+.N`      | Like `.N` with explicit `+` sign for positive values | `[v\|+.2]` → `"+1.234,50"`        |
-| `currency` | Thousands + 2 decimals with `€` symbol                | `[v\|currency]` → `"€ 1.234,50"` |
+| `N`        | N decimal places, no thousands separator, `.` as decimal point | `[v\|2]` → `"1234.50"`            |
+| `.N`       | Thousands separator + N decimals                         | `[v\|.2]` → `"1,234.50"`          |
+| `W.N`      | Right-justify in W characters, thousands + N decimals    | `[v\|10.2]` → `"  1,234.50"`      |
+| `+.N`      | Like `.N` with explicit `+` sign for positive values | `[v\|+.2]` → `"+1,234.50"`        |
+| `currency` | Currency symbol + thousands + 2 decimals                | `[v\|currency]` → `"$ 1,234.50"` |
 
 Formatters can be chained to combine effects:
 
 ```
 [amount | .2 | space]    →  formatted with thousands/decimals, blank if zero
-[balance | +.2]          →  "+1.234,50" or "-567,00"
+[balance | +.2]          →  "+1,234.50" or "-567.00"
 ```
 
 ---
@@ -1004,15 +1004,40 @@ Formatters can be chained to combine effects:
 
 | Formatter      | Effect                                                                 |
 | -------------- | ---------------------------------------------------------------------- |
-| `date`       | Format a `date` / `datetime` value as `dd/mm/yyyy`               |
+| `date`       | Format a `date` / `datetime` value in the locale's format (`09/25/2026` in `en-US`, `25/09/2026` in `it-IT`) |
 | `dd/mm/yyyy` | Explicit format using `d`, `m`, `y` tokens (e.g. `yyyy-mm-dd`) |
 
 The explicit format pattern replaces: `dd` → day, `mm` → month, `yyyy` → 4-digit year,
 `yy` → 2-digit year.
 
 ```
-[row.delivery_date | date]          →  "28/03/2026"
-[row.delivery_date | yyyy-mm-dd]    →  "2026-03-28"
+[row.delivery_date | date]          →  "03/28/2026"   (en-US)   "28/03/2026"   (it-IT)
+[row.delivery_date | yyyy-mm-dd]    →  "2026-03-28"   (any locale)
+```
+
+### Locale
+
+Number separators, the `date` format, `[_date]` and the currency symbol follow the
+report's locale — from the first one set:
+
+1. `r.locale` / `r.currency` — set by the code, e.g. from the customer's language
+   (integrations take it from their own configuration);
+2. the template's `page.locale` / `page.currency` — set in the editor's *Page setup*;
+3. the `ANDREP_LOCALE` environment variable — one setting for a whole installation;
+4. `en-US`.
+
+When no currency is set, the locale's own is used (`USD` for `en-US`, `EUR` for `it-IT`,
+`GBP` for `en-GB`, `CHF` for `de-CH`…). The symbol always precedes the amount:
+`€ 1.234,50`, `$ 1,234.50`.
+
+Built-in locales: `en-US`, `en-GB`, `it-IT`, `it-CH`, `de-DE`, `de-AT`, `de-CH`,
+`fr-FR`, `fr-CH`, `es-ES`, `pt-PT`, `pt-BR`, `nl-NL`. `it_IT` and a bare `it` are
+accepted; an unknown code falls back to its language, then to `en-US`. Add one with:
+
+```python
+from andrep.locales import register_locale
+
+register_locale("sv-SE", decimal=",", group="\u00a0", date="%Y-%m-%d", currency="SEK")
 ```
 
 If the value is not a `date` / `datetime` object it is converted to string unchanged.
@@ -1431,7 +1456,9 @@ r.emit("next_section_header")
 | Attribute       | Type            | Description                                                                 |
 | --------------- | --------------- | --------------------------------------------------------------------------- |
 | `title`       | str             | Report title (default: template name)                                       |
-| `report_date` | str             | Print date `dd/mm/yyyy` — set before first emit to override              |
+| `report_date` | str \| None     | Print date shown by `[_date]`; `None` (default) = today in the locale's format |
+| `locale`      | str \| None     | Locale of the formatters, overrides the template's — see [Locale](#locale)   |
+| `currency`    | str \| None     | Currency of the `currency` formatter, overrides the template's              |
 | `report_time` | str             | Print time `HH:MM:SS`                                                     |
 | `report_user` | str             | OS user (`USER` / `USERNAME` env var)                                   |
 | `cur_page`    | int             | Number of the first page (default 1) — set it when chaining reports        |

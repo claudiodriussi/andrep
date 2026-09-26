@@ -80,7 +80,7 @@ def test_compiled_records_with_dates_and_decimals_round_trip():
     from andrep import AndRepRenderer
     from conftest import make_template
 
-    template = make_template({"band": ["[d | date]", "[t]", "[amount | .2]"]})
+    template = make_template({"band": ["[d | date]", "[t]", "[amount | .2]"]}, page={"locale": "it-IT"})
     r = AndRepRenderer(template)
     d, t, amount = datetime.date(2026, 9, 25), datetime.datetime(2026, 9, 25, 8, 30), Decimal("1234.50")  # noqa: F841
     r.emit("band")
