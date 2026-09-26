@@ -13,6 +13,11 @@
   ]
  },
  {
+  "band": "__mark__",
+  "label": "CONN — Connectors and cables",
+  "level": 1
+ },
+ {
   "band": "cat_header",
   "values": [
    "CONN",
@@ -101,6 +106,11 @@
  },
  {
   "band": "__page_break__"
+ },
+ {
+  "band": "__mark__",
+  "label": "KIT — Development kits",
+  "level": 1
  },
  {
   "band": "cat_header",
@@ -289,6 +299,11 @@
  },
  {
   "band": "__page_break__"
+ },
+ {
+  "band": "__mark__",
+  "label": "MCU — Microcontrollers and SBCs",
+  "level": 1
  },
  {
   "band": "cat_header",
@@ -514,6 +529,11 @@
  },
  {
   "band": "__page_break__"
+ },
+ {
+  "band": "__mark__",
+  "label": "PASS — Passive components",
+  "level": 1
  },
  {
   "band": "cat_header",
@@ -871,6 +891,11 @@
   "band": "__page_break__"
  },
  {
+  "band": "__mark__",
+  "label": "POWER — Power supplies",
+  "level": 1
+ },
+ {
   "band": "cat_header",
   "values": [
    "POWER",
@@ -959,6 +984,11 @@
  },
  {
   "band": "__page_break__"
+ },
+ {
+  "band": "__mark__",
+  "label": "SEMI — Semiconductors",
+  "level": 1
  },
  {
   "band": "cat_header",
@@ -1121,6 +1151,11 @@
  },
  {
   "band": "__page_break__"
+ },
+ {
+  "band": "__mark__",
+  "label": "SRV — Services",
+  "level": 1
  },
  {
   "band": "cat_header",
@@ -1299,6 +1334,11 @@
   "band": "__page_break__"
  },
  {
+  "band": "__mark__",
+  "label": "TOOL — Tools and instruments",
+  "level": 1
+ },
+ {
   "band": "cat_header",
   "values": [
    "TOOL",
@@ -1369,6 +1409,11 @@
  },
  {
   "band": "__page_break__"
+ },
+ {
+  "band": "__mark__",
+  "label": "Totals",
+  "level": 1
  },
  {
   "band": "totals",

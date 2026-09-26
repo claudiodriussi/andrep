@@ -398,6 +398,9 @@ class AndRepRenderer:
         self._carry_initial: dict = {}
         self._carry_page = None   # (start, end) snapshots while rendering a PDF page
 
+        # Marks (r.mark): after to_pdf(), r.marks lists where each one landed
+        self.marks: list = []
+
         self.on_init()
 
     # ------------------------------------------------------------------
@@ -432,7 +435,7 @@ class AndRepRenderer:
     # Renderer attributes that are engine internals, not report data
     _R_INTERNALS = frozenset({
         "template", "page", "bands", "globals", "formatters", "data",
-        "pdf_backend", "trusted", "base_dir", "phantom_batch", "resolver",
+        "pdf_backend", "trusted", "base_dir", "phantom_batch", "resolver", "marks",
     })
 
     def _r_snapshot(self) -> types.SimpleNamespace:
@@ -697,6 +700,18 @@ class AndRepRenderer:
         """
         self._emissions.append({"band": "__page_break__", "reset": True} if reset
                                else {"band": "__page_break__"})
+
+    def mark(self, label: str, level: int = 1) -> None:
+        """Mark the start of a part of the document — an invoice, a category.
+
+        Nothing is printed.  After to_pdf(), r.marks tells where each mark
+        landed: its page, the last page of the part (until the next mark of the
+        same or a higher level), and its vertical position — to split the PDF
+        or add bookmarks with pypdf.  level=2, 3… nest parts (category › article).
+        """
+        if not isinstance(level, int) or level < 1:
+            raise ValueError("mark level must be an integer ≥ 1")
+        self._emissions.append({"band": "__mark__", "label": str(label), "level": level})
 
     def patch_band(self, cssExtra: str = "") -> None:
         """Apply CSS to ALL cells of the current band emission.
@@ -1368,6 +1383,8 @@ class AndRepRenderer:
                     in_flex = False
                 body_parts.append('<div style="page-break-after:always;height:0"></div>\n')
                 continue
+            if band_name == "__mark__":
+                continue
 
             rows = self.bands.get(band_name, [])
             if not rows:
@@ -1473,6 +1490,9 @@ class AndRepRenderer:
             if band_name == "__page_break__":
                 rec_plan.append(("break", record.get("reset", False)))
                 continue
+            if band_name == "__mark__":
+                rec_plan.append(("mark", record["label"], record.get("level", 1)))
+                continue
 
             rows = self.bands.get(band_name, [])
             if not rows:
@@ -1532,6 +1552,10 @@ class AndRepRenderer:
             if kind == "break":
                 _flush()
                 items.append(("__reset__" if entry[1] else "__break__", 0, None, None))
+
+            elif kind == "mark":
+                _flush()
+                items.append(("__mark__", 0, None, (entry[1], entry[2])))
 
             elif kind == "multi":
                 _, col_w, gap, columns, inner, h, carry = entry
@@ -1594,6 +1618,26 @@ class AndRepRenderer:
         if in_flex_gap is not None:
             parts.append("</div>\n")
         return "".join(parts)
+
+    @staticmethod
+    def _marks_map(placed: list, page_count: int, page_h: int) -> list:
+        """r.marks from the marks placed during pagination.
+
+        A part runs until the next mark of the same or a higher level: to the
+        page before it if that mark opens its page, else to that same page.
+        top is in PDF points from the bottom of the page, as PDF viewers and
+        pypdf use it.
+        """
+        marks = []
+        for i, (label, level, page, y, _) in enumerate(placed):
+            last = page_count - 1
+            for _, other_level, other_page, _, opens in placed[i + 1:]:
+                if other_level <= level:
+                    last = max(page, other_page - 1 if opens else other_page)
+                    break
+            marks.append({"label": label, "level": level, "first": page, "last": last,
+                          "pages": last - page + 1, "top": round((page_h - y) * 0.75, 2)})
+        return marks
 
     def _render_page_hdr(self, is_first: bool, ns: dict, content_w: int) -> str:
         """Return the header HTML for one PDF page (first_header or page_header)."""
@@ -1692,9 +1736,20 @@ class AndRepRenderer:
         cur: "list[tuple]" = []
         cur_h    = 0
         section  = 0
+        is_first = True
         avail    = _avail(is_first=True)
+        placed: list = []    # marks: (label, level, page, y px from the page top, opens its page)
+        pending: list = []   # marks waiting for the next content, which may start a new page
+
+        def _place_pending() -> None:
+            y = mt + _hdr_h(is_first) + cur_h
+            placed.extend((label, level, len(pages), y, not cur) for label, level in pending)
+            pending.clear()
 
         for html, h, tag, carry in items:
+            if html == "__mark__":
+                pending.append(carry)
+                continue
             if html in ("__break__", "__reset__"):
                 pages.append(cur)
                 sections.append(section)
@@ -1706,14 +1761,17 @@ class AndRepRenderer:
             if cur_h + h > avail and cur:
                 pages.append(cur)
                 sections.append(section)
-                cur, cur_h = [], 0
+                cur, cur_h, is_first = [], 0, False
                 avail = _avail(is_first=False)
+            _place_pending()
             cur.append((html, h, tag, carry))
             cur_h += h
 
+        _place_pending()
         pages.append(cur)
         sections.append(section)
         section_size = {s: sections.count(s) for s in set(sections)}
+        self.marks = self._marks_map(placed, len(pages), ph)
 
         # ── render each page ────────────────────────────────────────────────
         page_divs: list[str] = []

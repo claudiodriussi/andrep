@@ -1426,12 +1426,27 @@ writer.add_metadata({"/Title": "Invoice 2026/001", "/Author": "ACME Corp."})
 writer.write("invoice_2026_001.pdf")
 ```
 
-**A range of pages** — e.g. one customer out of a monthly run (pages 5–7):
+**One PDF per invoice** — the invoices of a monthly run, split with the
+[marks](#marks-rmark) of the report:
 
 ```python
-writer = PdfWriter()
-writer.append(BytesIO(pdf), pages=(4, 7))   # 0-based, end excluded
-writer.write("customer.pdf")
+for m in r.marks:
+    writer = PdfWriter()
+    writer.append(BytesIO(pdf), pages=(m["first"], m["last"] + 1))
+    writer.write(f"{m['label']}.pdf")
+```
+
+**Bookmarks** — the side panel of PDF viewers, from the same marks, on several levels:
+
+```python
+from pypdf.generic import Fit
+
+writer = PdfWriter(clone_from=BytesIO(pdf))
+parents = {}
+for m in r.marks:
+    parents[m["level"]] = writer.add_outline_item(
+        m["label"], m["first"], parent=parents.get(m["level"] - 1), fit=Fit.xyz(top=m["top"]))
+writer.write("report.pdf")
 ```
 
 **A password** — e.g. payslips sent by e-mail (AES needs `pip install "pypdf[crypto]"`):
@@ -1530,6 +1545,7 @@ r.emit("next_section_header")
 | `report_date` | str \| None     | Print date shown by `[_date]`; `None` (default) = today in the locale's format |
 | `locale`      | str \| None     | Locale of the formatters, overrides the template's — see [Locale](#locale)   |
 | `currency`    | str \| None     | Currency of the `currency` formatter, overrides the template's              |
+| `marks`       | list            | After `to_pdf()`: where each `r.mark()` landed — see [Marks](#marks-rmark)   |
 | `report_time` | str             | Print time `HH:MM:SS`                                                     |
 | `report_user` | str             | OS user (`USER` / `USERNAME` env var)                                   |
 | `cur_page`    | int             | Number of the first page (default 1) — set it when chaining reports        |
@@ -1783,6 +1799,37 @@ for i, invoice in enumerate(invoices):
 
 To chain separate reports with continuous numbering, set `r.cur_page` to the number of
 the first page before rendering.
+
+#### Marks: `r.mark()`
+
+`r.mark(label, level=1)` marks where a part of the document starts — an invoice, a
+category, the totals. It prints nothing and can go anywhere in the loop, also before the
+first `emit()`. After `to_pdf()`, `r.marks` tells where each mark landed:
+
+```python
+for i, invoice in enumerate(invoices):
+    if i:
+        r.page_break(reset=True)
+    r.mark(invoice.number)
+    ...
+pdf = r.to_pdf()
+
+r.marks
+# [{"label": "INV-001", "level": 1, "first": 0, "last": 2, "pages": 3, "top": 753.8},
+#  {"label": "INV-002", "level": 1, "first": 3, "last": 3, "pages": 1, "top": 753.8}, ...]
+```
+
+| Key      | Meaning                                                                          |
+| -------- | -------------------------------------------------------------------------------- |
+| `first`  | Page where the mark landed (0-based, as pypdf counts)                            |
+| `last`   | Last page of the part: until the next mark of the same or a higher level         |
+| `top`    | Vertical position of the mark, in PDF points from the bottom of the page         |
+| `level`  | 1 for parts, 2, 3… for sub-parts (category › article)                            |
+
+A mark goes with the band that follows it: if that band starts a new page, so does the
+mark. With [pypdf](#post-processing-with-pypdf) the map splits the document (one file per
+invoice) or adds bookmarks — the same marks serve both. `examples/03_detail.py` marks
+every category and prints the map.
 
 #### Carry forward
 
@@ -2145,7 +2192,7 @@ to one `emit()` call in the loop engine.
 
 | Field          | Type     | Required | Description                                                                                                                            |
 | -------------- | -------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `band`       | string   | yes      | Band name. Use `"__page_break__"` to force a page break; add `"reset": true` to start a new section.                                  |
+| `band`       | string   | yes      | Band name. Use `"__page_break__"` to force a page break (`"reset": true` starts a new section); `"__mark__"` (with `label`, `level`) is a mark. |
 | `values`     | any[]    | no       | Evaluated expression values, one per `[expr]` token across all cells of the band, in document order. Omit if the band has no tokens. |
 | `css_extras` | string[] | no       | Per-cell CSS overrides, one entry per cell (including embed cells). Empty string means no override.                                    |
 | `band_css`   | string   | no       | CSS applied to the entire band container.                                                                                              |

@@ -137,6 +137,7 @@ def main(summary: bool | None = None):
             (cat["id"],),
         ).fetchall()
 
+        r.mark(f'{cat["code"]} — {cat["description"]}')   # one part per category
         r.emit("cat_header")
 
         for art in articles:
@@ -162,6 +163,7 @@ def main(summary: bool | None = None):
         r.emit("cat_footer")
         r.page_break()
 
+    r.mark("Totals")
     r.emit("totals")
     con.close()
 
@@ -177,6 +179,9 @@ def main(summary: bool | None = None):
         f"  {r.art_count} articles, {r.mov_count} movements\n"
         f"  Purchased: {r.grand_in:,.2f}   Sold: {r.grand_out:,.2f}"
     )
+    # Where each part landed — to split the PDF or add bookmarks (see the manual)
+    for m in r.marks:
+        print(f"  pages {m['first'] + 1}-{m['last'] + 1}  {m['label']}")
 
 
 if __name__ == "__main__":
