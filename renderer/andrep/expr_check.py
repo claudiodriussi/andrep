@@ -21,6 +21,8 @@ import types
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
+from .adapters import RecordView
+
 # System variables injected by the renderer — the only names starting with "_"
 SYSTEM_NAMES = frozenset({"_r", "_page", "_pages", "_page_start", "_page_end",
                           "_date", "_time", "_user", "_name"})
@@ -86,7 +88,10 @@ class AccessDenied(Exception):
 
 
 def checked_getattr(obj, name: str):
-    """Attribute access for template expressions: data only."""
+    """Attribute access for template expressions: data, or the declared
+    fields of a record view."""
+    if isinstance(obj, RecordView):
+        return obj._read(name)
     kind = type(obj)
     if kind not in DATA_TYPES:
         raise AccessDenied(f"attribute access on {kind.__name__} is not allowed")

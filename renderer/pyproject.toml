@@ -32,8 +32,9 @@ pdf        = ["weasyprint"]
 playwright = ["playwright"]
 barcode    = ["python-barcode", "qrcode"]
 markdown   = ["markdown"]
+sqlalchemy = ["sqlalchemy>=2.0"]   # andrep.adapters.sqlalchemy
 all        = ["weasyprint", "playwright", "python-barcode", "qrcode", "markdown"]
-dev        = ["pytest"]
+dev        = ["pytest", "sqlalchemy>=2.0"]
 
 [project.urls]
 Homepage   = "https://github.com/claudiodriussi/andrep"

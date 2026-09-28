@@ -22,6 +22,7 @@ import types
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
+from .adapters import RecordView
 from .expr_check import ATTR_FN, EXCLUDED_KEY, checked_getattr, compile_expr
 from .locales import currency_symbol, get_locale
 from .resources import DefaultResolver, ResourceError
@@ -114,11 +115,15 @@ def _to_data(value):
       sqlite3.Row) → SimpleNamespace; other dicts stay dicts
     - list, tuple, set, frozenset → same container, items converted
     - objects of a type with a registered adapter → adapter(value), converted
+    - read-only views of records (adapters.RecordView) → returned as they are
     - anything else → NotData (a container holding one is NotData as a whole)
 
-    Always returns a copy: templates never touch the caller's objects.
+    Always returns a copy or a read-only view: templates never touch the
+    caller's objects.
     """
     if type(value) in _EXACT_SCALARS:
+        return value
+    if isinstance(value, RecordView):
         return value
     for cls in type(value).__mro__:
         fn = _adapters.get(cls)
@@ -313,6 +318,8 @@ def json_value(value):
         return list(value)
     if isinstance(value, bytes):
         return base64.b64encode(value).decode()
+    if isinstance(value, RecordView):
+        return str(value)
     raise TypeError(f"{type(value).__name__} is not JSON serializable")
 
 
