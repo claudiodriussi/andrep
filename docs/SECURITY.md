@@ -186,10 +186,30 @@ andrep.register_adapter(uuid.UUID, str)
 andrep.register_adapter(enum.Enum, lambda e: e.value)
 ```
 
-The same mechanism serves ORM records: an adapter converting a record into a dict of the
-fields a report may read lets the loop pass records as they are. Convert only the fields
-reports need, and stop following relations after a level or two — relations often lead
-back to where they started, and reading one can cost a database query.
+**ORM records.** A loop can pass ORM records as they are once a *view* is registered for
+them. A view is read-only and exposes exactly the fields declared by the model — columns
+and relations — read lazily, with the ORM's own permissions. Anything else (sessions,
+metadata, methods, attributes with `_`) shows a marker in the report instead of a value.
+SQLAlchemy is supported out of the box (`pip install andrep[sqlalchemy]`):
+
+```python
+from andrep import register_view
+from andrep.adapters.sqlalchemy import SQLAlchemyView
+
+register_view(Base, SQLAlchemyView)     # once, in the integration module
+```
+
+For another ORM, subclass `andrep.RecordView` and implement `fields()` from the ORM's
+metadata; see "Writing an adapter" in the [manual](manual.md#writing-an-adapter). Views
+for a specific platform belong to that platform's integration module. Methods a template
+may call are declared by the author of the view (`safe_methods`), never by the author of a
+report. Do not pass records obtained with elevated privileges: the privilege would follow
+every relation the template reads.
+
+Alternatively, an adapter converting a record into a dict of the fields a report may read
+works with `register_adapter`. Convert only the fields reports need, and stop following
+relations after a level or two — relations often lead back to where they started, and
+reading one can cost a database query.
 
 **Loaders.** Custom loaders keep templates of a platform, a customer or a tenant in their
 own storage; see the contract above.

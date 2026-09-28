@@ -1337,6 +1337,9 @@ andrep.register_adapter(uuid.UUID, str)
 andrep.register_adapter(enum.Enum, lambda e: e.value)
 ```
 
+ORM records can be passed as they are through a read-only **view**: see
+[Writing an adapter](#writing-an-adapter).
+
 `_r` is a snapshot of the renderer's public data attributes (accumulators, `title`,
 metadata), taken when the namespace is built: `[_r.total]` works, methods of the renderer
 are not available. With `trusted=True` everything is exposed as it is, as in earlier
@@ -1370,6 +1373,96 @@ r.globals["fmt_pct"] = lambda v: f"{float(v):.1f}%"
 Register **functions, not objects**: templates cannot read attributes of arbitrary
 objects. For values, use the workspace: `r["config"] = {"company_name": "ACME"}` →
 `[config.company_name]`.
+
+---
+
+### Writing an adapter
+
+An adapter lets a loop pass objects that are not data — typically ORM records — without
+converting them first. There are two ways.
+
+**Conversion.** `register_adapter(cls, fn)`: `fn(value)` returns data, usually a dict of
+the fields a report may read. Simple and always available; relations must be converted
+in advance, so limit their depth.
+
+**View.** `register_view(base_cls, view)`: each instance of `base_cls` is wrapped in a
+read-only view that exposes exactly the fields declared by the model. Fields are read
+when a template uses them, so a relation costs a query only if a report follows it, and
+the ORM's permissions apply. Everything else is refused with a marker that names the
+reason:
+
+```
+[row.author.name]        → Tolkien
+[row.query]              → [#row.query: Book.query is not a field#]
+```
+
+**SQLAlchemy** has a ready-made view (`pip install andrep[sqlalchemy]`):
+
+```python
+from andrep import AndRepRenderer, register_view
+from andrep.adapters.sqlalchemy import SQLAlchemyView
+
+register_view(Base, SQLAlchemyView)     # once, at startup
+
+r = AndRepRenderer("books", loader=loader)
+for book in session.scalars(select(Book)):
+    r.emit("band")                      # template: [book.title]  [book.author.name]
+```
+
+It exposes the mapper's column attributes and relationships. Properties that are data
+(computed fields of the application) are added by a subclass:
+
+```python
+from andrep.adapters import VALUE
+
+class BookView(SQLAlchemyView):
+    extra_fields = {"label_text": VALUE}
+```
+
+**Another ORM.** Subclass `andrep.RecordView` and implement `fields(record)`, which
+returns `{name: kind}` from the ORM's metadata. The kind is `VALUE` (a value), `ONE` (a
+related record, wrapped again, or `None`) or `MANY` (a list of related records):
+
+```python
+from andrep import RecordView, register_view
+from andrep.adapters import MANY, ONE, VALUE
+
+class MyOrmView(RecordView):
+    __slots__ = ()
+
+    @classmethod
+    def fields(cls, record):
+        return {name: VALUE for name in type(record).column_names}
+
+    def label(self):                    # shown when a template prints the record
+        return f"{type(self._record).__name__}({self._record.id})"
+
+register_view(MyOrmModel, MyOrmView)
+```
+
+Override when the ORM needs it:
+
+| Member          | Default                          | Override to                                             |
+| --------------- | -------------------------------- | ------------------------------------------------------- |
+| `fields()`      | — (required)                     | list the fields from the ORM's metadata                 |
+| `raw(name, kind)` | `getattr(record, name)`        | normalize values (e.g. an ORM's "empty" marker → `None`) |
+| `collection(value)` | list of wrapped records      | keep a collection type the ORM provides                  |
+| `label()`       | class name                       | show something meaningful (`display_name`, the key)      |
+| `safe_methods`  | none                             | allow a few read-only methods of the record              |
+
+Guidelines:
+
+- derive the fields from the ORM's metadata, not from the attributes of the object:
+  what the object carries besides its fields is exactly what templates must not reach;
+- keep `safe_methods` short and read-only. Their arguments must be data and their results
+  are converted to data, but the method itself runs on the real record;
+- the view is set up once by the integration, never by the author of a report;
+- views for a specific platform live in that platform's integration module, not in
+  AndRep; `andrep/adapters/sqlalchemy.py` is the reference implementation.
+
+Two views of the same record compare equal, so `[row.author == prev.author]` works as
+expected. In compiled records and JSON output a record printed as a whole becomes its
+label.
 
 ---
 
