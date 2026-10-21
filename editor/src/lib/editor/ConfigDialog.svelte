@@ -380,6 +380,7 @@
 
         <!-- ─── 6. Band name presets ─── -->
         <div class="section-title">{_('Band name presets')}</div>
+        <p class="sub-label">{_('Reserved names (band, page_header, …) are always offered: list your own here.')}</p>
         <div class="list-editor">
           {#each local.bandNamePresets as preset, i (i)}
             <div class="list-row">

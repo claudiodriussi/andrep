@@ -116,8 +116,7 @@ export interface EditorConfig {
   toolbarGroups: ToolbarGroupId[]; // ordered list; absent groups are hidden
   defaultFont: string;
   defaultFontSize: number;
-  bandNamePresets: string[]; // quick-pick list shown on "+ Row"
-  showRenderingHints: boolean; // show page_role chips on "+ Row" and var-ref in cell dialog
+  bandNamePresets: string[]; // user's band names offered by "+ Row", besides the reserved ones
   fontFamilies: string[]; // font family list shown in the font picker
   fgPalette: string[]; // foreground (text / border) color swatches
   bgPalette: string[]; // background color swatches

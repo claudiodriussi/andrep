@@ -1,14 +1,9 @@
 <script lang="ts">
   import { editor } from '$lib/store/editor.svelte';
-  import { config } from '$lib/store/config.svelte';
   import { _ } from '$lib/i18n/index.svelte';
   import RowBlock from './RowBlock.svelte';
   import HRuler from './HRuler.svelte';
   import { handleKeydown } from './keyboard';
-
-  let newRowName = $state('');
-  let showRowInput = $state(false);
-  let inputEl = $state<HTMLInputElement | null>(null);
 
   const page = $derived(editor.template.page);
 
@@ -28,27 +23,8 @@
   const CHAR_W = 8;
   const bandColW = $derived.by(() => {
     const names = editor.template.rows.map((r) => r.name);
-    // include the name being typed so the column expands in real time
-    if (showRowInput && newRowName.trim()) names.push(newRowName.trim());
     return Math.max(80, ...names.map((n) => n.length * CHAR_W + BTN_AREA));
   });
-
-  function addRow(name: string) {
-    editor.addRow(name);
-    newRowName = '';
-    showRowInput = false;
-  }
-
-  function confirmAddRow() {
-    const name = newRowName.trim();
-    if (name) addRow(name);
-  }
-
-  function startAddRow() {
-    showRowInput = true;
-    newRowName = '';
-    setTimeout(() => inputEl?.focus(), 0);
-  }
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -86,29 +62,7 @@
 
     <!-- Add row -->
     <div class="add-row-area" role="presentation" onclick={(e) => e.stopPropagation()}>
-    {#if showRowInput}
-      <input
-        bind:this={inputEl}
-        bind:value={newRowName}
-        class="row-input"
-        list="band-name-list"
-        onclick={(e) => e.stopPropagation()}
-        onkeydown={(e) => {
-          e.stopPropagation();
-          if (e.key === 'Enter') confirmAddRow();
-          if (e.key === 'Escape') { showRowInput = false; newRowName = ''; }
-        }}
-      />
-      <datalist id="band-name-list">
-        {#each config.config.bandNamePresets as name (name)}
-          <option value={name}></option>
-        {/each}
-      </datalist>
-      <button class="btn-ok" onclick={confirmAddRow}>OK</button>
-      <button class="btn-cancel" onclick={() => { showRowInput = false; newRowName = ''; }}>×</button>
-    {:else}
-      <button class="add-row-btn" onclick={startAddRow}>{_('+ Row')}</button>
-    {/if}
+      <button class="add-row-btn" onclick={() => editor.openAddRow()}>{_('+ Row')}</button>
   </div>
   </div><!-- rows-wrapper -->
 </div>
@@ -178,34 +132,5 @@
 
   .add-row-btn:hover {
     background: #1d4ed8;
-  }
-
-  .row-input {
-    padding: 3px 8px;
-    border: 1px solid #3b82f6;
-    border-radius: 4px;
-    font-size: 12px;
-    width: 280px;
-    outline: none;
-  }
-
-  .btn-ok {
-    padding: 3px 10px;
-    background: #2563eb;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-  }
-
-  .btn-cancel {
-    padding: 3px 8px;
-    background: transparent;
-    color: #64748b;
-    border: 1px solid #e2e8f0;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
   }
 </style>

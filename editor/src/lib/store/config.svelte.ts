@@ -1,5 +1,6 @@
 import type { EditorConfig } from '$lib/types';
 import { _ } from '$lib/i18n/index.svelte';
+import { isReservedBand } from '$lib/bands';
 
 const STORAGE_KEY = 'andrep-config';
 
@@ -16,8 +17,8 @@ const DEFAULT_CONFIG: EditorConfig = {
   toolbarGroups: ['file', 'font', 'align', 'colors', 'borders', 'cell', 'structure'],
   defaultFont: 'Arial',
   defaultFontSize: 11,
-  bandNamePresets: ['band', 'first_header', 'page_header', 'page_footer', 'last_footer', 'page_filler'],
-  showRenderingHints: false,
+  // User's own band names; the reserved ones (lib/bands.ts) are always offered
+  bandNamePresets: ['totals'],
   fontFamilies: [
     'Arial', 'Arial Narrow', 'Helvetica',
     'Times New Roman', 'Georgia', 'Palatino', 'Garamond',
@@ -39,14 +40,21 @@ const DEFAULT_CONFIG: EditorConfig = {
   ],
 };
 
+// Merge stored data with defaults, so fields added in later versions are populated.
+// Configs saved before lib/bands.ts listed the reserved names among the presets: drop them.
+function withDefaults(data: Partial<EditorConfig>): EditorConfig {
+  const merged = { ...DEFAULT_CONFIG, ...data };
+  merged.bandNamePresets = merged.bandNamePresets.filter((n) => !isReservedBand(n));
+  return merged;
+}
+
 function loadConfig(): EditorConfig {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...DEFAULT_CONFIG };
     const data = JSON.parse(raw);
     if (data?._type !== 'andrep-config') return { ...DEFAULT_CONFIG };
-    // Merge with defaults so new fields added in future versions are populated
-    return { ...DEFAULT_CONFIG, ...data };
+    return withDefaults(data);
   } catch {
     return { ...DEFAULT_CONFIG };
   }
@@ -91,8 +99,7 @@ class ConfigState {
           alert(_('Invalid file: not an AndRep config.'));
           return;
         }
-        // Merge with defaults to handle missing fields from older config files
-        this.config = { ...DEFAULT_CONFIG, ...data };
+        this.config = withDefaults(data);
         this.save();
       } catch {
         alert(_('Invalid JSON file.'));

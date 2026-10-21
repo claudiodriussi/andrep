@@ -254,7 +254,7 @@ const SHORTCUTS: Record<string, Handler> = {
   'Alt+ArrowUp':    (e) => { e.preventDefault(); const r = activeRow(); if (r) editor.moveRowUp(r.id); },
   'Alt+ArrowDown':  (e) => { e.preventDefault(); const r = activeRow(); if (r) editor.moveRowDown(r.id); },
   'Alt+Delete':     () => { const r = activeRow(); if (r) editor.deleteRow(r.id); },
-  'Alt+Insert':     () => { const name = prompt(_('Band name:'), 'band'); if (name?.trim()) editor.addRow(name.trim(), activeRow()?.id); },
+  'Alt+Insert':     () => editor.openAddRow(activeRow()?.id),
   'Ctrl+ArrowUp':   (e) => { e.preventDefault(); const r = activeRow(); if (r) { editor.pushHistory(); for (const c of r.cells) c.height = Math.max(10, c.height - editor.gridStepY); } },
   'Ctrl+ArrowDown': (e) => { e.preventDefault(); const r = activeRow(); if (r) { editor.pushHistory(); for (const c of r.cells) c.height += editor.gridStepY; } },
 };

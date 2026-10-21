@@ -45,8 +45,7 @@
   }
 
   function addRow() {
-    const name = prompt(_('Band name:'), 'band');
-    if (name?.trim()) editor.addRow(name.trim(), activeRow?.id);
+    editor.openAddRow(activeRow?.id);
   }
 
   function deleteRow() {

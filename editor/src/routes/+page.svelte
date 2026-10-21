@@ -6,6 +6,7 @@
   import PageSetupDialog from '$lib/editor/PageSetupDialog.svelte';
   import ShortcutCheatSheet from '$lib/editor/ShortcutCheatSheet.svelte';
   import ConfigDialog from '$lib/editor/ConfigDialog.svelte';
+  import AddRowDialog from '$lib/editor/AddRowDialog.svelte';
   import { editor } from '$lib/store/editor.svelte';
   import { config } from '$lib/store/config.svelte';
   import { _ } from '$lib/i18n/index.svelte';
@@ -175,6 +176,7 @@
   <PageSetupDialog />
   <ShortcutCheatSheet />
   <ConfigDialog />
+  <AddRowDialog />
 </div>
 
 <style>

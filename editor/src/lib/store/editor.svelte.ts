@@ -194,6 +194,19 @@ class EditorState {
     history.clear();
   }
 
+  // --- add row dialog (toolbar, Alt+Insert, "+ Row") ---
+  addRowOpen = $state(false);
+  addRowAfterId = $state<string | undefined>(undefined); // undefined: append at the end
+
+  openAddRow(afterRowId?: string) {
+    this.addRowAfterId = afterRowId;
+    this.addRowOpen = true;
+  }
+
+  closeAddRow() {
+    this.addRowOpen = false;
+  }
+
   // --- page setup dialog ---
   pageSetupOpen = $state(false);
 
