@@ -79,6 +79,7 @@ for row in db_rows:
 
 json_str = r.to_json()           # compiled records as JSON string
 r.save_output("records.json")    # or save directly to file
+records = r.records()            # or as Python objects, typed values (date, Decimal, ...)
 ```
 
 The JSON output can later be rendered without re-running the loop:

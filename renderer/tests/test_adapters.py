@@ -127,7 +127,7 @@ def test_record_printed_as_a_whole(session):
     r = AndRepRenderer(make_template({"band": ["[row]"]}))
     r["row"] = session.get(Book, 2)
     r.emit("band")
-    assert emitted_values(r) == [r._compiled[0]["values"][0]]
+    assert emitted_values(r) == [r.records()[0]["values"][0]]
     assert str(emitted_values(r)[0]) == "Book(2)"
     assert "Book(2)" in r.to_json()           # compiled records stay serializable
     json.loads(r.to_json())

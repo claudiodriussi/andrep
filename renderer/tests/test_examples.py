@@ -89,3 +89,23 @@ def test_compiled_records_with_dates_and_decimals_round_trip():
     assert records[0]["values"] == ["2026-09-25", "2026-09-25T08:30:00", 1234.5]
     html = AndRepRenderer.from_compiled(template, records).to_html()
     assert "25/09/2026" in html and "1.234,50" in html
+
+
+def test_records_keep_emission_order_and_raw_types():
+    """records() returns the compiled records unserialized: typed values, in emission order."""
+    import datetime
+    from decimal import Decimal
+    from andrep import AndRepRenderer
+    from conftest import make_template
+
+    r = AndRepRenderer(make_template({"head": ["[title]"], "band": ["[d | date]", "[amount | .2]"]}))
+    title = "Sells"  # noqa: F841
+    r.emit("head")
+    for d, amount in [(datetime.date(2026, 9, 25), Decimal("1234.50")),  # noqa: B007
+                      (datetime.date(2026, 9, 26), Decimal("7.25"))]:
+        r.emit("band")
+    records = r.records()
+    assert [rec["band"] for rec in records] == ["head", "band", "band"]
+    assert records[1]["values"] == [datetime.date(2026, 9, 25), Decimal("1234.50")]
+    assert type(records[2]["values"][0]) is datetime.date
+    assert type(records[2]["values"][1]) is Decimal

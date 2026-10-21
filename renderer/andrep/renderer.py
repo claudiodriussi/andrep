@@ -752,7 +752,7 @@ class AndRepRenderer:
     def compile(self) -> None:
         """Assemble the final output: auto header + emissions + auto footer.
 
-        Called automatically by to_html(), to_pdf(), to_json(), save_output().
+        Called automatically by to_html(), to_pdf(), to_json(), save_output(), records().
         Safe to call multiple times — runs only once.
         Band expressions were already evaluated at emit() time.
         """
@@ -794,6 +794,18 @@ class AndRepRenderer:
         """Return the compiled output as a JSON string."""
         self.compile()
         return json.dumps(self._compiled, ensure_ascii=False, indent=2, default=json_value)
+
+    def records(self) -> list[dict]:
+        """Return the compiled records as Python objects (raw values, no formatters).
+
+        Same records as to_json() / save_output(), not serialized: dates stay
+        date/datetime, Decimal stays Decimal. For consumers that need typed
+        values, e.g. an Excel export. Includes the auto header/footer bands
+        added by compile(). The list is a copy; the records are shared with
+        the renderer, so don't modify them if you still render it.
+        """
+        self.compile()
+        return list(self._compiled)
 
     # ------------------------------------------------------------------
     # External loop engine support

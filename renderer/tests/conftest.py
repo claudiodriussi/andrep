@@ -44,8 +44,7 @@ def make_template(bands: dict, **extra) -> dict:
 
 def emitted_values(r: AndRepRenderer) -> list:
     """Values of all compiled records, in emission order."""
-    r.compile()
-    return [v for rec in r._compiled for v in rec.get("values", [])]
+    return [v for rec in r.records() for v in rec.get("values", [])]
 
 
 def write_templates(directory: Path, templates: dict) -> Path:

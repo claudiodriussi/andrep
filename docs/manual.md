@@ -1474,10 +1474,13 @@ label.
 | `to_pdf(backend=None)` | `bytes` | PDF bytes (default backend: Playwright; fallback: WeasyPrint) |
 | `to_json()`         | `str`   | Compiled records as JSON string            |
 | `save_output(path)` | —        | Write compiled records to a `.json` file |
+| `records()`         | `list[dict]` | Compiled records as Python objects, raw typed values |
 
 `to_html()` and `to_pdf()` trigger the final render pass (including `on_after()`).
 `save_output()` / `to_json()` write the intermediate compiled records — useful for
 debugging or for passing to a separate renderer process via `from_compiled()`.
+`records()` returns the same records unserialized — dates stay `date`, `Decimal`
+stays `Decimal` — for a consumer that needs the typed values (e.g. an Excel export).
 
 ---
 
@@ -2310,6 +2313,7 @@ to one `emit()` call in the loop engine.
   `Decimal` → number, `timedelta` → seconds, `bytes` → base64. The `date` formatter and
   explicit date patterns (`dd/mm/yyyy`) accept ISO strings, so `from_compiled()` formats
   them as before — and a JS client can send JavaScript dates as they serialize.
+  `records()` returns the values with their Python types, unconverted.
 - Page-role bands (`first_header`, `page_header`, `page_footer`, `last_footer`,
   `page_filler`) must **not** appear in the records — the renderer inserts them
   automatically.
