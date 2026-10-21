@@ -77,7 +77,8 @@ The band emitted once per data row is named **`band`** by convention. `emit()` w
 name emits it (`r.emit()` is `r.emit("band")`), and the editor proposes it as the default
 name of a new row. Consumers of the compiled records rely on the name to tell the detail
 rows from the rest — an Excel export that turns them into a table, a loop driven by band
-names. Name the detail band `band` unless you have a reason not to.
+names (`DETAIL_BAND` in Python and in the JS client). Name the detail band `band`
+unless you have a reason not to.
 
 The band name and the loop variable are two different things. The template reads
 `[row.price]` because the loop variable is called `row`; the band it sits in is `band`:
@@ -155,7 +156,9 @@ with formatters.
 
 Five band names are reserved by the renderer and inserted automatically at page breaks —
 **never emitted by the caller**: `first_header`, `page_header`, `page_footer`,
-`last_footer`, `page_filler`.
+`last_footer`, `page_filler`. `emit()` raises an error for them, in Python and in the
+JS client. The names are exported as `PAGE_ROLES` (and the detail band as `DETAIL_BAND`)
+by both.
 
 See [Chapter 7](#7-pagination) for the full pagination reference.
 
@@ -1765,7 +1768,7 @@ leftover space — but it never decides *what* to print on its own.
 
 ### Page-role bands
 
-Six band names carry a reserved meaning. They are declared in the template like any other
+Five band names carry a reserved meaning. They are declared in the template like any other
 band but are **never emitted by the caller** — the renderer inserts them automatically at
 the right point in each page.
 
@@ -2333,8 +2336,9 @@ to one `emit()` call in the loop engine.
   them as before — and a JS client can send JavaScript dates as they serialize.
   `records()` returns the values with their Python types, unconverted.
 - Page-role bands (`first_header`, `page_header`, `page_footer`, `last_footer`,
-  `page_filler`) must **not** appear in the records — the renderer inserts them
-  automatically.
+  `page_filler`) are inserted by the renderer: a loop engine does not emit them.
+  `to_json()` / `save_output()` include the header and footer of the run, and
+  `from_compiled()` drops any page-role record, so saved records render them once.
 - Values are collected in the order cells appear in the template rows, left-to-right,
   top-to-bottom. Embed cells contribute no value slot; they use the `embeds` map instead.
 - Complex formatters (`img`, `load`, `barcode`, `qr`, `currency`) are applied by the

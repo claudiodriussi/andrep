@@ -5,9 +5,12 @@ page_break(reset=True), r.cur_page as the number of the first page.
 Pages are 300 px high with 20 px header and footer: two 100 px rows per page.
 No backend is needed — rows have fixed heights, nothing to measure.
 """
+import json
 import re
 
-from andrep import AndRepRenderer
+import pytest
+
+from andrep import PAGE_ROLES, AndRepRenderer
 
 
 def row(name: str, content: str, height: int) -> dict:
@@ -90,3 +93,22 @@ def test_reset_is_kept_in_compiled_records():
     r.emit("band")
     r2 = AndRepRenderer.from_compiled(TEMPLATE, r._emissions)
     assert marks(r2) == marks(r) == ["FIRST 1/1", "LAST 1/1", "FIRST 1/1", "LAST 1/1"]
+
+
+@pytest.mark.parametrize("band", sorted(PAGE_ROLES))
+def test_page_roles_are_not_emitted(band):
+    r = AndRepRenderer(TEMPLATE)
+    with pytest.raises(ValueError, match="page-role"):
+        r.emit(band)
+
+
+def test_saved_records_render_page_roles_once():
+    """save_output() / to_json() include the auto header and footer; from_compiled() drops them."""
+    r = AndRepRenderer(TEMPLATE)
+    for _ in range(5):
+        r.emit("band")
+    records = json.loads(r.to_json())
+    assert records[0]["band"] == "first_header" and records[-1]["band"] == "last_footer"
+    r2 = AndRepRenderer.from_compiled(TEMPLATE, records)
+    assert marks(r2) == marks(r)
+    assert r2.to_html().count("FIRST") == r.to_html().count("FIRST") == 1

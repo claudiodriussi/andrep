@@ -141,7 +141,13 @@ def load_template(template, loader: TemplateLoader = None):
 # Renderer
 # ---------------------------------------------------------------------------
 
-_PAGE_ROLES = {"first_header", "page_header", "page_footer", "last_footer", "page_filler"}
+# Band names with a fixed meaning.  Page roles are placed by the renderer at
+# page breaks: never emitted, never in the records passed to from_compiled().
+# The detail band (one emission per data row) is a convention for the consumers
+# of the compiled records.  Same names in clients/js/src/engine.ts and in the
+# editor (editor/src/lib/bands.ts).
+PAGE_ROLES = frozenset({"first_header", "page_header", "page_footer", "last_footer", "page_filler"})
+DETAIL_BAND = "band"
 
 # Content-Security-Policy of every generated document: no scripts, no
 # connections, images and fonts only as data: URLs (resources are embedded by
@@ -388,7 +394,7 @@ class AndRepRenderer:
         # in the page bands are snapshot after every emit(); pagination then
         # gives each page the values at its start and at its end.
         self._carry_fields: set = set()
-        for band_name in _PAGE_ROLES & self.bands.keys():
+        for band_name in PAGE_ROLES & self.bands.keys():
             for row in self.bands[band_name]:
                 for cell in row.get("cells", []):
                     for expr in self._cell_exprs[id(cell)]:
@@ -571,7 +577,7 @@ class AndRepRenderer:
     # Emit
     # ------------------------------------------------------------------
 
-    def emit(self, band_name: str = "band", silent: bool = False) -> None:
+    def emit(self, band_name: str = DETAIL_BAND, silent: bool = False) -> None:
         """Compile and record a band emission.
 
         The caller's local variables are captured automatically and made
@@ -582,7 +588,12 @@ class AndRepRenderer:
             band_name: name of the band to emit.  Default "band": by convention
                        the detail band, the one emitted once per data row.
             silent:    fire hooks without recording the emission (summary mode).
+
+        Raises ValueError for a page-role band: the renderer places those itself.
         """
+        if band_name in PAGE_ROLES:
+            raise ValueError(f"emit({band_name!r}): page-role bands are placed by the renderer, "
+                             "do not emit them")
         frame = sys._getframe(1)
 
         if not self.started:
@@ -822,8 +833,9 @@ class AndRepRenderer:
         formatters are applied at render time (to_html / to_pdf) using the token
         info from the template — identical to the normal emit() path.
 
-        page_role bands (page_header, page_footer, …) must NOT be in records;
-        they are inserted automatically by compile() / _to_pdf_html().
+        page_role bands (page_header, page_footer, …) are inserted by compile() /
+        _to_pdf_html(); records of those bands are dropped, so the output of
+        save_output() (which includes them) renders them once.
 
         metadata: optional dict of renderer attributes to set before rendering,
         e.g. {"title": "My Report", "name": ["Acme Corp", "Rome"]}.
@@ -840,7 +852,7 @@ class AndRepRenderer:
         # Store in _emissions so that:
         #   - compile() runs normally and prepends/appends page_role bands (_compiled)
         #   - _to_pdf_html() reads _emissions for the body (page_role handled per-page)
-        r._emissions = list(records)
+        r._emissions = [rec for rec in records if rec.get("band") not in PAGE_ROLES]
         r.started = True   # suppress on_before() if compile() is ever called
         if metadata:
             for key, value in metadata.items():

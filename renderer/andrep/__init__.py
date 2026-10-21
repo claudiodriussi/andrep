@@ -14,12 +14,13 @@ Minimal usage::
 """
 from .adapters import RecordView, register_view
 from .loader import FilesystemLoader, TemplateLoader
-from .renderer import AndRepRenderer, load_template
+from .renderer import DETAIL_BAND, PAGE_ROLES, AndRepRenderer, load_template
 from .resources import DefaultResolver, ResourceError, ResourceResolver
 from .variables import register_adapter
 
 __all__ = [
     "AndRepRenderer", "FilesystemLoader", "TemplateLoader", "load_template",
+    "DETAIL_BAND", "PAGE_ROLES",
     "register_adapter", "register_view", "RecordView",
     "DefaultResolver", "ResourceResolver", "ResourceError",
 ]

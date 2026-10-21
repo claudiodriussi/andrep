@@ -25,14 +25,18 @@ import { applyFormatter, type FormatterFn } from "./formatters.js";
 /** Caller-provided context: named variables accessible in template expressions. */
 export type Ctx = Record<string, unknown>;
 
-// Band names handled automatically by the Python renderer — never emit these.
-const PAGE_ROLES = new Set([
+// Band names with a fixed meaning — same as PAGE_ROLES / DETAIL_BAND in
+// renderer/andrep/renderer.py. Page roles are placed by the Python renderer at
+// page breaks: never emit them. The detail band (one emission per data row) is
+// a convention for the consumers of the compiled records.
+export const PAGE_ROLES: ReadonlySet<string> = new Set([
   "first_header",
   "page_header",
   "page_footer",
   "last_footer",
   "page_filler",
 ]);
+export const DETAIL_BAND = "band";
 
 function todayStr(): string {
   const d = new Date();

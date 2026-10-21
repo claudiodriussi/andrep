@@ -2,7 +2,7 @@ export type { Template, Cell, Row, BandOptions, CompositionRule, CompiledRecord,
 export { parseTokens, evalExpr } from "./expression.js";
 export { applyFormatter } from "./formatters.js";
 export type { FormatterFn } from "./formatters.js";
-export { AndRepEngine } from "./engine.js";
+export { AndRepEngine, PAGE_ROLES, DETAIL_BAND } from "./engine.js";
 export type { Ctx } from "./engine.js";
 export { FilesystemLoader } from "./loader.js";
 export type { TemplateLoader } from "./loader.js";
