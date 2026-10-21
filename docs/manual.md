@@ -55,18 +55,37 @@ appear as separate processes communicating through JSON.
 
 ### Band
 
-A **band** is a named section of the report (e.g. `Header`, `Band`, `Totals`). The
+A **band** is a named section of the report (e.g. `header`, `band`, `totals`). The
 template is a catalogue of available bands. The caller decides which bands to emit, in what
 order, and how many times — the renderer imposes no structure.
 
 ```python
-r.emit("Header")       # once
-r.emit("Band")         # once per data row  (× N)
-r.emit("Totals")       # once at the end
+r.emit("header")       # once
+r.emit("band")         # once per data row  (× N)
+r.emit("totals")       # once at the end
 ```
 
-A band has a free-form name chosen by the designer. The only exception is the set of
-[page-role bands](#page-role-bands) described below, whose names are reserved by the renderer.
+A band has a free-form name chosen by the designer. The exceptions are the set of
+[page-role bands](#page-role-bands) described below, whose names are reserved by the renderer,
+and the [detail band](#detail-band) convention.
+
+---
+
+### Detail band
+
+The band emitted once per data row is named **`band`** by convention. `emit()` with no
+name emits it (`r.emit()` is `r.emit("band")`), and the editor proposes it as the default
+name of a new row. Consumers of the compiled records rely on the name to tell the detail
+rows from the rest — an Excel export that turns them into a table, a loop driven by band
+names. Name the detail band `band` unless you have a reason not to.
+
+The band name and the loop variable are two different things. The template reads
+`[row.price]` because the loop variable is called `row`; the band it sits in is `band`:
+
+```python
+for row in db_rows:
+    r.emit("band")     # band "band", template reads [row.code], [row.price]
+```
 
 ---
 
@@ -160,9 +179,9 @@ report. It does not process data and it does not generate output. Its only job i
 you design, visually and precisely, what each band of the report will look like.
 
 The connection to the actual output happens through the **emit loop** in your application
-code. Every time your code calls `emit("Band")`, the renderer takes the band named `Band`
+code. Every time your code calls `emit("band")`, the renderer takes the band named `band`
 from the template and produces one rendered block, substituting the `[variable]`
-placeholders with the real values from that iteration. Call `emit("Band")` a thousand times
+placeholders with the real values from that iteration. Call `emit("band")` a thousand times
 and you get a thousand blocks — all with the same layout, each with different data.
 
 This means the editor canvas is **not a page preview**. It is a catalogue of all the
@@ -1260,8 +1279,6 @@ from pathlib import Path
 loader = FilesystemLoader(Path("templates/"))
 r = AndRepRenderer("my_report", loader=loader)
 
-r.emit("page_header")
-
 for row in db_rows:
     r.emit("band")          # 'row' is captured automatically from the local scope
 
@@ -1276,7 +1293,8 @@ Path("output/report.pdf").write_bytes(pdf)
 
 `emit()` captures the **local variables of the calling frame** automatically. The loop
 variable `row` becomes available in template expressions as `[row.price]`, `[row.code]`,
-and so on — no explicit passing required.
+and so on — no explicit passing required. `r.emit()` with no name emits `band`, the
+[detail band](#detail-band).
 
 ---
 

@@ -8,7 +8,8 @@ Minimal usage::
 
     loader = FilesystemLoader(Path("templates/"))
     r = AndRepRenderer("sells", loader=loader)
-    r.emit("band", {"row": {"it": "001", "description": "Widget", "amount": 5, "price": 10}})
+    for row in rows:
+        r.emit("band")          # 'row' captured from the local scope → [row.price]
     html = r.to_html()
 """
 from .adapters import RecordView, register_view

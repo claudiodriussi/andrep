@@ -109,3 +109,17 @@ def test_records_keep_emission_order_and_raw_types():
     assert records[1]["values"] == [datetime.date(2026, 9, 25), Decimal("1234.50")]
     assert type(records[2]["values"][0]) is datetime.date
     assert type(records[2]["values"][1]) is Decimal
+
+
+def test_emit_defaults_to_the_detail_band():
+    """r.emit() is r.emit("band"): the detail band, by convention."""
+    from andrep import AndRepRenderer
+    from conftest import make_template
+
+    r = AndRepRenderer(make_template({"band": ["[row]"], "totals": ["end"]}))
+    for row in ["a", "b"]:  # noqa: B007
+        r.emit()
+    r.emit("totals")
+    records = r.records()
+    assert [rec["band"] for rec in records] == ["band", "band", "totals"]
+    assert [rec["values"] for rec in records[:2]] == [["a"], ["b"]]

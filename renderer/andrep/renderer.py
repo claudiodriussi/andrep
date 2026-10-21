@@ -571,7 +571,7 @@ class AndRepRenderer:
     # Emit
     # ------------------------------------------------------------------
 
-    def emit(self, band_name: str, silent: bool = False) -> None:
+    def emit(self, band_name: str = "band", silent: bool = False) -> None:
         """Compile and record a band emission.
 
         The caller's local variables are captured automatically and made
@@ -579,7 +579,8 @@ class AndRepRenderer:
         the template: ``for row in data: r.emit("band")`` → ``[row.price]``.
 
         Args:
-            band_name: name of the band to emit.
+            band_name: name of the band to emit.  Default "band": by convention
+                       the detail band, the one emitted once per data row.
             silent:    fire hooks without recording the emission (summary mode).
         """
         frame = sys._getframe(1)

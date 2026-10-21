@@ -40,6 +40,12 @@ html = r.to_html()
 pdf  = r.to_pdf()
 ```
 
+The detail band — the one emitted once per data row — is named `band` by convention,
+and `r.emit()` with no name emits it. Consumers of the compiled records (an Excel
+export, a loop driven by band names) rely on the name to find the detail rows.
+The band name is not the loop variable: the template reads `[row.price]` because
+the loop variable is called `row`, whatever the band is called.
+
 ## Usage — compiled records (external loop engine)
 
 Any language can drive the loop and pass compiled records to the renderer:
